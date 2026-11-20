@@ -1,0 +1,18 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Jol" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Jol" } }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Jol uses your location to show where you are on the map and to build routes from your position." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Jol использует вашу геопозицию, чтобы показать вас на карте и строить маршруты от вашего местоположения." } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

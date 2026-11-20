@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, select, checkbox, csrf_field %}
+{% block title %}{{ display_name(place) }}{% endblock %}
+{% block content %}
+<p><a href="/admin/places">← К списку мест</a></p>
+<h1>{{ display_name(place) }}</h1>
+{% if saved == "1" %}<div class="flash">Сохранено. Изменённые поля защищены от перезаписи при импорте OSM.</div>{% endif %}
+{% if saved == "nochange" %}<div class="flash">Ничего не изменилось.</div>{% endif %}
+{% if saved == "photo" %}<div class="flash">Фото обновлены.</div>{% endif %}
+{% if errors %}<div class="flash bad">Исправьте ошибки в форме.</div>{% endif %}
+<p class="muted">
+  {% if place.osm_type %}OSM: {{ place.osm_type }}/{{ place.osm_id }} · {% endif %}
+  {{ "%.5f"|format(place.lat) }}, {{ "%.5f"|format(place.lon) }} ·
+  Вручную заданные поля: {{ place.manual_override|join(", ") or "нет" }}
+</p>
+
+<form method="post" action="/admin/places/{{ place.id }}">
+  {{ csrf_field(csrf) }}
+  <div class="card">
+    <h2>Названия и описание</h2>
+    <div class="grid">
+      {{ field("name_ru", "Название RU", f, errors) }}
+      {{ field("name_en", "Название EN", f, errors) }}
+      {{ field("name_kk", "Название KK", f, errors) }}
+    </div>
+    <div class="grid two">
+      {{ textarea("description_ru", "Описание RU", f, errors) }}
+      {{ textarea("description_en", "Описание EN", f, errors) }}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Параметры</h2>
+    <div class="grid">
+      {{ select("category_id", "Категория", f, errors, categories|map(attribute="id")|zip(categories|map(attribute="name_ru"))|list, blank="— нет —") }}
+      {{ select("kind", "Тип (kind)", f, errors, KINDS|zip(KINDS)|list) }}
+      {{ select("setting", "Помещение/улица", f, errors, SETTINGS|zip(SETTINGS)|list, blank="— не указано —") }}
+      {{ select("status", "Статус", f, errors, STATUSES|zip(STATUSES)|list) }}
+      {{ field("typical_visit_min", "Время посещения, мин", f, errors, hint="1–1440") }}
+      {{ field("popularity", "Популярность", f, errors, hint="0 и больше") }}
+      {{ field("elevation_m", "Высота, м", f, errors) }}
+    </div>
+    <div class="grid">
+      {{ field("entry_price_kzt", "Цена входа, ₸", f, errors) }}
+      {{ field("avg_check_kzt", "Средний чек, ₸", f, errors) }}
+      {{ field("price_per_night_kzt", "Цена за ночь, ₸", f, errors) }}
+    </div>
+    {{ checkbox("is_public", "Государственное / общественное место (без рекламы)", f) }}
+    {{ checkbox("is_mountain", "Горное место", f) }}
+  </div>
+
+  <div class="card">
+    <h2>Часы работы</h2>
+    <p class="muted">Один интервал на строку: <code>09:00-18:00</code>. Несколько строк — несколько интервалов
+      (перерыв). Круглосуточно: <code>круглосуточно</code>. Пусто — нет данных/закрыто. Если конец раньше начала —
+      интервал переходит через полночь.</p>
+    <div class="hours">
+      {% for wd in range(7) %}
+      {% set key = "hours_" ~ wd %}
+      <div class="field{% if errors.get(key) %} error{% endif %}">
+        <label for="{{ key }}">{{ WEEKDAY_LABELS[wd] }}</label>
+        <textarea id="{{ key }}" name="{{ key }}">{{ f.get(key, '') }}</textarea>
+        {% if errors.get(key) %}<span class="err">{{ errors[key] }}</span>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <button type="submit">Сохранить</button>
+</form>
+
+<div class="card" style="margin-top:18px">
+  <h2>Фото</h2>
+  <!-- TODO(Ш-44): загрузка файлов в S3; пока — ключ в хранилище или https-ссылка -->
+  {% if photo_error %}<div class="flash bad">{{ photo_error }}</div>{% endif %}
+  <table>
+    {% for ph in place.photos %}
+    <tr><td>{{ ph.storage_key }}</td><td>{{ ph.source }}</td><td>{{ ph.status }}</td>
+      <td><form class="inline" method="post" action="/admin/places/{{ place.id }}/photos/{{ ph.id }}/delete" data-confirm="Удалить фото?">
+        {{ csrf_field(csrf) }}<button class="danger small" type="submit">Удалить</button></form></td></tr>
+    {% else %}<tr><td class="muted">Фото нет</td></tr>{% endfor %}
+  </table>
+  <form method="post" action="/admin/places/{{ place.id }}/photos" class="toolbar" style="margin-top:12px">
+    {{ csrf_field(csrf) }}
+    <input type="text" name="storage_key" placeholder="storage key или https://… (заглушка до Ш-44)" required>
+    <button type="submit">Добавить</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, csrf_field %}
+{% block title %}Новый маршрут{% endblock %}
+{% block content %}
+<p><a href="/admin/routes">← К маршрутам</a></p>
+<h1>Новый маршрут</h1>
+<form method="post" action="/admin/routes/new" class="card">
+  {{ csrf_field(csrf) }}
+  <div class="grid two">
+    {{ field("title_ru", "Название RU", f, errors, required=True) }}
+    {{ field("title_en", "Название EN", f, errors, required=True) }}
+    {{ textarea("description_ru", "Описание RU", f, errors) }}
+    {{ textarea("description_en", "Описание EN", f, errors) }}
+  </div>
+  <button type="submit">Создать</button>
+  <span class="muted">Места добавляются на следующем шаге.</span>
+</form>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Места{% endblock %}
+{% block content %}
+<h1>Места</h1>
+<form class="toolbar" method="get" action="/admin/places" hx-get="/admin/places" hx-target="#places-results"
+      hx-trigger="input changed delay:300ms from:#q, change from:#category, change from:#status" hx-push-url="true">
+  <input type="search" id="q" name="q" value="{{ q }}" placeholder="Поиск по названию (RU/EN/KK)" autofocus>
+  <select id="category" name="category">
+    <option value="">Все категории</option>
+    {% for c in categories %}<option value="{{ c.id }}"{% if category == c.id|string %} selected{% endif %}>{{ c.name_ru }}</option>{% endfor %}
+  </select>
+  <select id="status" name="status">
+    <option value="">Любой статус</option>
+    {% for s in STATUSES %}<option value="{{ s }}"{% if status_f == s %} selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <button type="submit" class="secondary">Найти</button>
+</form>
+<div id="places-results">{% include "_places_results.html" %}</div>
+{% endblock %}

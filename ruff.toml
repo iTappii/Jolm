@@ -1,0 +1,10 @@
+# Python 3.9 is the runtime available on the dev machine; production target is 3.12 (TECH_PLAN §2).
+target-version = "py39"
+line-length = 100
+extend-exclude = [".venv"]
+
+[lint]
+select = ["E", "F", "I", "B", "W"]
+
+[lint.isort]
+known-first-party = ["app", "migrate"]

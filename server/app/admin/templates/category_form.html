@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, checkbox, csrf_field %}
+{% block title %}Категория {{ row.slug }}{% endblock %}
+{% block content %}
+<p><a href="/admin/categories">← К категориям</a></p>
+<h1>Категория {{ row.slug }}</h1>
+{% if saved %}<div class="flash">Сохранено.</div>{% endif %}
+<form method="post" action="/admin/categories/{{ row.id }}" class="card">
+  {{ csrf_field(csrf) }}
+  <div class="grid">
+    {{ field("name_ru", "Название RU", f, errors, required=True) }}
+    {{ field("name_en", "Название EN", f, errors, required=True) }}
+    {{ field("sort_order", "Порядок сортировки", f, errors) }}
+  </div>
+  {{ checkbox("outdoor", "На улице (страдает от плохой погоды)", f) }}
+  <button type="submit">Сохранить</button>
+</form>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Готовые маршруты{% endblock %}
+{% block content %}
+<h1>Готовые маршруты</h1>
+<p><a class="btn" href="/admin/routes/new">Создать маршрут</a></p>
+<table>
+  <tr><th>Название</th><th>Мест</th><th>Статус</th></tr>
+  {% for r in rows %}
+  <tr><td><a href="/admin/routes/{{ r.id }}">{{ r.title_ru }}</a><div class="muted">{{ r.title_en }}</div></td>
+    <td>{{ r.items }}</td><td><span class="badge {{ r.status }}">{{ r.status }}</span></td></tr>
+  {% else %}<tr><td colspan="3" class="muted">Маршрутов пока нет</td></tr>{% endfor %}
+</table>
+{% endblock %}

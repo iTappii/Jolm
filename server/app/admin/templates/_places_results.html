@@ -1,0 +1,23 @@
+<p class="muted">Найдено: {{ total }}</p>
+<table>
+  <tr><th>Название</th><th>Категория</th><th>Тип</th><th>Статус</th><th>Вход</th><th>Чек</th><th>Ночь</th></tr>
+  {% for p in rows %}
+  <tr>
+    <td><a href="/admin/places/{{ p.id }}">{{ display_name(p) }}</a>
+      {% if p.name_en and p.name_ru %}<div class="muted">{{ p.name_en }}</div>{% endif %}</td>
+    <td>{{ p.category_name or "—" }}</td>
+    <td>{{ p.kind }}</td>
+    <td><span class="badge {{ p.status }}">{{ p.status }}</span></td>
+    <td class="num">{{ kzt(p.entry_price_kzt) }}</td>
+    <td class="num">{{ kzt(p.avg_check_kzt) }}</td>
+    <td class="num">{{ kzt(p.price_per_night_kzt) }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">Ничего не найдено</td></tr>
+  {% endfor %}
+</table>
+<div class="pager">
+  {% if page > 1 %}<a href="/admin/places?q={{ q|urlencode }}&category={{ category|urlencode }}&status={{ status_f|urlencode }}&page={{ page - 1 }}">← Назад</a>{% endif %}
+  <span class="muted">Страница {{ page }} из {{ pages }}</span>
+  {% if page < pages %}<a href="/admin/places?q={{ q|urlencode }}&category={{ category|urlencode }}&status={{ status_f|urlencode }}&page={{ page + 1 }}">Вперёд →</a>{% endif %}
+</div>

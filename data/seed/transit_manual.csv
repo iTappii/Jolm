@@ -1,0 +1,11 @@
+# Hand-entered public transport parameters (TECH_PLAN Ш-21). There is no official GTFS/timetable for Almaty,
+# so every number here is an APPROXIMATE, deliberately conservative estimate; users will refine them (SSOT §10.1).
+# kind: metro|bus|trolleybus|tram. ref: empty = default for the whole kind, otherwise one route number of that kind.
+# avg_headway_min: average wait between vehicles (single value, no peak/off-peak split). speed_kmh: commercial
+# speed incl. stops and traffic. fare_kzt: single-ride fare, informational here, consumed by Ш-22 (transport_tariffs).
+# Metro line 1 runs 06:20-00:00 (OSM opening_hours); real headway is ~5-6 min at peak, ~10 min off-peak.
+kind,ref,avg_headway_min,speed_kmh,fare_kzt,note
+metro,,8,34,100,"conservative single value between peak 5-6 and off-peak 10 min; verify fare"
+bus,,15,16,100,"default when unknown; Almaty buses crawl in traffic; verify fare"
+trolleybus,,15,14,100,"default when unknown; verify fare"
+tram,,20,15,100,"no trams in Almaty since 2015; kept for the schema"

@@ -1,0 +1,5 @@
+# fixture: small curated CSV
+osm_type,osm_id,name_ru,name_en,lat,lon,category,description_ru,description_en,typical_visit_min,entry_price_kzt,avg_check_kzt,setting,is_mountain,elevation_m,is_public,popularity
+node,900001,Медеу,Medeu,43.1578,77.0596,mountain,"Каток, высокогорный",High-altitude rink,120,,,outdoor,1,1691,1,98
+,,Площадь Республики,Republic Square,43.2380,76.9456,landmark,Главная площадь,Main square,30,0,,outdoor,0,,1,95
+,,Кафе без цены,Cafe,43.2500,76.9500,cafe_oriental,,,60,,,indoor,0,,0,10

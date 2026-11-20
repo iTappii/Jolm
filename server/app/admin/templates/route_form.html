@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, textarea, csrf_field %}
+{% block title %}{{ route.title_ru }}{% endblock %}
+{% block content %}
+<p><a href="/admin/routes">← К маршрутам</a></p>
+<h1>{{ route.title_ru }} <span class="badge {{ route.status }}">{{ route.status }}</span></h1>
+{% if saved %}<div class="flash">Сохранено.</div>{% endif %}
+{% if notice %}<div class="flash bad">{{ notice }}</div>{% endif %}
+{% if errors %}<div class="flash bad">Исправьте ошибки в форме.</div>{% endif %}
+
+<form method="post" action="/admin/routes/{{ route.id }}" class="card">
+  {{ csrf_field(csrf) }}
+  <div class="grid two">
+    {{ field("title_ru", "Название RU", f, errors, required=True) }}
+    {{ field("title_en", "Название EN", f, errors, required=True) }}
+    {{ textarea("description_ru", "Описание RU", f, errors) }}
+    {{ textarea("description_en", "Описание EN", f, errors) }}
+  </div>
+  <button type="submit">Сохранить</button>
+</form>
+
+<div class="card">
+  <h2>Места маршрута</h2>
+  <table>
+    {% for it in items %}
+    <tr>
+      <td>{{ it.ord }}</td>
+      <td><a href="/admin/places/{{ it.place_id }}">{{ display_name(it) }}</a></td>
+      <td class="actions">
+        {% for direction, label in (("up", "↑"), ("down", "↓")) %}
+        <form class="inline" method="post" action="/admin/routes/{{ route.id }}/items/{{ it.id }}/move">
+          {{ csrf_field(csrf) }}<input type="hidden" name="direction" value="{{ direction }}">
+          <button class="secondary small" type="submit">{{ label }}</button></form>
+        {% endfor %}
+        <form class="inline" method="post" action="/admin/routes/{{ route.id }}/items/{{ it.id }}/remove">
+          {{ csrf_field(csrf) }}<button class="danger small" type="submit">Убрать</button></form>
+      </td>
+    </tr>
+    {% else %}<tr><td class="muted">Мест пока нет</td></tr>{% endfor %}
+  </table>
+  <h2>Добавить место</h2>
+  <input type="search" name="q" placeholder="Название места" autocomplete="off"
+         hx-get="/admin/routes/{{ route.id }}/place-search" hx-trigger="input changed delay:300ms"
+         hx-target="#route-search-results">
+  <div id="route-search-results"></div>
+</div>
+
+<div class="card actions">
+  {% if route.status == "draft" %}
+  <form class="inline" method="post" action="/admin/routes/{{ route.id }}/status">
+    {{ csrf_field(csrf) }}<input type="hidden" name="status" value="published">
+    <button type="submit">Опубликовать</button></form>
+  {% else %}
+  <form class="inline" method="post" action="/admin/routes/{{ route.id }}/status">
+    {{ csrf_field(csrf) }}<input type="hidden" name="status" value="draft">
+    <button class="secondary" type="submit">Снять с публикации</button></form>
+  {% endif %}
+  <form class="inline" method="post" action="/admin/routes/{{ route.id }}/delete" data-confirm="Удалить маршрут безвозвратно?">
+    {{ csrf_field(csrf) }}<button class="danger" type="submit">Удалить маршрут</button></form>
+</div>
+{% endblock %}

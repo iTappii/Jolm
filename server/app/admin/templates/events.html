@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Мероприятия{% endblock %}
+{% block content %}
+<h1>Мероприятия</h1>
+<p><a class="btn" href="/admin/events/new">Создать мероприятие</a></p>
+<table>
+  <tr><th>Название</th><th>Начало (Алматы)</th><th>Место</th><th>Цена</th><th>Реклама</th></tr>
+  {% for e in rows %}
+  <tr>
+    <td><a href="/admin/events/{{ e.id }}">{{ e.title_ru }}</a></td>
+    <td>{{ e.starts_local.strftime("%d.%m.%Y %H:%M") }}</td>
+    <td>{{ e.place_name_ru or e.place_name_en or "—" }}</td>
+    <td class="num">{{ kzt(e.price_kzt) }}</td>
+    {# OPEN(SSOT §16.9): promo label logic is a placeholder: "Реклама" badge when is_promoted #}
+    <td>{% if e.is_promoted %}<span class="badge promo">Реклама</span> {{ e.sponsor or "" }}{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">Мероприятий пока нет</td></tr>{% endfor %}
+</table>
+{% endblock %}

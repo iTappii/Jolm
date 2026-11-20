@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Обзор</h1>
+<div class="grid">
+  <a class="card" href="/admin/places"><h2>Места</h2><b>{{ counts.places }}</b></a>
+  <a class="card" href="/admin/categories"><h2>Категории</h2><b>{{ counts.categories }}</b></a>
+  <a class="card" href="/admin/routes"><h2>Готовые маршруты</h2><b>{{ counts.routes }}</b></a>
+  <a class="card" href="/admin/events"><h2>Мероприятия</h2><b>{{ counts.events }}</b></a>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% macro field(name, label, f, errors, type="text", hint=None, required=False) %}
+<div class="field{% if errors.get(name) %} error{% endif %}">
+  <label for="{{ name }}">{{ label }}{% if required %} *{% endif %}</label>
+  <input type="{{ type }}" id="{{ name }}" name="{{ name }}" value="{{ f.get(name, '') }}">
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+  {% if errors.get(name) %}<span class="err">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro textarea(name, label, f, errors, hint=None) %}
+<div class="field{% if errors.get(name) %} error{% endif %}">
+  <label for="{{ name }}">{{ label }}</label>
+  <textarea id="{{ name }}" name="{{ name }}">{{ f.get(name, '') }}</textarea>
+  {% if hint %}<span class="hint">{{ hint }}</span>{% endif %}
+  {% if errors.get(name) %}<span class="err">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro select(name, label, f, errors, options, blank=None) %}
+<div class="field{% if errors.get(name) %} error{% endif %}">
+  <label for="{{ name }}">{{ label }}</label>
+  <select id="{{ name }}" name="{{ name }}">
+    {% if blank is not none %}<option value="">{{ blank }}</option>{% endif %}
+    {% for value, text in options %}
+    <option value="{{ value }}"{% if f.get(name, '') == value|string %} selected{% endif %}>{{ text }}</option>
+    {% endfor %}
+  </select>
+  {% if errors.get(name) %}<span class="err">{{ errors[name] }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro checkbox(name, label, f) %}
+<div class="check">
+  <input type="checkbox" id="{{ name }}" name="{{ name }}" value="on"{% if f.get(name) %} checked{% endif %}>
+  <label for="{{ name }}">{{ label }}</label>
+</div>
+{% endmacro %}
+
+{% macro csrf_field(csrf) %}<input type="hidden" name="csrf_token" value="{{ csrf }}">{% endmacro %}

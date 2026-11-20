@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+.swiftpm/
+Pods/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# graphify
+graphify-out/cache/
+
+# Maps
+*.pmtiles
+maps/build/
+
+# Data dumps
+data/*.osm.pbf
+
+# OSM import cache (Geofabrik extract)
+data/osm/cache/

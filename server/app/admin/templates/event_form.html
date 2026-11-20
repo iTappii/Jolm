@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import field, select, checkbox, csrf_field %}
+{% block title %}{{ event.title_ru if event else "Новое мероприятие" }}{% endblock %}
+{% block content %}
+<p><a href="/admin/events">← К мероприятиям</a></p>
+<h1>{{ event.title_ru if event else "Новое мероприятие" }}</h1>
+{% if saved %}<div class="flash">Сохранено.</div>{% endif %}
+{% if errors %}<div class="flash bad">Исправьте ошибки в форме.</div>{% endif %}
+<form method="post" action="{{ '/admin/events/' ~ event.id if event else '/admin/events/new' }}" class="card">
+  {{ csrf_field(csrf) }}
+  <div class="grid two">
+    {{ field("title_ru", "Название RU", f, errors, required=True) }}
+    {{ field("title_en", "Название EN", f, errors) }}
+    {{ field("starts_at", "Начало (время Алматы)", f, errors, type="datetime-local", required=True) }}
+    {{ field("ends_at", "Окончание", f, errors, type="datetime-local") }}
+    {{ field("price_kzt", "Цена, ₸", f, errors) }}
+    {{ select("category_id", "Категория", f, errors, categories|map(attribute="id")|zip(categories|map(attribute="name_ru"))|list, blank="— нет —") }}
+  </div>
+  <div class="field{% if errors.get('place_id') %} error{% endif %}">
+    <label>Место</label>
+    <input type="hidden" id="place_id" name="place_id" value="{{ f.get('place_id', '') }}">
+    <div><b id="place_label">{{ place_label or "не выбрано" }}</b>
+      <button type="button" class="secondary small" data-clear-place>Очистить</button></div>
+    <input type="search" placeholder="Найти место…" autocomplete="off" hx-get="/admin/places/picker"
+           hx-trigger="input changed delay:300ms" hx-target="#place-picker-results" name="q">
+    <div id="place-picker-results"></div>
+    {% if errors.get('place_id') %}<span class="err">{{ errors['place_id'] }}</span>{% endif %}
+  </div>
+  {# OPEN(SSOT §16.9): how promo is labelled to tourists is not decided; for now "Реклама / Ad" #}
+  {{ checkbox("is_promoted", "Продвигаемое мероприятие (метка «Реклама»)", f) }}
+  {{ field("sponsor", "Спонсор / организатор", f, errors) }}
+  <button type="submit">Сохранить</button>
+</form>
+{% if event %}
+<form method="post" action="/admin/events/{{ event.id }}/delete" data-confirm="Удалить мероприятие?">
+  {{ csrf_field(csrf) }}<button class="danger" type="submit">Удалить</button></form>
+{% endif %}
+{% endblock %}

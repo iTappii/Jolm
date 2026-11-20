@@ -1,0 +1,1 @@
+HEALTH = "SELECT 1 AS ok"

@@ -1,0 +1,9 @@
+{% if rows %}
+<ul class="pick-list">
+  {% for p in rows %}
+  <li><span>{{ display_name(p) }} <span class="muted">{{ p.category_name or "" }}</span></span>
+    <button type="button" class="small" data-pick-place data-place-id="{{ p.id }}"
+            data-place-name="{{ display_name(p) }}">Выбрать</button></li>
+  {% endfor %}
+</ul>
+{% elif q %}<p class="muted">Ничего не найдено</p>{% endif %}

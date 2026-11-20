@@ -1,0 +1,19 @@
+{
+  "version": 8,
+  "name": "Jol placeholder (MapLibre demotiles)",
+  "sources": {
+    "demotiles": {
+      "type": "vector",
+      "url": "https://demotiles.maplibre.org/tiles/tiles.json",
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#f4f1ea" } },
+    { "id": "countries-fill", "type": "fill", "source": "demotiles", "source-layer": "countries",
+      "paint": { "fill-color": "#e6e0d4", "fill-outline-color": "#9a9a9a" } },
+    { "id": "countries-boundary", "type": "line", "source": "demotiles", "source-layer": "countries",
+      "paint": { "line-color": "#FF7A00", "line-width": 1 } }
+  ]
+}

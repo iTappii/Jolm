@@ -1,0 +1,23 @@
+included:
+  - Jol
+  - JolTests
+  - JolUITests
+excluded:
+  - build
+  - DerivedData
+disabled_rules:
+  - trailing_comma
+opt_in_rules:
+  - empty_count
+  - closure_spacing
+  - explicit_init
+  - sorted_imports
+line_length:
+  warning: 120
+  error: 160
+file_length:
+  warning: 500
+function_body_length:
+  warning: 60
+identifier_name:
+  min_length: 2

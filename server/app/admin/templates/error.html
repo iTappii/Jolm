@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}Ошибка {{ status }}{% endblock %}
+{% block content %}
+<div class="card"><h1>Ошибка {{ status }}</h1><p>{{ message }}</p><p><a href="/admin">В админку</a></p></div>
+{% endblock %}

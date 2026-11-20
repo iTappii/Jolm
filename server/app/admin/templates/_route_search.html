@@ -1,0 +1,11 @@
+{% if rows %}
+<ul class="pick-list">
+  {% for p in rows %}
+  <li><span>{{ display_name(p) }} <span class="muted">{{ p.category_name or "" }}</span></span>
+    <form class="inline" method="post" action="/admin/routes/{{ route_id }}/places">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="place_id" value="{{ p.id }}">
+      <button class="small" type="submit">Добавить</button></form></li>
+  {% endfor %}
+</ul>
+{% elif q %}<p class="muted">Ничего не найдено</p>{% endif %}

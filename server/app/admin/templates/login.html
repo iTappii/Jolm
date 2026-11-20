@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<div class="card login">
+  <h1>Jol · админка</h1>
+  {% if error %}<div class="flash bad">{{ error }}</div>{% endif %}
+  <form method="post" action="/admin/login">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <div class="field"><label for="email">E-mail</label>
+      <input type="email" id="email" name="email" value="{{ email }}" autocomplete="username" required autofocus></div>
+    <div class="field"><label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required></div>
+    <button type="submit">Войти</button>
+  </form>
+</div>
+{% endblock %}

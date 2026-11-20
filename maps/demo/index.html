@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jol map demo</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  html, body, #map { margin: 0; height: 100%; }
+  #bar { position: absolute; z-index: 1; top: 10px; left: 10px; background: #000; color: #fff;
+         font: 13px system-ui, sans-serif; padding: 8px 10px; border-radius: 8px; display: flex; gap: 10px; }
+  #bar select { font: inherit; }
+  #bar b { color: #FF7A00; }
+</style>
+</head>
+<body>
+<div id="bar"><b>Jol</b>
+  <label>theme <select id="theme"><option>light</option><option>dark</option></select></label>
+  <label>labels <select id="lang"><option>ru</option><option>en</option></select></label>
+</div>
+<div id="map"></div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
+<script>
+  // Serve maps/ with Range support:  python3 maps/serve.py  ->  http://localhost:8080/demo/
+  const q = new URLSearchParams(location.search);
+  const tilesUrl = q.get("pmtiles") || new URL("../build/almaty.pmtiles", location.href).href;
+  maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
+
+  async function load(theme, lang) {
+    const file = lang === "ru" ? `jol-${theme}.json` : `jol-${theme}.${lang}.json`;
+    const style = await (await fetch(new URL("../style/" + file, location.href))).json();
+    style.sources.openmaptiles.url = "pmtiles://" + tilesUrl;   // placeholder -> local file
+    return style;
+  }
+  const theme = document.getElementById("theme"), lang = document.getElementById("lang");
+  const map = new maplibregl.Map({ container: "map", style: { version: 8, sources: {}, layers: [] },
+                                   center: [76.945, 43.238], zoom: 11 });
+  map.addControl(new maplibregl.NavigationControl());
+  const reload = async () => map.setStyle(await load(theme.value, lang.value));
+  theme.onchange = lang.onchange = reload;
+  map.on("error", e => console.error("map error", e.error && e.error.message));
+  reload();
+  window.jolMap = map;
+</script>
+</body>
+</html>

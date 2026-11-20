@@ -1,0 +1,4 @@
+// Map style URL. Empty value -> bundled placeholder style (Jol/Resources/placeholder-style.json).
+// Note: in xcconfig "//" starts a comment, so write URLs with the slashes split via $() :
+//   JOL_MAP_STYLE_URL = https:/$()/example.com/style.json
+JOL_MAP_STYLE_URL =

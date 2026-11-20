@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Категории{% endblock %}
+{% block content %}
+<h1>Категории</h1>
+<table>
+  <tr><th>Порядок</th><th>Slug</th><th>RU</th><th>EN</th><th>На улице</th><th>Родитель</th><th>Мест</th></tr>
+  {% for c in rows %}
+  <tr>
+    <td>{{ c.sort_order }}</td>
+    <td><a href="/admin/categories/{{ c.id }}">{{ c.slug }}</a></td>
+    <td>{{ c.name_ru }}</td><td>{{ c.name_en }}</td>
+    <td>{{ "да" if c.outdoor else "нет" }}</td>
+    <td>{{ c.parent_name or "—" }}</td>
+    <td>{{ c.places }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

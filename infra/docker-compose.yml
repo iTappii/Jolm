@@ -1,0 +1,50 @@
+name: jol
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64  # image has no arm64 build; runs under emulation on Apple Silicon
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jol}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jol_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-jol}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jol} -d ${POSTGRES_DB:-jol}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # Routing engine (Ш-20). Optional: `make up` starts only postgres; use `make valhalla-up`.
+  # Tiles are built once from the whole-Kazakhstan extract (kept whole so intercity routing
+  # works later) into the named volume `valhalla_data`; the PBF is mounted read-only.
+  # Image is pinned by exact tag (multi-arch: native arm64 on Apple Silicon).
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:3.9.3
+    profiles: ["valhalla"]
+    ports:
+      - "127.0.0.1:${VALHALLA_PORT:-8002}:8002"
+    volumes:
+      - valhalla_data:/custom_files
+      - ../data/osm/cache/kazakhstan.osm.pbf:/custom_files/kazakhstan.osm.pbf:ro
+    environment:
+      serve_tiles: "True"
+      build_tar: "True"          # tiles packed into one mmap-able tar (fast start, lower RAM)
+      build_admins: "True"
+      build_time_zones: "False"  # would download a DB from GitHub; not needed for routing
+      build_elevation: "False"
+      use_default_speeds_config: "False"
+      server_threads: "${VALHALLA_THREADS:-4}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8002/status || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 240
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  valhalla_data:

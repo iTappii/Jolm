@@ -1,0 +1,396 @@
+"""Import Almaty public transport from OpenStreetMap into transit_* tables (TECH_PLAN Ш-21).
+
+Usage:
+    python data/osm/import_transit.py [--pbf PATH] [--seed PATH] [--dry-run]
+
+Source: data/osm/cache/kazakhstan.osm.pbf (`make osm-pbf`), route relations with
+route=subway|bus|trolleybus|tram inside the Almaty bbox. One relation = one direction (or a loop);
+its ordered stop members (roles stop/platform and variants) become transit_route_stops.
+Headways/speeds come from data/seed/transit_manual.csv (approximate, see that file).
+
+Assumptions (documented, not hidden):
+  * OSM member order of stops is the travel order. Mis-ordered relations give wrong rides; the
+    community can fix them in OSM, or by hand through manual_override.
+  * Stops are node members only; platform *ways* are skipped (counted in the report).
+  * Per relation, if both stop_position and platform members exist, the class with more members is
+    the sequence and the other class is folded into it (same station, <=80 m, compatible name).
+    Metro stations of opposite directions (different nodes, same name, <=200 m) become one stop.
+    Bus stops on opposite sides of a road stay separate stops (directions differ).
+  * A relation with fewer than 2 stops inside the bbox is skipped; stops outside the bbox are
+    dropped, so a route leaving the city is cut at the bbox edge.
+  * Re-import is idempotent; fields named in manual_override are kept. OSM routes that vanished
+    from the extract (and carry no manual edits) are deleted, together with their orphan stops.
+
+Attribution: map data (c) OpenStreetMap contributors, ODbL.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import math
+import re
+import sys
+from collections import Counter
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+
+from import_places import BBOX, database_url, find_pbf, in_bbox  # noqa: E402
+
+ROUTE_KINDS = {"subway": "metro", "bus": "bus", "trolleybus": "trolleybus", "tram": "tram"}
+KIND_PRIORITY = ["metro", "tram", "trolleybus", "bus"]
+DEFAULT_SEED = HERE.parent / "seed" / "transit_manual.csv"
+FOLD_RADIUS_M = 80.0
+METRO_MERGE_RADIUS_M = 200.0
+KAZAKH_LETTERS = set("әіңғүұқөһӘІҢҒҮҰҚӨҺ")
+
+NODE_TAG_KEYS = ("name", "name:ru", "name:en", "name:kk", "public_transport", "highway", "railway")
+
+
+def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    h = (
+        math.sin((p2 - p1) / 2) ** 2
+        + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    )
+    return 2 * 6371008.8 * math.asin(math.sqrt(h))
+
+
+def norm_name(name: Optional[str]) -> str:
+    return re.sub(r"[^\w]+", "", (name or "").lower())
+
+
+def stop_role_class(role: str, tags: Optional[dict]) -> Optional[str]:
+    """'stop' | 'platform' | None for a node member of a route relation."""
+    r = role.lower()
+    if "platform" in r:
+        return "platform"
+    if "stop" in r or r == "station":
+        return "stop"
+    if r == "" and tags:
+        if tags.get("highway") == "bus_stop" or tags.get("public_transport") == "platform":
+            return "platform"
+        if tags.get("public_transport") in ("stop_position", "station") or tags.get("railway") in (
+            "stop",
+            "station",
+        ):
+            return "stop"
+    return None
+
+
+def localized_names(tags: dict) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    name, kk = tags.get("name"), tags.get("name:kk")
+    ru = tags.get("name:ru")
+    if ru is None and name and name != kk and not (set(name) & KAZAKH_LETTERS):
+        ru = name
+    if kk is None and name and (set(name) & KAZAKH_LETTERS):
+        kk = name
+    return ru, tags.get("name:en"), kk
+
+
+# --- extraction (pyosmium) ------------------------------------------------------------------
+
+
+def extract(path: str):
+    """Return (relations, nodes). relations: id -> {kind, tags, members[(type, ref, role)]}."""
+    import osmium
+
+    relations: Dict[int, dict] = {}
+    for rel in osmium.FileProcessor(str(path), osmium.osm.RELATION):
+        t = rel.tags
+        if t.get("type") != "route" or t.get("route") not in ROUTE_KINDS:
+            continue
+        relations[rel.id] = {
+            "kind": ROUTE_KINDS[t["route"]],
+            "tags": {k: t.get(k) for k in ("ref", "name", "name:ru", "name:en", "name:kk")},
+            "members": [(m.type, m.ref, m.role) for m in rel.members],
+        }
+    needed = {ref for r in relations.values() for ty, ref, _ in r["members"] if ty == "n"}
+    nodes: Dict[int, dict] = {}
+    for n in osmium.FileProcessor(str(path), osmium.osm.NODE):
+        if n.id in needed and n.location.valid():
+            nodes[n.id] = {
+                "lon": n.location.lon,
+                "lat": n.location.lat,
+                "tags": {k: n.tags.get(k) for k in NODE_TAG_KEYS if n.tags.get(k) is not None},
+            }
+    return relations, nodes
+
+
+# --- pure transformation ----------------------------------------------------------------------
+
+
+def relation_sequence(rel: dict, nodes: dict, bbox, stats: Counter):
+    """Ordered node ids of a relation (one class) + alias map {folded_node: node}."""
+    members = []
+    for ty, ref, role in rel["members"]:
+        if ty == "w" and ("stop" in role.lower() or "platform" in role.lower()):
+            stats["way_stop_members_skipped"] += 1
+            continue
+        if ty != "n" or ref not in nodes:
+            continue
+        n = nodes[ref]
+        cls = stop_role_class(role, n["tags"])
+        if cls is None or not in_bbox(n["lon"], n["lat"], bbox):
+            continue
+        members.append((ref, cls))
+    n_plat = sum(1 for _, c in members if c == "platform")
+    main = "platform" if n_plat >= len(members) - n_plat else "stop"
+    seq = [ref for ref, c in members if c == main]
+    aliases: Dict[int, int] = {}
+    for ref, c in members:
+        if c == main:
+            continue
+        n = nodes[ref]
+        best, best_d = None, FOLD_RADIUS_M
+        for cand in seq:
+            m = nodes[cand]
+            a, b = norm_name(n["tags"].get("name")), norm_name(m["tags"].get("name"))
+            if a and b and a != b:
+                continue
+            d = haversine_m(n["lat"], n["lon"], m["lat"], m["lon"])
+            if d <= best_d:
+                best, best_d = cand, d
+        if best is not None and best != ref:
+            aliases[ref] = best
+            stats["stop_platform_folded"] += 1
+        else:
+            stats["unmatched_other_class_dropped"] += 1
+    return seq, aliases
+
+
+def build_network(relations: dict, nodes: dict, bbox=BBOX):
+    """-> (stops, routes, stats). stops: node_id -> dict; routes: list of dicts with 'stop_nodes'."""
+    stats: Counter = Counter()
+    stats["relations_total"] = len(relations)
+    alias: Dict[int, int] = {}
+    raw_routes = []
+    for rid, rel in sorted(relations.items()):
+        seq, al = relation_sequence(rel, nodes, bbox, stats)
+        if not seq:
+            stats["relations_outside_bbox_or_no_stops"] += 1
+            continue
+        if len(seq) < 2:
+            stats["routes_skipped_lt2_stops"] += 1
+            continue
+        for k, v in al.items():
+            alias.setdefault(k, v)
+        raw_routes.append((rid, rel, seq))
+
+    # metro: one station per name (opposite directions use different nodes)
+    metro_nodes = sorted({n for _, rel, seq in raw_routes if rel["kind"] == "metro" for n in seq})
+    reps: List[int] = []
+    for n in metro_nodes:
+        nn = nodes[n]
+        key = norm_name(nn["tags"].get("name"))
+        for r in reps:
+            rr = nodes[r]
+            if (
+                key
+                and key == norm_name(rr["tags"].get("name"))
+                and haversine_m(nn["lat"], nn["lon"], rr["lat"], rr["lon"]) <= METRO_MERGE_RADIUS_M
+            ):
+                alias.setdefault(n, r)
+                stats["metro_directions_merged"] += 1
+                break
+        else:
+            reps.append(n)
+
+    def resolve(n: int) -> int:
+        for _ in range(4):
+            if n in alias and alias[n] != n:
+                n = alias[n]
+            else:
+                break
+        return n
+
+    routes = []
+    stop_kinds: Dict[int, set] = {}
+    for rid, rel, seq in raw_routes:
+        out: List[int] = []
+        for n in seq:
+            n = resolve(n)
+            if not out or out[-1] != n:
+                out.append(n)
+        if len(out) < 2:
+            stats["routes_skipped_lt2_stops"] += 1
+            continue
+        for n in out:
+            stop_kinds.setdefault(n, set()).add(rel["kind"])
+        routes.append(
+            {"relation_id": rid, "kind": rel["kind"], "tags": rel["tags"], "stop_nodes": out}
+        )
+        stats["routes_" + rel["kind"]] += 1
+
+    twins: Dict[int, List[int]] = {}
+    for k in alias:
+        twins.setdefault(resolve(k), []).append(k)
+    stops: Dict[int, dict] = {}
+    for n, kinds in stop_kinds.items():
+        nn = nodes[n]
+        tags = dict(nn["tags"])
+        if not tags.get("name"):  # borrow a name from a folded twin
+            for k in twins.get(n, []):
+                if nodes.get(k, {}).get("tags", {}).get("name"):
+                    tags = dict(nodes[k]["tags"])
+                    break
+        ru, en, kk = localized_names(tags)
+        stops[n] = {
+            "osm_id": n,
+            "lat": nn["lat"],
+            "lon": nn["lon"],
+            "name_ru": ru,
+            "name_en": en,
+            "name_kk": kk,
+            "kind": next(k for k in KIND_PRIORITY if k in kinds),
+        }
+        if not (ru or en or kk):
+            stats["stops_unnamed"] += 1
+    return stops, routes, stats
+
+
+def load_seed(path: Path) -> Dict[Tuple[str, str], dict]:
+    with open(path, encoding="utf-8", newline="") as f:
+        lines = [ln for ln in f if ln.strip() and not ln.lstrip().startswith("#")]
+    seed: Dict[Tuple[str, str], dict] = {}
+    for row in csv.DictReader(lines):
+        kind = row["kind"].strip()
+        if kind not in KIND_PRIORITY:
+            raise SystemExit(f"bad kind in seed: {kind!r}")
+        seed[(kind, (row["ref"] or "").strip())] = {
+            "avg_headway_min": float(row["avg_headway_min"]),
+            "speed_kmh": float(row["speed_kmh"]),
+            "fare_kzt": int(row["fare_kzt"]) if row.get("fare_kzt") else None,
+        }
+    for kind in KIND_PRIORITY:
+        if (kind, "") not in seed:
+            raise SystemExit(f"seed has no default row for kind {kind!r}")
+    return seed
+
+
+def seed_for(seed: dict, kind: str, ref: Optional[str]) -> dict:
+    return seed.get((kind, ref or "")) or seed[(kind, "")]
+
+
+# --- database (raw parameterized SQL, no ORM) -------------------------------------------------
+
+UPSERT_STOP = """
+INSERT INTO transit_stops (osm_type, osm_id, kind, name_ru, name_en, name_kk, geom)
+VALUES ('node', %(osm_id)s, %(kind)s, %(name_ru)s, %(name_en)s, %(name_kk)s,
+        ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography)
+ON CONFLICT (osm_type, osm_id) DO UPDATE SET
+    kind    = CASE WHEN transit_stops.manual_override @> '"kind"'::jsonb
+                   THEN transit_stops.kind ELSE EXCLUDED.kind END,
+    name_ru = CASE WHEN transit_stops.manual_override @> '"name_ru"'::jsonb
+                   THEN transit_stops.name_ru ELSE EXCLUDED.name_ru END,
+    name_en = CASE WHEN transit_stops.manual_override @> '"name_en"'::jsonb
+                   THEN transit_stops.name_en ELSE EXCLUDED.name_en END,
+    name_kk = CASE WHEN transit_stops.manual_override @> '"name_kk"'::jsonb
+                   THEN transit_stops.name_kk ELSE EXCLUDED.name_kk END,
+    geom    = CASE WHEN transit_stops.manual_override @> '"geom"'::jsonb
+                   THEN transit_stops.geom ELSE EXCLUDED.geom END,
+    updated_at = now()
+RETURNING id, (xmax = 0) AS inserted
+"""
+
+UPSERT_ROUTE = """
+INSERT INTO transit_routes (osm_relation_id, kind, ref, name_ru, name_en, avg_headway_min, speed_kmh)
+VALUES (%(relation_id)s, %(kind)s, %(ref)s, %(name_ru)s, %(name_en)s, %(headway)s, %(speed)s)
+ON CONFLICT (osm_relation_id) DO UPDATE SET
+    kind     = CASE WHEN transit_routes.manual_override @> '"kind"'::jsonb
+                    THEN transit_routes.kind ELSE EXCLUDED.kind END,
+    ref      = CASE WHEN transit_routes.manual_override @> '"ref"'::jsonb
+                    THEN transit_routes.ref ELSE EXCLUDED.ref END,
+    name_ru  = CASE WHEN transit_routes.manual_override @> '"name_ru"'::jsonb
+                    THEN transit_routes.name_ru ELSE EXCLUDED.name_ru END,
+    name_en  = CASE WHEN transit_routes.manual_override @> '"name_en"'::jsonb
+                    THEN transit_routes.name_en ELSE EXCLUDED.name_en END,
+    avg_headway_min = CASE WHEN transit_routes.manual_override @> '"avg_headway_min"'::jsonb
+                    THEN transit_routes.avg_headway_min ELSE EXCLUDED.avg_headway_min END,
+    speed_kmh = CASE WHEN transit_routes.manual_override @> '"speed_kmh"'::jsonb
+                    THEN transit_routes.speed_kmh ELSE EXCLUDED.speed_kmh END,
+    updated_at = now()
+RETURNING id, (xmax = 0) AS inserted, manual_override
+"""
+
+DELETE_ROUTE_STOPS = "DELETE FROM transit_route_stops WHERE route_id = %s"
+INSERT_ROUTE_STOP = "INSERT INTO transit_route_stops (route_id, stop_id, ord) VALUES (%s, %s, %s)"
+DELETE_STALE_ROUTES = """
+DELETE FROM transit_routes
+WHERE osm_relation_id IS NOT NULL AND NOT (osm_relation_id = ANY(%s))
+  AND manual_override = '[]'::jsonb
+"""
+DELETE_ORPHAN_STOPS = """
+DELETE FROM transit_stops s
+WHERE s.osm_id IS NOT NULL AND s.manual_override = '[]'::jsonb
+  AND NOT EXISTS (SELECT 1 FROM transit_route_stops rs WHERE rs.stop_id = s.id)
+"""
+
+
+def write_db(conn, stops: dict, routes: list, seed: dict) -> Counter:
+    """Idempotent upsert inside the caller's transaction. Returns counters."""
+    c: Counter = Counter()
+    ids: Dict[int, object] = {}
+    for n, s in stops.items():
+        row = conn.execute(UPSERT_STOP, s).fetchone()
+        ids[n] = row[0]
+        c["stops_inserted" if row[1] else "stops_updated"] += 1
+    for r in routes:
+        t = r["tags"]
+        ref = (t.get("ref") or "").strip() or None
+        name_ru, name_en, _ = localized_names(t)
+        params = seed_for(seed, r["kind"], ref)
+        row = conn.execute(
+            UPSERT_ROUTE,
+            {
+                "relation_id": r["relation_id"],
+                "kind": r["kind"],
+                "ref": ref,
+                "name_ru": name_ru,
+                "name_en": name_en,
+                "headway": params["avg_headway_min"],
+                "speed": params["speed_kmh"],
+            },
+        ).fetchone()
+        c["routes_inserted" if row[1] else "routes_updated"] += 1
+        if "stops" in row[2]:
+            continue
+        conn.execute(DELETE_ROUTE_STOPS, (row[0],))
+        for i, n in enumerate(r["stop_nodes"]):
+            conn.execute(INSERT_ROUTE_STOP, (row[0], ids[n], i))
+    if routes:  # never wipe the network because of an empty/broken extract
+        keep = [r["relation_id"] for r in routes]
+        c["routes_deleted_stale"] = conn.execute(DELETE_STALE_ROUTES, (keep,)).rowcount
+        c["stops_deleted_orphan"] = conn.execute(DELETE_ORPHAN_STOPS).rowcount
+    return c
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--pbf", help="path to kazakhstan .osm.pbf")
+    ap.add_argument("--seed", default=str(DEFAULT_SEED))
+    ap.add_argument("--dry-run", action="store_true", help="parse and report, write nothing")
+    args = ap.parse_args(argv)
+
+    seed = load_seed(Path(args.seed))
+    pbf = find_pbf(args.pbf)
+    print(f"reading {pbf} (bbox {BBOX})", flush=True)
+    relations, nodes = extract(str(pbf))
+    stops, routes, stats = build_network(relations, nodes)
+    if not args.dry_run:
+        import psycopg
+
+        with psycopg.connect(database_url()) as conn:
+            with conn.transaction():
+                stats.update(write_db(conn, stops, routes, seed))
+    print(f"routes imported: {len(routes)}  stops: {len(stops)}" + ("  (dry run)" if args.dry_run else ""))
+    for k in sorted(stats):
+        print(f"  {k}: {stats[k]}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
