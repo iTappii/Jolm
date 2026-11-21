@@ -42,13 +42,16 @@ async def expire_stale(conn, trip_id: UUID, version: int) -> None:
     )
 
 
-async def already_proposed(conn, trip_id: UUID, place_id: UUID, day: date) -> bool:
-    """A proposal (pending, accepted or declined) for this stop on this day exists: do not nag."""
+async def already_proposed(
+    conn, trip_id: UUID, place_id: UUID, day: date, ignore: Optional[List[UUID]] = None
+) -> bool:
+    """A proposal (pending, accepted or declined) for this stop on this day exists: do not nag.
+    `ignore` = proposals about to be expired by the caller (still pending in the database)."""
     row = await fetch_one(
         conn,
         "SELECT 1 AS ok FROM trip_change_proposals WHERE trip_id = %s AND place_id = %s "
-        "AND day = %s AND status <> 'expired' LIMIT 1",
-        (trip_id, place_id, day),
+        "AND day = %s AND status <> 'expired' AND NOT (id = ANY(%s)) LIMIT 1",
+        (trip_id, place_id, day, list(ignore or [])),
     )
     return row is not None
 

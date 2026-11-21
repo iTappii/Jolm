@@ -89,7 +89,10 @@ def committed_auth_db_url(test_db_url):
 @pytest.fixture
 def scratch_db_url() -> str:
     """Empty database for migration-runner tests."""
-    return recreate_database(get_settings().test_database_url, "jol_migrate_scratch")
+    base = get_settings().test_database_url
+    # named after the test DB, so two runs against different test DBs never drop each other's
+    name = conninfo_to_dict(base)["dbname"].rsplit("_test", 1)[0] + "_migrate_scratch"
+    return recreate_database(base, name)
 
 
 @pytest.fixture

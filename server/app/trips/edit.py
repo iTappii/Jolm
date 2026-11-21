@@ -84,6 +84,7 @@ async def recompute_budget(
     legs = await store.main_legs(conn, trip["id"])
     stored = dict(trip["budget"] or {})
     entries = meals = meals_assumed = entries_unknown = must_cost = 0
+    hours_assumed = {row["place_id"] for row in items if row["hours_assumed"]}
     for row in items:
         meal = row["kind"] == "meal" or "food" in (row["category"], row["parent_category"])
         if meal:
@@ -128,6 +129,8 @@ async def recompute_budget(
     _set_warning(warnings, "over_budget", str(shortfall) if shortfall else None)
     _set_warning(warnings, "must_haves_exceed_budget", str(floor) if floor > budget_kzt else None)
     _set_warning(warnings, "meal_prices_assumed", str(meals_assumed) if meals_assumed else None)
+    # same count as the layout's warning (places without opening hours), after every edit
+    _set_warning(warnings, "hours_assumed", str(len(hours_assumed)) if hours_assumed else None)
     return stored, total
 
 
