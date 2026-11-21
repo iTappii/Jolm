@@ -83,6 +83,16 @@
         }
       }
     },
+    "1 bonus ≈ 1 ₸" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 бонус ≈ 1 ₸"
+          }
+        }
+      }
+    },
     "2GIS" : {
       "localizations" : {
         "ru" : {
@@ -229,6 +239,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "По отчётам посетителей: %lld"
+          }
+        }
+      }
+    },
+    "Bonus" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бонус"
+          }
+        }
+      }
+    },
+    "Bonuses" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бонусы"
           }
         }
       }
@@ -653,6 +683,16 @@
         }
       }
     },
+    "Couldn't load your bonuses." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить бонусы."
+          }
+        }
+      }
+    },
     "Couldn't open the route" : {
       "localizations" : {
         "ru" : {
@@ -933,6 +973,16 @@
         }
       }
     },
+    "Entry price" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цена входа"
+          }
+        }
+      }
+    },
     "Estimated cost" : {
       "localizations" : {
         "ru" : {
@@ -1183,6 +1233,16 @@
         }
       }
     },
+    "History" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "История"
+          }
+        }
+      }
+    },
     "How crowded is it right now?" : {
       "localizations" : {
         "ru" : {
@@ -1333,6 +1393,16 @@
         }
       }
     },
+    "Menu" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Меню"
+          }
+        }
+      }
+    },
     "Message" : {
       "localizations" : {
         "ru" : {
@@ -1449,6 +1519,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Новый чат"
+          }
+        }
+      }
+    },
+    "No bonuses yet. They are paid after a moderator approves your reviews, photos and data." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бонусов пока нет. Их начисляют после того, как модератор одобрит ваши отзывы, фото и данные."
           }
         }
       }
@@ -1773,6 +1853,16 @@
         }
       }
     },
+    "Photo" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фото"
+          }
+        }
+      }
+    },
     "Photos" : {
       "localizations" : {
         "ru" : {
@@ -1949,6 +2039,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Повторить"
+          }
+        }
+      }
+    },
+    "Review" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отзыв"
           }
         }
       }
@@ -2229,6 +2329,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Что-то пошло не так. Повторите."
+          }
+        }
+      }
+    },
+    "Spending bonuses: coming soon" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Траты бонусов: скоро"
           }
         }
       }
@@ -2519,6 +2629,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Транспорт"
+          }
+        }
+      }
+    },
+    "Transport data" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Данные о транспорте"
           }
         }
       }

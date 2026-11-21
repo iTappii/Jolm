@@ -60,6 +60,10 @@ final class AppContainer {
         self.bookings = BookingModel(api: self.api)
     }
 
+    func makeBonusModel() -> BonusModel {
+        BonusModel(api: api, auth: auth)
+    }
+
     func makeProfileModel() -> ProfileModel {
         ProfileModel(service: AuthService(api: api, tokens: tokens), auth: auth)
     }

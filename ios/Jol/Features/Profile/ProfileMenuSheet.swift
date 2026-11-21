@@ -6,7 +6,7 @@ struct ProfileMenuSheet: View {
     @Environment(AppContainer.self) private var container
 
     var body: some View {
-        ProfileMenuContent(model: container.makeProfileModel())
+        ProfileMenuContent(model: container.makeProfileModel(), bonuses: container.makeBonusModel())
     }
 }
 
@@ -14,16 +14,19 @@ private struct ProfileMenuContent: View {
     @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
     @State private var model: ProfileModel
+    @State private var bonuses: BonusModel
     @State private var confirmDelete = false
 
-    init(model: ProfileModel) {
+    init(model: ProfileModel, bonuses: BonusModel) {
         _model = State(initialValue: model)
+        _bonuses = State(initialValue: bonuses)
     }
 
     var body: some View {
         NavigationStack {
             List {
                 accountSection
+                if container.auth.isSignedIn { bonusSection }
                 Section {
                     NavigationLink { SettingsScreen() } label: {
                         Label("Settings", systemImage: "gearshape")
@@ -65,6 +68,7 @@ private struct ProfileMenuContent: View {
             }
         }
         .task { await model.load() }
+        .task { await bonuses.load() }
         .confirmationDialog("Delete account?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete account", role: .destructive) {
                 Task { if await model.deleteAccount() { dismiss() } }
@@ -117,6 +121,23 @@ private struct ProfileMenuContent: View {
                 }
                 .accessibilityIdentifier("profile-sign-in")
             }
+        }
+    }
+
+    /// Bonus balance (SSOT §10.3); guests have no bonus account, so no row.
+    private var bonusSection: some View {
+        Section {
+            NavigationLink { BonusScreen(model: bonuses) } label: {
+                LabeledContent {
+                    if let balance = bonuses.balance {
+                        Text(verbatim: balance.formatted(.number.locale(container.language.locale)))
+                            .accessibilityIdentifier("profile-bonus-balance")
+                    }
+                } label: {
+                    Label("Bonuses", systemImage: "gift")
+                }
+            }
+            .accessibilityIdentifier("profile-bonuses")
         }
     }
 
