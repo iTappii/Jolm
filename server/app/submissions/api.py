@@ -28,7 +28,7 @@ from app.auth.api import bearer_token
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.providers.storage import StorageProvider, make_storage
-from app.submissions import service
+from app.submissions import bonuses, service
 from app.submissions.schemas import SubmissionIn, UploadIn
 
 log = logging.getLogger("app.submissions")
@@ -126,3 +126,22 @@ async def place_reviews(
         if not await service.place_exists(conn, place_id):
             raise AppError(404, "not_found")
         return await service.list_reviews(conn, place_id, limit, cursor)
+
+
+@router.get("/me/bonuses")
+async def my_bonuses(
+    request: Request,
+    response: Response,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: Optional[str] = Query(None, max_length=200),
+):
+    """Balance and history: {"balance", "tenge_per_bonus", "items": [{"id", "amount", "kind",
+    "submission_id", "submission_type", "created_at"}], "next_cursor"} (Ш-46, SSOT §10.3).
+
+    Bonuses are paid after a moderator approves a submission; spending is not available yet.
+    """
+    access = bearer_token(request)
+    response.headers["Cache-Control"] = "no-store"
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        return await bonuses.summary(conn, user["id"], limit, cursor)

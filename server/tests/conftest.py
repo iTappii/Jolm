@@ -42,6 +42,7 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "bonus_ledger",  # Ш-46: the bonus ledger hangs off users and submissions
     "submissions",  # Ш-44: user content hangs off users and places
     "uploads",
     "push_notifications",  # Ш-40: the push outbox, trip day notices and proposals hang off users

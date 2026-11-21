@@ -99,6 +99,7 @@ SCHEDULES: List[Schedule] = [
     Schedule("weather.scan", interval_sec=3600),  # Ш-40: trips due for a forecast re-check
     Schedule("mountain.scan", interval_sec=900),  # Ш-40: mountain mornings (SSOT §7.2)
     Schedule("memory.scan", interval_sec=3600),  # Ш-41: idle chats -> memory notes
+    Schedule("retention.cleanup", interval_sec=3600),  # Ш-44 review: stale upload slots, tokens
 ]
 
 
@@ -124,6 +125,43 @@ async def enqueue_due_schedules(
 @register("jobs.cleanup")
 async def _cleanup_done_jobs(conn: AsyncConnection, payload: dict) -> None:
     await execute(conn, sql.CLEANUP_DONE, (int(payload.get("keep_days", 14)),))
+
+
+RETIRED_TOKEN_KEEP_DAYS = 60  # = the refresh-token lifetime (app/auth/sessions.py)
+UPLOAD_CLEANUP_BATCH = 500
+
+
+@register("retention.cleanup")
+async def _retention_cleanup(conn: AsyncConnection, payload: dict) -> None:
+    """Drop expired, never-attached upload slots (and queue deletion of their files) and retired
+    refresh-token hashes older than the refresh lifetime (they can no longer be told from garbage).
+
+    Slots with status `used` stay: the submission points at the file. `rejected` ones already had
+    a `storage.delete` queued; the same dedupe key makes the repeat harmless. The delete is a
+    separate job, so a storage outage never blocks this one and a file is never forgotten: the
+    slot row and the delete job commit together. Runs in batches per call; the hourly schedule
+    catches up with any backlog."""
+    rows = await fetch_all(
+        conn,
+        "SELECT id, storage_key FROM uploads WHERE status <> 'used' AND expires_at < now()"
+        " ORDER BY expires_at LIMIT %s FOR UPDATE SKIP LOCKED",
+        (UPLOAD_CLEANUP_BATCH,),
+    )
+    if rows:
+        keys = [r["storage_key"] for r in rows]
+        await enqueue(
+            conn,
+            "storage.delete",
+            {"keys": keys},
+            dedupe_key="storage.delete:cleanup:%s" % rows[0]["id"],
+        )
+        await execute(conn, "DELETE FROM uploads WHERE id = ANY(%s)", ([r["id"] for r in rows],))
+    await execute(
+        conn,
+        "DELETE FROM session_retired_tokens"
+        " WHERE retired_at < clock_timestamp() - make_interval(days => %s)",
+        (RETIRED_TOKEN_KEEP_DAYS,),
+    )
 
 
 @register("apple.revoke", external=True)

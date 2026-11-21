@@ -510,3 +510,47 @@ async def test_storage_delete_job_removes_objects(tmp_path, monkeypatch):
     assert await local.read("ugc/a.png", 100) is None
     monkeypatch.setattr(storage_module, "make_storage", lambda settings=None: None)
     await handler(None, {"keys": ["ugc/a.png"]})  # no storage configured: logged, not fatal
+
+
+# --- retention cleanup (worker job) ------------------------------------------------------------
+
+
+async def test_retention_cleanup_drops_stale_slots_and_old_retired_tokens(conn):
+    from app import worker
+    from app.auth import sessions
+
+    first = await sessions.sign_in(conn, "email", "clean@example.org", "en")
+    user = await fetch_one(conn, "SELECT id FROM users")
+    session = await fetch_one(conn, "SELECT id FROM sessions")
+    for key, status, expires in [
+        ("ugc/old-pending.png", "pending", "-1 hour"),
+        ("ugc/old-rejected.png", "rejected", "-2 hours"),
+        ("ugc/old-used.png", "used", "-1 day"),  # attached to a submission: kept
+        ("ugc/live-pending.png", "pending", "+30 minutes"),
+    ]:
+        await conn.execute(
+            "INSERT INTO uploads (user_id, storage_key, content_type, size_bytes, status,"
+            " expires_at) VALUES (%s, %s, 'image/png', 10, %s, now() + %s::interval)",
+            (user["id"], key, status, expires),
+        )
+    for name, age in [("old", "61 days"), ("recent", "1 day")]:
+        await conn.execute(
+            "INSERT INTO session_retired_tokens (token_hash, session_id, retired_at)"
+            " VALUES (%s, %s, now() - %s::interval)",
+            (name, session["id"], age),
+        )
+    assert first.refresh_token
+
+    await worker._retention_cleanup(conn, {})
+
+    left = [r["storage_key"] for r in await fetch_all(conn, "SELECT storage_key FROM uploads")]
+    assert sorted(left) == ["ugc/live-pending.png", "ugc/old-used.png"]
+    rows = await fetch_all(conn, "SELECT token_hash FROM session_retired_tokens")
+    tokens = [r["token_hash"] for r in rows]
+    assert tokens == ["recent"]
+    job = await fetch_one(conn, "SELECT payload FROM jobs WHERE kind = 'storage.delete'")
+    assert sorted(job["payload"]["keys"]) == ["ugc/old-pending.png", "ugc/old-rejected.png"]
+    await worker._retention_cleanup(conn, {})  # idempotent: nothing new to delete
+    count = await fetch_one(conn, "SELECT count(*) AS n FROM jobs WHERE kind = 'storage.delete'")
+    assert count["n"] == 1
+    assert any(s.kind == "retention.cleanup" for s in worker.SCHEDULES)

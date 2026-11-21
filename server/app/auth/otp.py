@@ -37,6 +37,22 @@ async def _latest(conn, channel: str, destination_hash: str):
     )
 
 
+async def _retry_after(conn, where: str, params: tuple, offset: int) -> int:
+    """Seconds until enough codes leave the 10-minute window for one more to be allowed."""
+    row = await fetch_one(
+        conn,
+        f"""
+        SELECT GREATEST(1, ceil(extract(epoch FROM
+            created_at + interval '10 minutes' - statement_timestamp())))::int AS seconds
+        FROM otp_codes
+        WHERE {where} AND created_at > statement_timestamp() - interval '10 minutes'
+        ORDER BY created_at ASC OFFSET %s LIMIT 1
+        """,
+        params + (offset,),
+    )
+    return int(row["seconds"]) if row else 600
+
+
 async def issue(db, provider, channel: str, destination: str, ip: str) -> None:
     key = sessions.signing_key()
     destination_hash = _digest(key, f"destination:{channel}", destination)
@@ -57,8 +73,22 @@ async def issue(db, provider, channel: str, destination: str, ip: str) -> None:
             """,
             (channel, destination_hash, ip_hash),
         )
-        if counts["destination"] >= DESTINATION_LIMIT or counts["ip"] >= IP_LIMIT:
-            raise AppError(429, "otp_rate_limited")
+        waits = []
+        if counts["destination"] >= DESTINATION_LIMIT:
+            waits.append(
+                await _retry_after(
+                    conn,
+                    "channel = %s AND destination_hash = %s",
+                    (channel, destination_hash),
+                    counts["destination"] - DESTINATION_LIMIT,
+                )
+            )
+        if counts["ip"] >= IP_LIMIT:
+            waits.append(
+                await _retry_after(conn, "ip_hash = %s", (ip_hash,), counts["ip"] - IP_LIMIT)
+            )
+        if waits:
+            raise AppError(429, "otp_rate_limited", headers={"Retry-After": str(max(waits))})
         # Reserve the rate-limit slot before delivery. A new code starts inactive.
         await execute(
             conn,
@@ -81,6 +111,14 @@ async def issue(db, provider, channel: str, destination: str, ip: str) -> None:
             await execute(conn, "UPDATE otp_codes SET consumed_at = NULL WHERE id = %s", (code_id,))
 
 
+# Wrong vs expired (review Ш-28 coordinator): `otp_invalid` = there IS an active code and the
+# guess is wrong (the attempt is counted, MAX_ATTEMPTS as before); `otp_expired` = there is no
+# usable code to guess (never requested, expired, consumed, or attempts used up): "request a new
+# code". An unknown destination gets `otp_expired`, the same as an expired one, so the answer does
+# not say whether an account exists (sign-in and sign-up are one flow anyway). It does reveal that
+# a code was recently requested for the destination, but anyone can trigger that by requesting a
+# code themselves. Brute force is not easier: only active codes accept guesses, 5 per code, and
+# every new code spends a rate-limit slot.
 async def verify(db, channel: str, destination: str, code: str, locale: str) -> sessions.Tokens:
     key = sessions.signing_key()
     destination_hash = _digest(key, f"destination:{channel}", destination)
@@ -98,6 +136,9 @@ async def verify(db, channel: str, destination: str, code: str, locale: str) -> 
             await execute(
                 conn, "UPDATE otp_codes SET attempts = attempts + 1 WHERE id = %s", (row["id"],)
             )
+            failure = "otp_invalid"
+        else:
+            failure = "otp_expired"
 
     # Commit failed attempts before raising the API error.
-    raise AppError(401, "otp_invalid")
+    raise AppError(401, failure)

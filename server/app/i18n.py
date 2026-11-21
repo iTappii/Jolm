@@ -10,7 +10,11 @@ MESSAGES = {
     "not_found": {"en": "Not found", "ru": "Не найдено"},
     "validation_error": {"en": "Invalid request", "ru": "Некорректный запрос"},
     "method_not_allowed": {"en": "Method not allowed", "ru": "Метод не поддерживается"},
-    "otp_invalid": {"en": "Invalid or expired code", "ru": "Неверный или просроченный код"},
+    "otp_invalid": {"en": "Wrong code", "ru": "Неверный код"},
+    "otp_expired": {
+        "en": "The code has expired or is no longer valid. Request a new one",
+        "ru": "Код истёк или больше не действует. Запросите новый",
+    },
     "otp_rate_limited": {"en": "Try again later", "ru": "Попробуйте позже"},
     "otp_delivery_unavailable": {
         "en": "Code delivery unavailable",

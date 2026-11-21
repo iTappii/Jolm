@@ -73,9 +73,42 @@ async def test_email_code_expiry_and_failed_attempts(client, conn, delivery, exp
         wrong = f"{(int(code) + 1) % 1_000_000:06d}"
         for _ in range(5):
             assert (await client.post(VERIFY, json={**ADDRESS, "code": wrong})).status_code == 401
-    assert (await client.post(VERIFY, json={**ADDRESS, "code": code})).status_code == 401
+    response = await client.post(VERIFY, json={**ADDRESS, "code": code})
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "otp_expired"  # also after 5 failures: re-request
     row = await fetch_one(conn, "SELECT attempts FROM otp_codes")
     assert row["attempts"] == (0 if expiry else 5)
+
+
+async def test_wrong_code_vs_expired_vs_unknown_destination(client, conn, delivery):
+    assert (await client.post(REQUEST, json=ADDRESS)).status_code == 204
+    code = delivery[0][1]
+    wrong = f"{(int(code) + 1) % 1_000_000:06d}"
+    response = await client.post(VERIFY, json={**ADDRESS, "code": wrong})
+    assert (response.status_code, response.json()["error"]["code"]) == (401, "otp_invalid")
+    unknown = {**ADDRESS, "destination": "nobody@example.com", "code": wrong}
+    response = await client.post(VERIFY, json=unknown)
+    # an unknown destination looks exactly like an expired code: no account/destination oracle
+    assert (response.status_code, response.json()["error"]["code"]) == (401, "otp_expired")
+    await execute(conn, "UPDATE otp_codes SET expires_at = clock_timestamp()")
+    response = await client.post(VERIFY, json={**ADDRESS, "code": wrong})
+    assert response.json()["error"]["code"] == "otp_expired"
+    assert response.json()["error"]["message"] != "Wrong code"
+
+
+async def test_rate_limited_carries_retry_after(client, conn, delivery):
+    for _ in range(otp.DESTINATION_LIMIT):
+        assert (await client.post(REQUEST, json=ADDRESS)).status_code == 204
+    # the oldest code was created 9 minutes ago: it leaves the window in about 60 seconds
+    await execute(
+        conn,
+        "UPDATE otp_codes SET created_at = statement_timestamp() - interval '9 minutes'"
+        " WHERE id = (SELECT id FROM otp_codes ORDER BY created_at LIMIT 1)",
+    )
+    response = await client.post(REQUEST, json=ADDRESS)
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "otp_rate_limited"
+    assert 55 <= int(response.headers["Retry-After"]) <= 61
 
 
 async def test_email_destination_limit_and_resend(client, conn, delivery, monkeypatch):
@@ -97,6 +130,8 @@ async def test_ip_limit_shared_across_destinations_and_forwarded_headers(client,
         headers = {"X-Forwarded-For": f"192.0.2.{count + 1}"}
         response = await client.post(REQUEST, json=destination, headers=headers)
         assert response.status_code == (204 if count < otp.IP_LIMIT else 429)
+        if response.status_code == 429:
+            assert 1 <= int(response.headers["Retry-After"]) <= 600
     await execute(conn, "UPDATE otp_codes SET created_at = now() - interval '11 minutes'")
     assert (await client.post(REQUEST, json=destination)).status_code == 204
 

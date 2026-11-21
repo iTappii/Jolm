@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}Бонусы{% endblock %}
+{% block content %}
+<h1>Бонусы за вклад в данные</h1>
+{% if saved %}<div class="flash">Сохранено.</div>{% endif %}
+<p class="muted">Временная формула (SSOT §16.8 не решён): бонус = базовая сумма × коэффициент
+давности × коэффициент частоты. 1 бонус ≈ 1 тенге. Платится один раз после одобрения модератором;
+отклонённое и отсеянное автофильтром бонусов не даёт. Новые значения действуют на следующие
+одобрения, уже начисленное не меняется.</p>
+<form method="post" action="/admin/bonuses">
+  {{ csrf_field(csrf) }}
+  {% for key, p in params.items() %}
+    <label>{{ p.label }}
+      <input required name="{{ key }}" inputmode="decimal" value="{{ f.get(key, '') }}">
+      {% if errors.get(key) %}<span class="err">{{ errors[key] }}</span>{% endif %}
+    </label>
+  {% endfor %}
+  <button type="submit">Сохранить</button>
+</form>
+{% endblock %}

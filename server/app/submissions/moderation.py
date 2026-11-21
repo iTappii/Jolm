@@ -10,7 +10,7 @@ prices, transit data) as `published_pending_review`. A moderator approves or rej
   the team reads it from the table. Reviews and photos need nothing more.
 - reject -> `rejected`. A rejected review disappears from the card; a rejected photo gets
   `place_photos.status = 'rejected'` and its file is queued for deletion.
-No bonus is paid here (Ш-46 pays after approval).
+An approval pays the bonus (Ш-46, bonuses.py); a rejection pays nothing.
 """
 
 from typing import Any, Dict, List, Optional
@@ -19,7 +19,7 @@ from uuid import UUID
 from psycopg.types.json import Jsonb
 
 from app.db import execute, fetch_all, fetch_one
-from app.submissions import service
+from app.submissions import bonuses, service
 
 PAGE = 50
 
@@ -35,7 +35,7 @@ QUEUE_SIZE = "SELECT count(*) AS n FROM submissions WHERE status = 'published_pe
 DECIDE = """
 UPDATE submissions SET status = %s, moderator_id = %s, decided_at = now()
 WHERE id = %s AND status = 'published_pending_review'
-RETURNING id, type, place_id, payload, place_photo_id
+RETURNING id, user_id, type, place_id, payload, place_photo_id
 """
 MENU_UPSERT = """
 INSERT INTO place_menu (place_id, payload, source) VALUES (%s, %s, 'user')
@@ -70,6 +70,9 @@ async def decide(conn, admin_id: str, submission_id: UUID, approve: bool) -> Dic
         raise AlreadyDecided()
     payload: Dict[str, Any] = row["payload"]
     if approve:
+        # Paid after the human approval only, and measured before the content is applied (the
+        # data age must not include the very submission being paid for).
+        row["bonus"] = await bonuses.accrue(conn, row)
         await _apply(conn, row)
     else:
         keys: List[str] = []

@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
 from app.places.service import ALMATY_TZ
 from app.providers.storage import media_url
-from app.submissions import moderation
+from app.submissions import bonus_policy, bonuses, moderation
 
 from . import auth, service, sql
 
@@ -239,6 +239,40 @@ async def moderation_decide(
     except moderation.AlreadyDecided:
         return redirect("/admin/moderation?done=already")
     return redirect("/admin/moderation?done=" + decision)
+
+
+# ---------------------------------------------------------------- bonuses (Ш-46)
+
+
+async def _bonus_page(request, session, form=None, errors=None, saved=False):
+    async with db(request) as conn:
+        current = await bonuses.load_coefficients(conn)
+    values = form if form is not None else {k: "%g" % v for k, v in current.items()}
+    return render(
+        request,
+        "bonuses.html",
+        session,
+        status=422 if errors else 200,
+        params=bonus_policy.DEFAULTS,
+        f=values,
+        errors=errors or {},
+        saved=saved,
+    )
+
+
+@router.get("/bonuses", response_class=HTMLResponse)
+async def bonuses_form(request: Request, session: auth.AdminSession = GET_ADMIN, saved: str = ""):
+    return await _bonus_page(request, session, saved=saved == "1")
+
+
+@router.post("/bonuses")
+async def bonuses_save(request: Request, ctx: PostCtx = POST_ADMIN):
+    values, errors = bonus_policy.validate(ctx.form)
+    if errors:
+        return await _bonus_page(request, ctx.session, ctx.form, errors)
+    async with db(request) as conn:
+        await bonuses.save_coefficients(conn, ctx.session.admin_id, values)
+    return redirect("/admin/bonuses?saved=1")
 
 
 # ---------------------------------------------------------------- places

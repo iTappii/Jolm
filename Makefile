@@ -7,7 +7,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 -include .env
 export
 
-.PHONY: up down migrate run worker test lint seed import-osm import-transit osm-pbf ci venv
+.PHONY: up down migrate run worker test lint seed import-osm import-transit import-addresses osm-pbf ci venv
 
 .env:
 	cp .env.example .env
@@ -58,6 +58,11 @@ import-osm: venv osm-pbf
 import-transit: venv osm-pbf
 	$(VENV)/bin/pip install -q -e "server[osm]"
 	$(PY) data/osm/import_transit.py
+
+# Addresses and named buildings for reverse geocoding (Ш-23c); idempotent, ~1-2 min
+import-addresses: venv osm-pbf
+	$(VENV)/bin/pip install -q -e "server[osm]"
+	$(PY) data/osm/import_addresses.py
 
 # Map (Ш-11/Ш-12): build vector tiles, regenerate styles, serve maps/ with Range support
 .PHONY: tiles tiles-styles tiles-serve
