@@ -74,6 +74,26 @@ final class APIClient: Sendable {
         }
     }
 
+    /// `PUT` of a file to a presigned URL (Ш-44). The URL belongs to the storage, not to the API: neither the bearer
+    /// token nor the install id goes there, only the headers the server said to send. `https` only (plain `http` for a
+    /// loopback dev server).
+    func upload(to url: URL, headers: [String: String], body: Data, timeout: TimeInterval = 120) async throws {
+        let loopback = ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "")
+        guard url.scheme == "https" || (url.scheme == "http" && loopback) else { throw APIError.invalidResponse }
+        var request = URLRequest(url: url, timeoutInterval: timeout)
+        request.httpMethod = "PUT"
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+        do {
+            let (data, response) = try await session.upload(for: request, from: body)
+            guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+            guard (200..<300).contains(http.statusCode) else {
+                throw APIErrorBody.decode(response: http, data: data)
+            }
+        } catch {
+            throw Self.normalize(error)
+        }
+    }
+
     /// Opens a `text/event-stream` endpoint. The request (including the 401 → refresh → retry)
     /// is made when iteration starts; cancelling the iteration cancels the request.
     func stream(_ endpoint: Endpoint) -> AsyncThrowingStream<SSEEvent, Error> {

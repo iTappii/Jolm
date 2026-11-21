@@ -73,12 +73,74 @@
         }
       }
     },
+    "%lld of 5" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld из 5"
+          }
+        }
+      }
+    },
     "%lld places" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Мест: %lld"
+          }
+        }
+      }
+    },
+    "%lld reviews" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld review"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld reviews"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld отзыв"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld отзыва"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld отзывов"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld отзыва"
+                }
+              }
+            }
           }
         }
       }
@@ -113,6 +175,16 @@
         }
       }
     },
+    "A dish needs a name." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "У блюда должно быть название."
+          }
+        }
+      }
+    },
     "About" : {
       "localizations" : {
         "ru" : {
@@ -143,6 +215,36 @@
         }
       }
     },
+    "Add a dish" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить блюдо"
+          }
+        }
+      }
+    },
+    "Add a dish or a photo of the menu." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавьте блюдо или фото меню."
+          }
+        }
+      }
+    },
+    "Add info" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить данные"
+          }
+        }
+      }
+    },
     "Add to favorites" : {
       "localizations" : {
         "ru" : {
@@ -163,12 +265,32 @@
         }
       }
     },
+    "Adult" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Взрослый"
+          }
+        }
+      }
+    },
     "Allow location access to do this." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Разрешите доступ к геопозиции, чтобы это сделать."
+          }
+        }
+      }
+    },
+    "Anonymous" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Аноним"
           }
         }
       }
@@ -353,6 +475,16 @@
         }
       }
     },
+    "Caption (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подпись (по желанию)"
+          }
+        }
+      }
+    },
     "Change" : {
       "localizations" : {
         "ru" : {
@@ -443,12 +575,62 @@
         }
       }
     },
+    "Child" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Детский"
+          }
+        }
+      }
+    },
     "Choose" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Выбрать"
+          }
+        }
+      }
+    },
+    "Choose a photo" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать фото"
+          }
+        }
+      }
+    },
+    "Choose a photo." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите фото."
+          }
+        }
+      }
+    },
+    "Choose a rating from 1 to 5." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поставьте оценку от 1 до 5."
+          }
+        }
+      }
+    },
+    "Choose another photo" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать другое фото"
           }
         }
       }
@@ -663,6 +845,16 @@
         }
       }
     },
+    "Couldn't load the reviews" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить отзывы"
+          }
+        }
+      }
+    },
     "Couldn't load the route." : {
       "localizations" : {
         "ru" : {
@@ -739,6 +931,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось отправить запрос. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "Couldn't send. Try again later." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось отправить. Попробуйте позже."
           }
         }
       }
@@ -863,6 +1065,16 @@
         }
       }
     },
+    "Direction (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Направление (по желанию)"
+          }
+        }
+      }
+    },
     "Directions" : {
       "localizations" : {
         "ru" : {
@@ -889,6 +1101,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Маршруты работают только в Алматы. Сдвиньте карту в Алматы и выберите «От центра карты»."
+          }
+        }
+      }
+    },
+    "Dish" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Блюдо"
           }
         }
       }
@@ -953,6 +1175,26 @@
         }
       }
     },
+    "Enter the price as a number." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введите цену числом."
+          }
+        }
+      }
+    },
+    "Enter the route number." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введите номер маршрута."
+          }
+        }
+      }
+    },
     "Entries" : {
       "localizations" : {
         "ru" : {
@@ -979,6 +1221,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Цена входа"
+          }
+        }
+      }
+    },
+    "Entry price, ₸" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цена входа, ₸"
           }
         }
       }
@@ -1043,6 +1295,16 @@
         }
       }
     },
+    "Fare, ₸ (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стоимость проезда, ₸ (по желанию)"
+          }
+        }
+      }
+    },
     "Favorites" : {
       "localizations" : {
         "ru" : {
@@ -1099,6 +1361,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Заказ еды"
+          }
+        }
+      }
+    },
+    "Foreigner" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для иностранцев"
           }
         }
       }
@@ -1273,6 +1545,46 @@
         }
       }
     },
+    "Interval, minutes (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал, минут (по желанию)"
+          }
+        }
+      }
+    },
+    "It appears right away and a moderator checks it later. Spam earns nothing." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оно появится сразу, модератор проверит позже. За мусор бонусы не начисляются."
+          }
+        }
+      }
+    },
+    "It didn't pass the automatic check" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не прошло автоматическую проверку"
+          }
+        }
+      }
+    },
+    "It is published and will be checked later. A bonus comes after the check." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Опубликовано, проверим позже. Бонус придёт после проверки."
+          }
+        }
+      }
+    },
     "Jol is still answering. Try again in a moment." : {
       "localizations" : {
         "ru" : {
@@ -1353,6 +1665,16 @@
         }
       }
     },
+    "Location and camera data are removed from the photo before it is sent." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перед отправкой из фото удаляются геометка и данные камеры."
+          }
+        }
+      }
+    },
     "Lodging" : {
       "localizations" : {
         "ru" : {
@@ -1399,6 +1721,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Меню"
+          }
+        }
+      }
+    },
+    "Menu: dishes and prices, or a photo of the menu" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Меню: блюда и цены или фото меню"
           }
         }
       }
@@ -1703,6 +2035,16 @@
         }
       }
     },
+    "Note (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Примечание (по желанию)"
+          }
+        }
+      }
+    },
     "Note for the venue (optional)" : {
       "localizations" : {
         "ru" : {
@@ -1719,6 +2061,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ничего не оплачено. Детали с вами уточнит заведение."
+          }
+        }
+      }
+    },
+    "Nothing was published and no bonus is paid. Check the text and try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ничего не опубликовано, бонус не начислен. Проверьте текст и попробуйте снова."
           }
         }
       }
@@ -1903,6 +2255,16 @@
         }
       }
     },
+    "Preparing the photo…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Готовим фото…"
+          }
+        }
+      }
+    },
     "Profile" : {
       "localizations" : {
         "ru" : {
@@ -2033,6 +2395,16 @@
         }
       }
     },
+    "Remove the photo" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Убрать фото"
+          }
+        }
+      }
+    },
     "Resend code" : {
       "localizations" : {
         "ru" : {
@@ -2049,6 +2421,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Отправить снова через %lld с"
+          }
+        }
+      }
+    },
+    "Resident" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для резидентов"
           }
         }
       }
@@ -2109,6 +2491,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Маршрут скачан"
+          }
+        }
+      }
+    },
+    "Route number" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Номер маршрута"
           }
         }
       }
@@ -2189,6 +2581,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Отправить запрос"
+          }
+        }
+      }
+    },
+    "Sending…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправляем…"
+          }
+        }
+      }
+    },
+    "Senior" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пенсионный"
           }
         }
       }
@@ -2373,6 +2785,26 @@
         }
       }
     },
+    "Stop (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановка (по желанию)"
+          }
+        }
+      }
+    },
+    "Student" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Студенческий"
+          }
+        }
+      }
+    },
     "Sunday" : {
       "localizations" : {
         "ru" : {
@@ -2409,6 +2841,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Такси"
+          }
+        }
+      }
+    },
+    "Thank you!" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Спасибо!"
           }
         }
       }
@@ -2453,12 +2895,52 @@
         }
       }
     },
+    "The interval is from 1 to 240 minutes." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал — от 1 до 240 минут."
+          }
+        }
+      }
+    },
+    "The photo is too large. Choose another one." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Фото слишком большое. Выберите другое."
+          }
+        }
+      }
+    },
     "The plan has changed, so it was reloaded." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "План изменился, поэтому он загружен заново."
+          }
+        }
+      }
+    },
+    "The server didn't accept the photo. Choose it again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сервер не принял фото. Выберите его снова."
+          }
+        }
+      }
+    },
+    "The text is too long." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текст слишком длинный."
           }
         }
       }
@@ -2503,6 +2985,16 @@
         }
       }
     },
+    "This photo can't be read. Choose another one." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это фото не читается. Выберите другое."
+          }
+        }
+      }
+    },
     "This venue doesn't take this kind of request." : {
       "localizations" : {
         "ru" : {
@@ -2529,6 +3021,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Четверг"
+          }
+        }
+      }
+    },
+    "Ticket" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Билет"
           }
         }
       }
@@ -2633,6 +3135,16 @@
         }
       }
     },
+    "Too many submissions today. Try again later." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сегодня слишком много отправок. Попробуйте позже."
+          }
+        }
+      }
+    },
     "Total %@" : {
       "localizations" : {
         "ru" : {
@@ -2723,6 +3235,16 @@
         }
       }
     },
+    "Uploading the photo…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загружаем фото…"
+          }
+        }
+      }
+    },
     "Version" : {
       "localizations" : {
         "ru" : {
@@ -2793,6 +3315,16 @@
         }
       }
     },
+    "What to add" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Что добавить"
+          }
+        }
+      }
+    },
     "What to book" : {
       "localizations" : {
         "ru" : {
@@ -2809,6 +3341,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Куда хотите отправиться?"
+          }
+        }
+      }
+    },
+    "Write a review" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Написать отзыв"
           }
         }
       }
@@ -2863,6 +3405,16 @@
         }
       }
     },
+    "You have already left a review here." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы уже оставляли здесь отзыв."
+          }
+        }
+      }
+    },
     "You kept the plan as it is." : {
       "localizations" : {
         "ru" : {
@@ -2899,6 +3451,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ваш аккаунт и все данные будут удалены навсегда. Это действие нельзя отменить."
+          }
+        }
+      }
+    },
+    "Your review (optional)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ваш отзыв (по желанию)"
           }
         }
       }
@@ -2969,6 +3531,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "© участники OpenStreetMap"
+          }
+        }
+      }
+    },
+    "· will be checked later" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "· проверим позже"
+          }
+        }
+      }
+    },
+    "₸" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "₸"
           }
         }
       }

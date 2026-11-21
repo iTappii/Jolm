@@ -9,6 +9,7 @@ struct PlaceTabContent: View {
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
     @State private var bookingOpen = false
+    @State private var contentOpen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
@@ -21,6 +22,9 @@ struct PlaceTabContent: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("place-tab-content-\(tab.rawValue)")
+        .sheet(isPresented: $contentOpen) {
+            ContentSheet(place: place) { Task { await container.reviews.reload() } }
+        }
     }
 
     // MARK: - Overview
@@ -59,6 +63,7 @@ struct PlaceTabContent: View {
         }
         NavigatorButton(place: place)
         bookButton
+        addInfoButton
         CrowdSection(place: place, crowd: detail.crowd)
         eventsBlock
     }
@@ -170,13 +175,26 @@ struct PlaceTabContent: View {
     // MARK: - Reviews and photos
 
     private var reviews: some View {
-        VStack(spacing: JolSpacing.sm) {
-            Image(systemName: "text.bubble").font(.largeTitle).foregroundStyle(JolColor.textTertiary)
-            Text("No reviews yet").font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
+        PlaceReviewsView(place: place, onAdd: addInfo)
+    }
+
+    /// «Add info» (Ш-44): signed-in only; a guest meets the sign-in gate first, as with favorites.
+    private func addInfo() {
+        if container.auth.isSignedIn { contentOpen = true } else {
+            container.gate.requireAccount { contentOpen = true }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, JolSpacing.xl)
-        .accessibilityIdentifier("place-reviews-empty")
+    }
+
+    private var addInfoButton: some View {
+        Button(action: addInfo) {
+            Label("Add info", systemImage: "square.and.pencil")
+                .font(JolFont.callout.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, JolSpacing.sm)
+                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("place-add-info")
     }
 
     @ViewBuilder

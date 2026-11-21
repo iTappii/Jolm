@@ -23,6 +23,7 @@ final class AppContainer {
     @ObservationIgnored let offline: OfflineTripsModel
     @ObservationIgnored let devices: DeviceRegistrar
     @ObservationIgnored let analytics: AnalyticsClient
+    @ObservationIgnored let reviews: ReviewsModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -69,6 +70,7 @@ final class AppContainer {
         self.events = EventsModel(api: self.api)
         self.crowd = CrowdModel(api: self.api, locator: locator)
         self.bookings = BookingModel(api: self.api)
+        self.reviews = ReviewsModel(api: self.api)
     }
 
     func makeBonusModel() -> BonusModel {
