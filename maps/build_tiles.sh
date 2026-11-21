@@ -20,13 +20,15 @@ JAR="$BUILD/planetiler.jar"
 
 mkdir -p "$BUILD"
 
-if [ ! -s "$PBF" ] || [ "${REFRESH:-0}" = "1" ]; then
-  echo ">> downloading $PBF_URL"
-  curl -fL --retry 3 -C - -o "$PBF.part" "$PBF_URL"
-  mv "$PBF.part" "$PBF"
-else
-  echo ">> using existing $PBF (REFRESH=1 to re-download)"
+# One shared extract for tiles, places/transit import and Valhalla: data/osm/cache (make osm-pbf).
+SHARED_PBF="$HERE/../data/osm/cache/kazakhstan.osm.pbf"
+PBF_URL="$PBF_URL" REFRESH="${REFRESH:-0}" "$HERE/../data/osm/fetch_pbf.sh"
+# Planetiler (docker) only sees $BUILD, so expose the shared file there via a hard link.
+if [ ! "$PBF" -ef "$SHARED_PBF" ]; then
+  rm -f "$PBF"
+  ln "$SHARED_PBF" "$PBF" 2>/dev/null || cp "$SHARED_PBF" "$PBF"
 fi
+echo ">> using $PBF"
 
 # Planetiler args shared by both runners. {DIR} is replaced by the build dir as seen by the runner.
 args() {

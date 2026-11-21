@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="jol-test">
+  <!-- metro: direction 1 uses nodes 1-3, direction 2 uses nodes 4-6 (same names, ~25 m apart) -->
+  <node id="1" version="1" lat="43.2400" lon="76.9000"><tag k="name" v="Alpha"/><tag k="railway" v="stop"/></node>
+  <node id="2" version="1" lat="43.2400" lon="76.9150"><tag k="name" v="Beta"/><tag k="name:en" v="Beta EN"/><tag k="railway" v="stop"/></node>
+  <node id="3" version="1" lat="43.2400" lon="76.9300"><tag k="name" v="Gamma"/><tag k="railway" v="stop"/></node>
+  <node id="4" version="1" lat="43.2402" lon="76.9300"><tag k="name" v="Gamma"/><tag k="railway" v="stop"/></node>
+  <node id="5" version="1" lat="43.2402" lon="76.9150"><tag k="name" v="Beta"/><tag k="railway" v="stop"/></node>
+  <node id="6" version="1" lat="43.2402" lon="76.9000"><tag k="name" v="Alpha"/><tag k="railway" v="stop"/></node>
+  <relation id="9001" version="1">
+    <member type="node" ref="1" role="stop"/><member type="node" ref="2" role="stop"/><member type="node" ref="3" role="stop"/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="1"/><tag k="name" v="Line 1 forward"/>
+  </relation>
+  <relation id="9002" version="1">
+    <member type="node" ref="4" role="stop"/><member type="node" ref="5" role="stop"/><member type="node" ref="6" role="stop"/>
+    <tag k="type" v="route"/><tag k="route" v="subway"/><tag k="ref" v="1"/><tag k="name" v="Line 1 back"/>
+  </relation>
+
+  <!-- bus 10: stop_position + platform pair per stop (interleaved); interval tag 12 -->
+  <node id="11" version="1" lat="43.2500" lon="76.9000"><tag k="name" v="Mall"/><tag k="public_transport" v="stop_position"/></node>
+  <node id="12" version="1" lat="43.2501" lon="76.9001"><tag k="name" v="Mall"/><tag k="highway" v="bus_stop"/><tag k="public_transport" v="platform"/></node>
+  <node id="13" version="1" lat="43.2500" lon="76.9100"><tag k="name" v="Park"/><tag k="public_transport" v="stop_position"/></node>
+  <node id="14" version="1" lat="43.2501" lon="76.9101"><tag k="name" v="Park"/><tag k="highway" v="bus_stop"/><tag k="public_transport" v="platform"/></node>
+  <relation id="9010" version="1">
+    <member type="node" ref="11" role="stop"/><member type="node" ref="12" role="platform"/>
+    <member type="node" ref="13" role="stop"/><member type="node" ref="14" role="platform"/>
+    <tag k="type" v="route"/><tag k="route" v="bus"/><tag k="ref" v="10"/><tag k="interval" v="12"/>
+    <tag k="name" v="Bus 10"/><tag k="name:en" v="Bus ten"/>
+  </relation>
+
+  <!-- bus 20: a single stop only -> skipped -->
+  <node id="21" version="1" lat="43.2600" lon="76.9000"><tag k="name" v="Lonely"/><tag k="highway" v="bus_stop"/></node>
+  <relation id="9020" version="1">
+    <member type="node" ref="21" role="platform"/>
+    <tag k="type" v="route"/><tag k="route" v="bus"/><tag k="ref" v="20"/>
+  </relation>
+
+  <!-- bus 30: stops listed out of travel order along an east-west road (way chain 100-105) -->
+  <node id="100" version="1" lat="43.2300" lon="76.9000"/>
+  <node id="101" version="1" lat="43.2300" lon="76.9050"/>
+  <node id="102" version="1" lat="43.2300" lon="76.9100"/>
+  <node id="103" version="1" lat="43.2300" lon="76.9150"/>
+  <node id="104" version="1" lat="43.2300" lon="76.9200"/>
+  <node id="105" version="1" lat="43.2300" lon="76.9250"/>
+  <way id="800" version="1"><nd ref="100"/><nd ref="101"/><nd ref="102"/></way>
+  <way id="801" version="1"><nd ref="102"/><nd ref="103"/><nd ref="104"/><nd ref="105"/></way>
+  <node id="31" version="1" lat="43.2302" lon="76.9000"><tag k="name" v="S0"/><tag k="highway" v="bus_stop"/></node>
+  <node id="32" version="1" lat="43.2302" lon="76.9050"><tag k="name" v="S1"/><tag k="highway" v="bus_stop"/></node>
+  <node id="33" version="1" lat="43.2302" lon="76.9100"><tag k="name" v="S2"/><tag k="highway" v="bus_stop"/></node>
+  <node id="34" version="1" lat="43.2302" lon="76.9150"><tag k="name" v="S3"/><tag k="highway" v="bus_stop"/></node>
+  <node id="35" version="1" lat="43.2302" lon="76.9200"><tag k="name" v="S4"/><tag k="highway" v="bus_stop"/></node>
+  <node id="36" version="1" lat="43.2302" lon="76.9250"><tag k="name" v="S5"/><tag k="highway" v="bus_stop"/></node>
+  <relation id="9030" version="1">
+    <member type="node" ref="31" role="platform"/><member type="node" ref="36" role="platform"/>
+    <member type="node" ref="32" role="platform"/><member type="node" ref="35" role="platform"/>
+    <member type="node" ref="33" role="platform"/><member type="node" ref="34" role="platform"/>
+    <member type="way" ref="800" role=""/><member type="way" ref="801" role=""/>
+    <tag k="type" v="route"/><tag k="route" v="bus"/><tag k="ref" v="30"/>
+  </relation>
+</osm>

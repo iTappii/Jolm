@@ -1,0 +1,124 @@
+[
+  {
+    "id": "republic_medeu",
+    "from": [
+      43.2386,
+      76.9456
+    ],
+    "to": [
+      43.1578,
+      77.0596
+    ],
+    "note": "Republic Square -> Medeu rink (bus 12/21 uphill)"
+  },
+  {
+    "id": "almaly_moskva",
+    "from": [
+      43.252,
+      76.9472
+    ],
+    "to": [
+      43.2305,
+      76.8673
+    ],
+    "expect_mode": "metro",
+    "note": "metro Almaly -> metro Moskva, same line"
+  },
+  {
+    "id": "green_bazaar_koktobe",
+    "from": [
+      43.2637,
+      76.9549
+    ],
+    "to": [
+      43.2444,
+      76.9594
+    ],
+    "note": "Green Bazaar -> Kok-Tobe lower cable-car station"
+  },
+  {
+    "id": "almaty2_panfilov",
+    "from": [
+      43.2735,
+      76.9394
+    ],
+    "to": [
+      43.2592,
+      76.9546
+    ],
+    "note": "Almaty-2 railway station -> Panfilov Park"
+  },
+  {
+    "id": "airport_republic",
+    "from": [
+      43.3479,
+      77.0115
+    ],
+    "to": [
+      43.2386,
+      76.9456
+    ],
+    "note": "airport (OSM airport stop/old terminal area; the new terminal at 43.352,77.041 has no mapped stop within 2 km) -> city centre"
+  },
+  {
+    "id": "mega_dostyk",
+    "from": [
+      43.2021,
+      76.8919
+    ],
+    "to": [
+      43.2334,
+      76.9567
+    ],
+    "note": "MEGA Alma-Ata -> Dostyk Plaza"
+  },
+  {
+    "id": "baikonur_raiymbek",
+    "from": [
+      43.2412,
+      76.9288
+    ],
+    "to": [
+      43.2713,
+      76.9447
+    ],
+    "expect_mode": "metro",
+    "note": "metro Baikonur -> Raiymbek batyr, same line"
+  },
+  {
+    "id": "gorky_park_moskva",
+    "from": [
+      43.2623,
+      76.9696
+    ],
+    "to": [
+      43.2305,
+      76.8673
+    ],
+    "note": "Gorky Park -> metro Moskva (needs a transfer)"
+  },
+  {
+    "id": "sayran_republic",
+    "from": [
+      43.2395,
+      76.8735
+    ],
+    "to": [
+      43.2386,
+      76.9456
+    ],
+    "note": "Sayran lake (east shore) -> Republic Square (metro)"
+  },
+  {
+    "id": "megapark_auezov",
+    "from": [
+      43.264,
+      76.9294
+    ],
+    "to": [
+      43.2403,
+      76.917
+    ],
+    "note": "MEGA Park -> Auezov Theatre metro"
+  }
+]

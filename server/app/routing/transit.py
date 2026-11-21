@@ -1,4 +1,4 @@
-"""Public transport search (TECH_PLAN Ш-21): A -> B with at most one transfer. All times approximate.
+"""Public transport search (TECH_PLAN Ш-21): A -> B, at most one transfer. All times approximate.
 
 There is no official GTFS/timetable for Almaty, so the model is deliberately simple:
 
@@ -10,6 +10,9 @@ There is no official GTFS/timetable for Almaty, so the model is deliberately sim
 
 Every option is flagged ``approximate=True``. Headways/speeds are per-route values from
 ``transit_routes`` (seeded from data/seed/transit_manual.csv; see there for the assumptions).
+
+Direction: an OSM relation is one direction. A line (kind+ref) mapped with a single relation gets
+its opposite direction inferred (reversed stop list, ``Route.inferred_reverse``).
 
 Design choice, in-memory network: Almaty has ~1k stops and ~120 route directions (~5k route-stop
 rows). The network is read with two SQL queries once per process (``get_network`` caches it for
@@ -32,13 +35,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from app.db import fetch_all
-from app.routing.base import Point, RoutingProvider
+from app.routing.base import Point, RoutingError, RoutingProvider
 from app.routing.fake import encode_polyline6, haversine_m
 
 # --- tunable assumptions ----------------------------------------------------------------------
 
-MAX_WALK_RADIUS_M = 800.0  # candidate stops: straight-line radius around A / B
-MAX_WALK_M = 1200.0  # reject candidates whose real walking distance is longer
+MAX_WALK_RADIUS_M = 1000.0  # candidate stops: straight-line radius around A / B
+MAX_WALK_M = 1400.0  # reject candidates whose real walking distance is longer
 MAX_CANDIDATE_STOPS = 24  # per end; nearest stop of every passing route first
 TRANSFER_RADIUS_M = 300.0  # stops this close count as one transfer node (same stop: 0 m)
 TRANSFER_DETOUR = 1.3  # straight line -> street distance for transfer walks
@@ -47,10 +50,21 @@ WALK_SPEED_MS = 4.8 / 3.6
 # stop-to-stop straight line -> distance travelled by the vehicle
 RIDE_DETOUR = {"metro": 1.05, "bus": 1.2, "trolleybus": 1.2, "tram": 1.1}
 # local service windows (hour of day, fractional); metro: OSM opening_hours Mo-Su 06:20-00:00
-SERVICE_HOURS = {"metro": (6 + 20 / 60, 24.0), "bus": (6.0, 23.5), "trolleybus": (6.0, 23.5), "tram": (6.0, 23.5)}
+SERVICE_HOURS = {
+    "metro": (6 + 20 / 60, 24.0),
+    "bus": (6.0, 23.5),
+    "trolleybus": (6.0, 23.5),
+    "tram": (6.0, 23.5),
+}
 ALMATY_TZ_OFFSET = timezone(timedelta(hours=5))  # UTC+5 since 2024-03; used if tzdata is missing
 CACHE_TTL_S = 600.0
 GRID_DEG = 0.004  # ~440 m lat / ~325 m lon at Almaty: cell >= TRANSFER_RADIUS_M
+
+
+def hop_speed_boost(hop_m: float) -> float:
+    """Commercial speed already includes dwell at ~400 m stop spacing; long non-stop hops (suburban
+    sections) run faster: x1 up to 1 km, rising linearly to x2 at 3 km and beyond."""
+    return 1.0 + min(1.0, max(0.0, (hop_m - 1000.0) / 2000.0))
 
 
 # --- network ------------------------------------------------------------------------------------
@@ -87,10 +101,12 @@ class Route:
     headway_min: float
     speed_kmh: float
     stops: List[int] = field(default_factory=list)  # stop idx in travel order
+    inferred_reverse: bool = False  # synthetic opposite direction of a one-direction OSM relation
     cum_m: List[float] = field(default_factory=list)  # distance travelled up to stops[i]
+    cum_s: List[float] = field(default_factory=list)  # riding time (no waiting) up to stops[i]
 
     def ride_s(self, p: int, q: int) -> float:
-        return (self.cum_m[q] - self.cum_m[p]) / (self.speed_kmh / 3.6)
+        return self.cum_s[q] - self.cum_s[p]
 
 
 STOPS_SQL = """
@@ -134,25 +150,67 @@ class TransitNetwork:
 
     @classmethod
     def build(cls, stop_rows: Sequence[dict], route_rows: Sequence[dict], rs_rows: Sequence[dict]):
-        stops = [Stop(i, **{k: r[k] for k in ("id", "lat", "lon", "name_ru", "name_en", "name_kk", "kind")})
-                 for i, r in enumerate(stop_rows)]
+        stops = [
+            Stop(
+                i,
+                **{k: r[k] for k in ("id", "lat", "lon", "name_ru", "name_en", "name_kk", "kind")},
+            )
+            for i, r in enumerate(stop_rows)
+        ]
         stop_ix = {s.id: s.idx for s in stops}
         routes = [
-            Route(i, r["id"], r["kind"], r["ref"], r["name_ru"], r["name_en"], r["headway"], r["speed"])
+            Route(
+                i,
+                r["id"],
+                r["kind"],
+                r["ref"],
+                r["name_ru"],
+                r["name_en"],
+                r["headway"],
+                r["speed"],
+            )
             for i, r in enumerate(route_rows)
         ]
         route_ix = {r.id: r.idx for r in routes}
         for row in rs_rows:
             r = routes[route_ix[row["route_id"]]]
             r.stops.append(stop_ix[row["stop_id"]])
+        routes = [r for r in routes if len(r.stops) >= 2]
+        # OSM maps many Almaty lines as one relation only. A line with a single relation gets its
+        # opposite direction inferred (same stops reversed; opposite-side stops are close enough).
+        by_line: Dict[Tuple[str, str], List[Route]] = {}
         for r in routes:
+            if r.ref:
+                by_line.setdefault((r.kind, r.ref), []).append(r)
+        for group in by_line.values():
+            if len(group) == 1 and group[0].stops[0] != group[0].stops[-1]:
+                g = group[0]
+                routes.append(
+                    Route(
+                        len(routes),
+                        g.id,
+                        g.kind,
+                        g.ref,
+                        g.name_ru,
+                        g.name_en,
+                        g.headway_min,
+                        g.speed_kmh,
+                        g.stops[::-1],
+                        inferred_reverse=True,
+                    )
+                )
+        for i, r in enumerate(routes):
+            r.idx = i
             detour = RIDE_DETOUR.get(r.kind, 1.2)
-            total, cum = 0.0, [0.0]
+            total, secs, cum, cum_t = 0.0, 0.0, [0.0], [0.0]
             for a, b in zip(r.stops, r.stops[1:]):
-                total += haversine_m(stops[a].point, stops[b].point) * detour
+                hop = haversine_m(stops[a].point, stops[b].point) * detour
+                total += hop
+                secs += hop / (r.speed_kmh / 3.6 * hop_speed_boost(hop))
                 cum.append(total)
-            r.cum_m = cum
-        return cls(stops, [r for r in routes if len(r.stops) >= 2])
+                cum_t.append(secs)
+            r.cum_m, r.cum_s = cum, cum_t
+        return cls(stops, routes)
 
     @classmethod
     async def load(cls, conn) -> "TransitNetwork":
@@ -161,7 +219,9 @@ class TransitNetwork:
         rs_rows = await fetch_all(conn, ROUTE_STOPS_SQL)
         return cls.build(stop_rows, route_rows, rs_rows)
 
-    def neighbors(self, stop_idx: int, radius_m: float = TRANSFER_RADIUS_M) -> List[Tuple[int, float]]:
+    def neighbors(
+        self, stop_idx: int, radius_m: float = TRANSFER_RADIUS_M
+    ) -> List[Tuple[int, float]]:
         """[(stop idx, straight-line metres)] within radius, including the stop itself (0 m)."""
         cached = self._neighbors.get(stop_idx)
         if cached is not None:
@@ -280,10 +340,18 @@ def _in_service(kind: str, hour: Optional[float]) -> bool:
     return start <= hour < end
 
 
-def _walk_leg(a: Point, b: Point, dur: float, dist: float, from_name=None, to_name=None) -> TransitLeg:
+def _walk_leg(
+    a: Point, b: Point, dur: float, dist: float, from_name=None, to_name=None
+) -> TransitLeg:
     return TransitLeg(
-        type="walk", duration_s=dur, distance_m=dist, from_point=a, to_point=b,
-        from_name=from_name, to_name=to_name, geometry=encode_polyline6([a, b]),
+        type="walk",
+        duration_s=dur,
+        distance_m=dist,
+        from_point=a,
+        to_point=b,
+        from_name=from_name,
+        to_name=to_name,
+        geometry=encode_polyline6([a, b]),
     )
 
 
@@ -294,10 +362,18 @@ def _ride_leg(net: TransitNetwork, r: Route, p: int, q: int) -> TransitLeg:
         type="ride",
         duration_s=wait + r.ride_s(p, q),
         distance_m=r.cum_m[q] - r.cum_m[p],
-        from_point=a.point, to_point=b.point,
-        from_name=a.name, to_name=b.name, from_name_en=a.name_en, to_name_en=b.name_en,
+        from_point=a.point,
+        to_point=b.point,
+        from_name=a.name,
+        to_name=b.name,
+        from_name_en=a.name_en,
+        to_name_en=b.name_en,
         geometry=encode_polyline6([net.stops[s].point for s in r.stops[p : q + 1]]),
-        route_id=r.id, route_ref=r.ref, kind=r.kind, n_stops=q - p, wait_s=wait,
+        route_id=r.id,
+        route_ref=r.ref,
+        kind=r.kind,
+        n_stops=q - p,
+        wait_s=wait,
         headway_min=r.headway_min,
     )
 
@@ -339,10 +415,13 @@ async def find_transit_options(
     depart: Optional[datetime] = None,
     *,
     max_options: int = 4,
+    drop_slower_than_walking: bool = True,
 ) -> List[TransitOption]:
     """Best transit itineraries A -> B (<= 1 transfer), fastest first, best of each mode kept.
 
-    ``depart`` only matters for service hours (metro 06:20-24:00, buses 06:00-23:30, Almaty time;
+    Options not faster than walking the whole way are dropped (``drop_slower_than_walking``), so an
+    empty list can also mean "just walk". ``depart`` only matters for service hours (metro
+    06:20-24:00, buses 06:00-23:30, Almaty time;
     naive datetimes are taken as local). Returns [] if nothing is within walking range of both ends.
     """
     hour = _local_hour(depart)
@@ -363,7 +442,7 @@ async def find_transit_options(
 
     found: List[Tuple[float, tuple]] = []  # (total_s, description)
 
-    for sa, (wa_s, wa_m) in cand_a.items():
+    for sa, (wa_s, _wa_m) in cand_a.items():
         for r1i, p in net.by_stop[sa]:
             if r1i not in allowed:
                 continue
@@ -371,7 +450,7 @@ async def find_transit_options(
             wait1 = r1.headway_min * 30.0
             head = wa_s + wait1
             # direct
-            for q, sb, wb_s, wb_m in b_by_route.get(r1i, ()):
+            for q, sb, wb_s, _wb_m in b_by_route.get(r1i, ()):
                 if q > p:
                     found.append((head + r1.ride_s(p, q) + wb_s, ("direct", sa, r1i, p, q, sb)))
             # one transfer: ride r1 to s, walk to t, ride r2 to the destination side
@@ -387,22 +466,45 @@ async def find_transit_options(
                         if r2.ref == r1.ref and r2.kind == r1.kind:
                             continue  # same line, other direction: pointless transfer
                         t2 = t1 + walk_s + TRANSFER_BUFFER_S + r2.headway_min * 30.0
-                        for q, sb, wb_s, wb_m in b_by_route[r2i]:
+                        for q, sb, wb_s, _wb_m in b_by_route[r2i]:
                             if q > qpos:
                                 found.append(
                                     (
                                         t2 + r2.ride_s(qpos, q) + wb_s,
-                                        ("transfer", sa, r1i, p, s_pos, t_idx, d_m, r2i, qpos, q, sb),
+                                        (
+                                            "transfer",
+                                            sa,
+                                            r1i,
+                                            p,
+                                            s_pos,
+                                            t_idx,
+                                            d_m,
+                                            r2i,
+                                            qpos,
+                                            q,
+                                            sb,
+                                        ),
                                     )
                                 )
 
+    walk_s = None
+    if drop_slower_than_walking:
+        try:
+            walk_s = (await router.route(a, b, "walk")).duration_s
+        except RoutingError:  # too far to walk / engine problem: nothing to compare with
+            walk_s = None
+    if walk_s is not None:
+        found = [f for f in found if f[0] < walk_s]
     found.sort(key=lambda x: x[0])
     chosen: List[TransitOption] = []
     seen_lines = set()
     pool: List[TransitOption] = []
-    for total, desc in found:
+    for _total, desc in found:
         key = _line_key(net, desc)
         if key in seen_lines:
+            continue
+        # a slower itinerary that merely adds lines to an already found one is not useful
+        if any(set(prev) < set(key) for prev in seen_lines):
             continue
         seen_lines.add(key)
         pool.append(_materialize(net, a, b, cand_a, cand_b, desc))
@@ -449,8 +551,12 @@ def _materialize(net, a: Point, b: Point, cand_a, cand_b, desc: tuple) -> Transi
         if d_m > 0:
             legs.append(
                 _walk_leg(
-                    s_stop.point, t_stop.point, d_m * TRANSFER_DETOUR / WALK_SPEED_MS,
-                    d_m * TRANSFER_DETOUR, s_stop.name, t_stop.name,
+                    s_stop.point,
+                    t_stop.point,
+                    d_m * TRANSFER_DETOUR / WALK_SPEED_MS,
+                    d_m * TRANSFER_DETOUR,
+                    s_stop.name,
+                    t_stop.name,
                 )
             )
         legs.append(_ride_leg(net, r2, qpos, q))

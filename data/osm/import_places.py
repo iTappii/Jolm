@@ -41,7 +41,7 @@ from merge import merge_place  # noqa: E402
 from tag_mapping import INTERESTING_KEYS, classify  # noqa: E402
 from upsert import upsert_place  # noqa: E402
 
-# One shared extract for places, transit and Valhalla; fetched by data/osm/fetch_pbf.sh (`make osm-pbf`)
+# One shared extract (places, transit, Valhalla), fetched by data/osm/fetch_pbf.sh (`make osm-pbf`)
 CACHE_PBF = HERE / "cache" / "kazakhstan.osm.pbf"
 
 # Almaty city + mountain suburbs: Medeu (77.06, 43.16), Shymbulak (77.08, 43.13),

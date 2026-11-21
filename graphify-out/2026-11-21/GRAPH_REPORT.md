@@ -79,16 +79,16 @@
 10. `He()` - 23 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Ф3. Карта` --references--> `MapView`  [INFERRED]
-  TECH_PLAN.md → ios/Jol/Features/Map/MapView.swift
 - `Что сделано` --references--> `MapView`  [INFERRED]
   docs/reviews/Ш-13.md → ios/Jol/Features/Map/MapView.swift
+- `Ф3. Карта` --references--> `MapView`  [INFERRED]
+  TECH_PLAN.md → ios/Jol/Features/Map/MapView.swift
 - `Что проверено ревьюером` --references--> `is_open_now()`  [INFERRED]
   docs/reviews/Ш-17.md → server/app/places/service.py
+- `Что сделано` --references--> `AppConfig`  [INFERRED]
+  docs/reviews/Ш-13.md → ios/Jol/Core/AppConfig.swift
 - `Что сделано` --references--> `RoutingProvider`  [INFERRED]
   docs/reviews/Ш-20.md → server/app/routing/base.py
-- `Что сделано` --references--> `FakeRouter`  [INFERRED]
-  docs/reviews/Ш-20.md → server/app/routing/fake.py
 
 ## Import Cycles
 - None detected.
@@ -307,16 +307,16 @@ Nodes (4): Замечания, Ревью доработки Ш-08: отноше
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `fetch_one()` connect `test_admin.py` to `worker.py`, `worker.py`, `admin/api.py`, `auth.py`, `test_places_api.py`, `test_osm_import.py`, `conftest.py`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+  _High betweenness centrality (0.041) - this node is a cross-community bridge._
 - **Are the 42 inferred relationships involving `conn()` (e.g. with `main()` and `main()`) actually correct?**
   _`conn()` has 42 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `Foundation`, `Jol`, `jol-server` to the rest of the system?**
   _15 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Personal Route Building (whole trip, by day)` be split into smaller, more focused modules?**
   _Cohesion score 0.05519480519480519 - nodes in this community are weakly interconnected._
-- **Why does `is_open_now()` connect `test_places_api.py` to `auth.py`, `worker.py`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `execute()` connect `admin/api.py` to `worker.py`, `worker.py`, `test_admin.py`, `auth.py`, `conftest.py`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Should `pytest` be split into smaller, more focused modules?**
   _Cohesion score 0.06153846153846154 - nodes in this community are weakly interconnected._
-- **Why does `conn()` connect `admin/api.py` to `worker.py`, `pytest`, `test_admin.py`, `test_places_api.py`, `import_places.py`, `conftest.py`?**
-  _High betweenness centrality (0.016) - this node is a cross-community bridge._
+- **Why does `fetch_all()` connect `admin/api.py` to `worker.py`, `worker.py`, `test_admin.py`, `test_places_api.py`, `conftest.py`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._

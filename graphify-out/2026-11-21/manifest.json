@@ -378,9 +378,9 @@
     "semantic_hash": ""
   },
   "data/osm/import_places.py": {
-    "mtime": 1795217813.8796399,
-    "seen": 1795217829.633177,
-    "ast_hash": "3a0ead8672e2a783ce24c9f81d09340b",
+    "mtime": 1795217963.9123552,
+    "seen": 1795217990.0762,
+    "ast_hash": "6347726cbe1d1600f319273ddb934540",
     "semantic_hash": ""
   },
   "data/osm/tag_mapping.py": {
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   "data/seed/import_popular.py": {
-    "mtime": 1795217743.0997033,
-    "seen": 1795217829.633209,
-    "ast_hash": "cec854ee2e54f72179026f5d98a8d50b",
+    "mtime": 1795217963.9248667,
+    "seen": 1795217990.0762749,
+    "ast_hash": "49888e3edce910e1d990a863acafeb8e",
     "semantic_hash": ""
   },
   "data/seed/load_seed.py": {
@@ -672,9 +672,9 @@
     "semantic_hash": ""
   },
   "data/osm/dedupe.py": {
-    "mtime": 1795217896.2955737,
-    "seen": 1795217961.2282429,
-    "ast_hash": "b1023e75a25fa77aa888ad22995dd353",
+    "mtime": 1795217963.924794,
+    "seen": 1795217990.0761569,
+    "ast_hash": "3e662b33ffb77031dc76f8e695b2e656",
     "semantic_hash": ""
   },
   "data/osm/merge.py": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "server/tests/test_osm_pipeline.py": {
-    "mtime": 1795217830.0292585,
-    "seen": 1795217834.3956962,
-    "ast_hash": "8a69a8f5095bd336d6ac9fa6413025dd",
+    "mtime": 1795217978.008622,
+    "seen": 1795217990.0776901,
+    "ast_hash": "73d1b7cfc5558cf25b6121a40d126a73",
     "semantic_hash": ""
   },
   "server/tests/test_routing.py": {
