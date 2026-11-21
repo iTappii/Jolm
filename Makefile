@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 VENV := server/.venv
+PYTHON ?= python3.12
 PY := $(VENV)/bin/python
 COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 
@@ -19,7 +20,7 @@ down:
 
 venv: $(VENV)/.installed
 $(VENV)/.installed: server/pyproject.toml
-	python3 -m venv $(VENV)
+	@test -x "$(PY)" || "$(PYTHON)" -m venv "$(VENV)"
 	$(VENV)/bin/pip install -q --upgrade pip
 	$(VENV)/bin/pip install -q -e "server[dev]"
 	touch $@

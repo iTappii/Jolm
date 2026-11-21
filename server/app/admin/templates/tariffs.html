@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import "_macros.html" as m %}
+{% block title %}Тарифы{% endblock %}
+{% block content %}
+<h1>Тарифы транспорта</h1>
+<h2>Новая версия</h2>
+<form method="post" action="/admin/tariffs">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <label>Вид транспорта
+    <select required name="mode">
+      <option value="">Выберите транспорт</option>
+      {% for mode, name in modes.items() %}
+        <option value="{{ mode }}"{% if f.mode == mode %} selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+    {% if errors.get("mode") %}<span class="err">{{ errors["mode"] }}</span>{% endif %}
+  </label>
+  <label>Дата начала действия (Алматы)
+    <input required type="date" name="valid_from" value="{{ f.valid_from }}">
+    {% if errors.get("valid_from") %}<span class="err">{{ errors["valid_from"] }}</span>{% endif %}
+  </label>
+  <p>Для автобуса и метро заполните фиксированную часть, для самоката добавьте цену минуты,
+     для такси укажите все три суммы, для своей машины укажите цену километра.
+     Для остальных полей укажите 0.</p>
+  {% for field, label in fields.items() %}
+    <label>{{ label }}
+      <input required type="number" min="0" max="99999999.99" step="0.01" name="{{ field }}"
+             value="{{ f.get(field, '0') }}">
+      {% if errors.get(field) %}<span class="err">{{ errors[field] }}</span>{% endif %}
+    </label>
+  {% endfor %}
+  <label>Источник или основание оценки
+    <input required maxlength="200" name="source" value="{{ f.source }}">
+    {% if errors.get("source") %}<span class="err">{{ errors["source"] }}</span>{% endif %}
+  </label>
+  {{ m.checkbox("approximate", "Примерная стоимость", f) }}
+  <button type="submit">Добавить версию</button>
+</form>
+
+<h2>История тарифов</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Транспорт</th><th>Действует с</th><th>Фиксировано, ₸</th><th>За минуту, ₸</th>
+      <th>За километр, ₸</th><th>Источник</th><th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>{{ modes[row.mode] }}</td>
+        <td>{{ row.valid_from }}</td>
+        <td>{{ row.base_kzt }}</td>
+        <td>{{ row.per_min_kzt }}</td>
+        <td>{{ row.per_km_kzt }}</td>
+        <td>{{ row.source }}{% if row.approximate %} (примерно){% endif %}</td>
+        <td>{% if row.is_current %}Текущий{% elif row.valid_from > today %}Будущий{% else %}Архив{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7">Тарифы пока не добавлены</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -51,14 +51,14 @@
   {
     "id": "airport_republic",
     "from": [
-      43.3479,
-      77.0115
+      43.34745,
+      77.01127
     ],
     "to": [
       43.2386,
       76.9456
     ],
-    "note": "airport (OSM airport stop/old terminal area; the new terminal at 43.352,77.041 has no mapped stop within 2 km) -> city centre"
+    "note": "airport international terminal T2 public frontage -> Republic Square"
   },
   {
     "id": "mega_dostyk",

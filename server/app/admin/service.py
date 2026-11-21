@@ -7,7 +7,8 @@ Validation functions take a mapping of submitted form strings and return (values
 import json
 import re
 import uuid
-from datetime import datetime, time
+from datetime import date, datetime, time
+from decimal import Decimal
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from app.db import execute, fetch_all, fetch_one
@@ -462,3 +463,52 @@ async def check_event_refs(conn, values: Mapping[str, Any], errors: Errors) -> N
     if values.get("category_id") and "category_id" not in errors:
         if not await fetch_one(conn, sql.CATEGORY_EXISTS, (values["category_id"],)):
             errors["category_id"] = "Категория не найдена"
+
+
+TARIFF_MODES = {
+    "walk": "Пешком",
+    "scooter": "Самокат",
+    "bus": "Автобус",
+    "metro": "Метро",
+    "taxi": "Такси",
+    "car": "Своя машина",
+}
+TARIFF_FIELDS = {
+    "base_kzt": "Фиксированная часть, ₸",
+    "per_min_kzt": "За минуту, ₸",
+    "per_km_kzt": "За километр, ₸",
+}
+_TARIFF_MODES_BY_FIELD = {
+    "base_kzt": {"scooter", "bus", "metro", "taxi"},
+    "per_min_kzt": {"scooter", "taxi"},
+    "per_km_kzt": {"taxi", "car"},
+}
+_TARIFF_AMOUNT_RE = re.compile(r"[0-9]{1,8}(?:\.[0-9]{1,2})?")
+
+
+def validate_tariff(form: Mapping[str, str]) -> Tuple[Dict[str, Any], Errors]:
+    values: Dict[str, Any] = {}
+    errors: Errors = {}
+    mode = form.get("mode", "")
+    values["mode"] = mode
+    if mode not in TARIFF_MODES:
+        errors["mode"] = "Выберите вид транспорта"
+    try:
+        values["valid_from"] = date.fromisoformat(form.get("valid_from", ""))
+    except ValueError:
+        errors["valid_from"] = "Укажите дату начала действия"
+    for field in TARIFF_FIELDS:
+        raw = form.get(field, "").strip().replace(",", ".")
+        if not _TARIFF_AMOUNT_RE.fullmatch(raw):
+            errors[field] = "Введите сумму от 0 до 99 999 999,99"
+            continue
+        amount = Decimal(raw)
+        if amount and mode not in _TARIFF_MODES_BY_FIELD[field]:
+            errors[field] = "Для этого вида транспорта укажите 0"
+        values[field] = amount
+    values["approximate"] = parse_bool(form.get("approximate"))
+    source, error = clean_text(form.get("source"), 200)
+    values["source"] = source
+    if not source:
+        errors["source"] = error or "Укажите источник или основание оценки"
+    return values, errors

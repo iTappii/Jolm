@@ -13,6 +13,7 @@ MESSAGES = {
     "unauthorized": {"en": "Authentication required", "ru": "Требуется авторизация"},
     "forbidden": {"en": "Access denied", "ru": "Доступ запрещён"},
     "db_unavailable": {"en": "Database unavailable", "ru": "База данных недоступна"},
+    "routing_unavailable": {"en": "Directions unavailable", "ru": "Маршруты недоступны"},
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

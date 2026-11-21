@@ -1,4 +1,4 @@
-"""Load all seeds into the dev DB: categories, then the curated popular places (Ш-07, Ш-09).
+"""Load categories, curated popular places, and transport tariffs into the dev DB.
 
 Usage: python data/seed/load_seed.py   (DATABASE_URL from env or .env)
 """
@@ -37,6 +37,7 @@ def main() -> int:
         print(f"categories: {n}")
         stats = import_popular.import_csv(conn, HERE / "popular_places.csv")
         print(f"popular places: {stats}")
+        conn.execute((HERE / "transport_tariffs.sql").read_text(encoding="utf-8"))
     return 0
 
 

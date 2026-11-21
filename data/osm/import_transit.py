@@ -1,7 +1,7 @@
 """Import Almaty public transport from OpenStreetMap into transit_* tables (TECH_PLAN Ш-21).
 
 Usage:
-    python data/osm/import_transit.py [--pbf PATH] [--seed PATH] [--dry-run]
+    python data/osm/import_transit.py [--pbf PATH] [--seed PATH] [--manual-stops PATH] [--dry-run]
 
 Source: data/osm/cache/kazakhstan.osm.pbf (`make osm-pbf`), route relations with
 route=subway|bus|trolleybus|tram inside the Almaty bbox. One relation = one direction (or a loop);
@@ -37,6 +37,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from uuid import UUID
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -46,6 +47,7 @@ from import_places import BBOX, database_url, find_pbf, in_bbox  # noqa: E402
 ROUTE_KINDS = {"subway": "metro", "bus": "bus", "trolleybus": "trolleybus", "tram": "tram"}
 KIND_PRIORITY = ["metro", "tram", "trolleybus", "bus"]
 DEFAULT_SEED = HERE.parent / "seed" / "transit_manual.csv"
+DEFAULT_MANUAL_STOPS = HERE.parent / "seed" / "transit_manual_stops.csv"
 FOLD_RADIUS_M = 80.0
 METRO_MERGE_RADIUS_M = 200.0
 KAZAKH_LETTERS = set("әіңғүұқөһӘІҢҒҮҰҚӨҺ")
@@ -384,13 +386,61 @@ def seed_for(seed: dict, kind: str, ref: Optional[str]) -> dict:
     return seed.get((kind, ref or "")) or seed[(kind, "")]
 
 
+def apply_manual_stops(stops: dict, routes: list, path: Path) -> Counter:
+    """Splice seed stops at explicit OSM anchors on verified route relations."""
+    stats: Counter = Counter()
+    by_relation = {route["relation_id"]: route for route in routes}
+    replaced_nodes = set()
+    with path.open(encoding="utf-8", newline="") as seed_file:
+        rows = csv.DictReader(line for line in seed_file if not line.startswith("#"))
+        for row in rows:
+            route = by_relation.get(int(row["relation_id"]))
+            stop_id = UUID(row["stop_id"])
+            anchor = int(row["anchor_node"])
+            if not route or route["kind"] != row["kind"] or route["tags"].get("ref") != row["ref"]:
+                stats["manual_stop_links_skipped"] += 1
+                continue
+            sequence = route["stop_nodes"]
+            if stop_id in sequence:
+                continue
+            if sequence.count(anchor) != 1:
+                stats["manual_stop_links_skipped"] += 1
+                continue
+            stop = {
+                "id": stop_id,
+                "kind": row["kind"],
+                "lat": float(row["lat"]),
+                "lon": float(row["lon"]),
+                **{key: row[key] or None for key in ("name_ru", "name_en", "name_kk")},
+            }
+            if not in_bbox(stop["lon"], stop["lat"]):
+                raise ValueError(f"manual stop {stop_id} outside import region")
+            if stops.setdefault(stop_id, stop) != stop:
+                raise ValueError(f"inconsistent seed coordinates or labels for stop {stop_id}")
+            index = sequence.index(anchor)
+            placement = row["placement"]
+            if placement == "replace":
+                sequence[index] = stop_id
+                replaced_nodes.add(anchor)
+            elif placement == "before":
+                sequence.insert(index, stop_id)
+            else:
+                raise ValueError(f"unknown manual stop placement: {placement!r}")
+            stats["manual_stop_links"] += 1
+    if replaced_nodes:
+        referenced = {node for route in routes for node in route["stop_nodes"]}
+        for node in replaced_nodes - referenced:
+            stops.pop(node, None)
+    return stats
+
+
 # --- database (raw parameterized SQL, no ORM) -------------------------------------------------
 
-UPSERT_STOP = """
-INSERT INTO transit_stops (osm_type, osm_id, kind, name_ru, name_en, name_kk, geom)
-VALUES ('node', %(osm_id)s, %(kind)s, %(name_ru)s, %(name_en)s, %(name_kk)s,
-        ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography)
-ON CONFLICT (osm_type, osm_id) DO UPDATE SET
+STOP_VALUES = """%(kind)s, %(name_ru)s, %(name_en)s, %(name_kk)s,
+        ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography"""
+
+UPDATE_STOP = """
+DO UPDATE SET
     kind    = CASE WHEN transit_stops.manual_override @> '"kind"'::jsonb
                    THEN transit_stops.kind ELSE EXCLUDED.kind END,
     name_ru = CASE WHEN transit_stops.manual_override @> '"name_ru"'::jsonb
@@ -403,6 +453,18 @@ ON CONFLICT (osm_type, osm_id) DO UPDATE SET
                    THEN transit_stops.geom ELSE EXCLUDED.geom END,
     updated_at = now()
 RETURNING id, (xmax = 0) AS inserted
+"""
+
+UPSERT_STOP = f"""
+INSERT INTO transit_stops (osm_type, osm_id, kind, name_ru, name_en, name_kk, geom)
+VALUES ('node', %(osm_id)s, {STOP_VALUES})
+ON CONFLICT (osm_type, osm_id) {UPDATE_STOP}
+"""
+
+UPSERT_MANUAL_STOP = f"""
+INSERT INTO transit_stops (id, kind, name_ru, name_en, name_kk, geom)
+VALUES (%(id)s, {STOP_VALUES})
+ON CONFLICT (id) {UPDATE_STOP}
 """
 
 UPSERT_ROUTE = """
@@ -443,9 +505,9 @@ WHERE s.osm_id IS NOT NULL AND s.manual_override = '[]'::jsonb
 def write_db(conn, stops: dict, routes: list, seed: dict) -> Counter:
     """Idempotent upsert inside the caller's transaction. Returns counters."""
     c: Counter = Counter()
-    ids: Dict[int, object] = {}
+    ids: Dict[int | UUID, object] = {}
     for n, s in stops.items():
-        row = conn.execute(UPSERT_STOP, s).fetchone()
+        row = conn.execute(UPSERT_MANUAL_STOP if isinstance(n, UUID) else UPSERT_STOP, s).fetchone()
         ids[n] = row[0]
         c["stops_inserted" if row[1] else "stops_updated"] += 1
     for r in routes:
@@ -486,6 +548,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--pbf", help="path to kazakhstan .osm.pbf")
     ap.add_argument("--seed", default=str(DEFAULT_SEED))
+    ap.add_argument("--manual-stops", type=Path, default=DEFAULT_MANUAL_STOPS)
     ap.add_argument("--dry-run", action="store_true", help="parse and report, write nothing")
     args = ap.parse_args(argv)
 
@@ -494,6 +557,7 @@ def main(argv=None) -> int:
     print(f"reading {pbf} (bbox {BBOX})", flush=True)
     relations, nodes, ways = extract(str(pbf))
     stops, routes, stats = build_network(relations, nodes, ways)
+    stats.update(apply_manual_stops(stops, routes, args.manual_stops))
     if not args.dry_run:
         import psycopg
 

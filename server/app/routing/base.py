@@ -35,6 +35,7 @@ class Maneuver:
     length_m: float
     duration_s: float
     street_names: List[str] = field(default_factory=list)
+    geometry: Optional[str] = None
 
 
 @dataclass(frozen=True)

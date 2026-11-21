@@ -2,6 +2,7 @@
 
 import secrets
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -12,6 +13,7 @@ from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
+from app.places.service import ALMATY_TZ
 
 from . import auth, service, sql
 
@@ -576,6 +578,54 @@ async def route_delete(request: Request, route_id: str, ctx: PostCtx = POST_ADMI
     async with db(request) as conn:
         await execute(conn, sql.ROUTE_DELETE, (route_id,))
     return redirect("/admin/routes")
+
+
+# ---------------------------------------------------------------- tariffs
+
+
+async def _tariff_page(request, session, form=None, errors=None):
+    today = datetime.now(ALMATY_TZ).date()
+    async with db(request) as conn:
+        rows = await fetch_all(conn, sql.TARIFFS_LIST, (today,))
+    return render(
+        request,
+        "tariffs.html",
+        session,
+        status=422 if errors else 200,
+        rows=rows,
+        today=today,
+        modes=service.TARIFF_MODES,
+        fields=service.TARIFF_FIELDS,
+        f=form or {"valid_from": today.isoformat(), "approximate": "on"},
+        errors=errors or {},
+    )
+
+
+@router.get("/tariffs", response_class=HTMLResponse)
+async def tariffs_list(request: Request, session: auth.AdminSession = GET_ADMIN):
+    return await _tariff_page(request, session)
+
+
+@router.post("/tariffs")
+async def tariff_create(request: Request, ctx: PostCtx = POST_ADMIN):
+    values, errors = service.validate_tariff(ctx.form)
+    if errors:
+        return await _tariff_page(request, ctx.session, ctx.form, errors)
+    async with db(request) as conn:
+        await execute(
+            conn,
+            sql.TARIFF_INSERT,
+            (
+                values["mode"],
+                values["valid_from"],
+                values["base_kzt"],
+                values["per_min_kzt"],
+                values["per_km_kzt"],
+                values["approximate"],
+                values["source"],
+            ),
+        )
+    return redirect("/admin/tariffs")
 
 
 # ---------------------------------------------------------------- events

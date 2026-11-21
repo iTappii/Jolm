@@ -56,6 +56,13 @@ SERVICE_HOURS = {
     "trolleybus": (6.0, 23.5),
     "tram": (6.0, 23.5),
 }
+# Almaty Airport's published operating hours. OSM relation IDs distinguish night bus 3.
+AIRPORT_DAY_RELATION = 3014420
+AIRPORT_NIGHT_RELATION = 19593601
+AIRPORT_SERVICE_HOURS = {
+    AIRPORT_DAY_RELATION: (6.0, 23.0),
+    AIRPORT_NIGHT_RELATION: (23.0, 6.0),
+}
 ALMATY_TZ_OFFSET = timezone(timedelta(hours=5))  # UTC+5 since 2024-03; used if tzdata is missing
 CACHE_TTL_S = 600.0
 GRID_DEG = 0.004  # ~440 m lat / ~325 m lon at Almaty: cell >= TRANSFER_RADIUS_M
@@ -104,6 +111,7 @@ class Route:
     inferred_reverse: bool = False  # synthetic opposite direction of a one-direction OSM relation
     cum_m: List[float] = field(default_factory=list)  # distance travelled up to stops[i]
     cum_s: List[float] = field(default_factory=list)  # riding time (no waiting) up to stops[i]
+    osm_relation_id: Optional[int] = None
 
     def ride_s(self, p: int, q: int) -> float:
         return self.cum_s[q] - self.cum_s[p]
@@ -117,7 +125,7 @@ WHERE id IN (SELECT stop_id FROM transit_route_stops)
 ORDER BY id
 """
 ROUTES_SQL = """
-SELECT id::text AS id, kind, ref, name_ru, name_en,
+SELECT id::text AS id, kind, ref, name_ru, name_en, osm_relation_id,
        avg_headway_min::float8 AS headway, speed_kmh::float8 AS speed
 FROM transit_routes
 ORDER BY id
@@ -168,6 +176,7 @@ class TransitNetwork:
                 r["name_en"],
                 r["headway"],
                 r["speed"],
+                osm_relation_id=r.get("osm_relation_id"),
             )
             for i, r in enumerate(route_rows)
         ]
@@ -178,10 +187,12 @@ class TransitNetwork:
         routes = [r for r in routes if len(r.stops) >= 2]
         # OSM maps many Almaty lines as one relation only. A line with a single relation gets its
         # opposite direction inferred (same stops reversed; opposite-side stops are close enough).
-        by_line: Dict[Tuple[str, str], List[Route]] = {}
+        by_line: Dict[Tuple[str, str, bool], List[Route]] = {}
         for r in routes:
             if r.ref:
-                by_line.setdefault((r.kind, r.ref), []).append(r)
+                by_line.setdefault(
+                    (r.kind, r.ref, r.osm_relation_id == AIRPORT_NIGHT_RELATION), []
+                ).append(r)
         for group in by_line.values():
             if len(group) == 1 and group[0].stops[0] != group[0].stops[-1]:
                 g = group[0]
@@ -197,6 +208,7 @@ class TransitNetwork:
                         g.speed_kmh,
                         g.stops[::-1],
                         inferred_reverse=True,
+                        osm_relation_id=g.osm_relation_id,
                     )
                 )
         for i, r in enumerate(routes):
@@ -333,10 +345,14 @@ def _local_hour(depart: Optional[datetime]) -> Optional[float]:
     return depart.hour + depart.minute / 60.0
 
 
-def _in_service(kind: str, hour: Optional[float]) -> bool:
+def _in_service(route: Route, hour: Optional[float]) -> bool:
     if hour is None:
         return True
-    start, end = SERVICE_HOURS.get(kind, (0.0, 24.0))
+    start, end = AIRPORT_SERVICE_HOURS.get(
+        route.osm_relation_id, SERVICE_HOURS.get(route.kind, (0.0, 24.0))
+    )
+    if start > end:
+        return hour >= start or hour < end
     return start <= hour < end
 
 
@@ -425,7 +441,7 @@ async def find_transit_options(
     naive datetimes are taken as local). Returns [] if nothing is within walking range of both ends.
     """
     hour = _local_hour(depart)
-    allowed = {r.idx for r in net.routes if _in_service(r.kind, hour)}
+    allowed = {r.idx for r in net.routes if _in_service(r, hour)}
     if not allowed:
         return []
     cand_a = await _candidates(net, router, a, True, allowed, MAX_WALK_RADIUS_M)

@@ -19,6 +19,8 @@ from app.routing.base import (
     RoutingUnavailable,
     check_mode,
 )
+from app.routing.fake import encode_polyline6
+from app.routing.geometry import decode_polyline6
 
 log = logging.getLogger("app.routing")
 
@@ -61,14 +63,24 @@ def parse_route(mode: str, data: Dict[str, Any]) -> RouteResult:
     legs = trip.get("legs") or []
     summary = trip.get("summary") or {}
     if not legs or "time" not in summary:
-        raise NoRoute("empty route in response")
-    if len(legs) == 1:
-        geometry = legs[0]["shape"]
-    else:  # multi-leg (not used for A->B); keep first leg shape, document limitation
-        geometry = legs[0]["shape"]
+        raise RoutingUnavailable("Valhalla response has no route summary or legs")
+    geometry = legs[0]["shape"]  # Requests contain exactly two points.
     maneuvers: List[Maneuver] = []
     for leg in legs:
+        try:
+            shape = decode_polyline6(leg["shape"])
+        except ValueError as exc:
+            raise RoutingUnavailable("invalid Valhalla route geometry") from exc
+        if not shape:
+            raise RoutingUnavailable("empty Valhalla route geometry")
         for m in leg.get("maneuvers", []):
+            start = m.get("begin_shape_index")
+            end = m.get("end_shape_index")
+            step_shape = (
+                encode_polyline6(shape[start : end + 1])
+                if start is not None and end is not None and 0 <= start <= end < len(shape)
+                else None
+            )
             maneuvers.append(
                 Maneuver(
                     instruction=m.get("instruction", ""),
@@ -76,6 +88,7 @@ def parse_route(mode: str, data: Dict[str, Any]) -> RouteResult:
                     length_m=round(float(m.get("length", 0.0)) * 1000, 1),
                     duration_s=float(m.get("time", 0.0)),
                     street_names=list(m.get("street_names", []) or []),
+                    geometry=step_shape,
                 )
             )
     return RouteResult(
@@ -137,10 +150,18 @@ class ValhallaRouter:
             except httpx.HTTPError as e:  # read timeout etc.: do not retry
                 raise RoutingUnavailable("valhalla request failed: %s" % e) from e
             if resp.status_code == 200:
-                return resp.json()
+                try:
+                    data = resp.json()
+                except ValueError as exc:
+                    raise RoutingUnavailable("invalid Valhalla JSON response") from exc
+                if not isinstance(data, dict):
+                    raise RoutingUnavailable("invalid Valhalla response object")
+                return data
             code = None
             try:
-                code = resp.json().get("error_code")
+                body_data = resp.json()
+                if isinstance(body_data, dict):
+                    code = body_data.get("error_code")
             except ValueError:
                 pass
             if resp.status_code == 400 and code in _NO_ROUTE_CODES:
@@ -156,7 +177,11 @@ class ValhallaRouter:
         body = _costing_body(mode)
         body["locations"] = [_loc(from_point), _loc(to_point)]
         body["directions_options"] = {"units": "kilometers", "language": "en-US"}
-        return parse_route(mode, await self._post("/route", body))
+        data = await self._post("/route", body)
+        try:
+            return parse_route(mode, data)
+        except (KeyError, ValueError, TypeError, AttributeError) as exc:
+            raise RoutingUnavailable("invalid Valhalla route response") from exc
 
     async def _matrix_chunk(
         self, ss: Sequence[Point], tt: Sequence[Point], mode: str
@@ -164,7 +189,11 @@ class ValhallaRouter:
         body = _costing_body(mode)
         body["sources"] = [_loc(p) for p in ss]
         body["targets"] = [_loc(p) for p in tt]
-        return parse_matrix(mode, await self._post("/sources_to_targets", body), len(ss), len(tt))
+        data = await self._post("/sources_to_targets", body)
+        try:
+            return parse_matrix(mode, data, len(ss), len(tt))
+        except (KeyError, ValueError, TypeError, IndexError) as exc:
+            raise RoutingUnavailable("invalid Valhalla matrix response") from exc
 
     async def _matrix_pairwise(
         self, ss: Sequence[Point], tt: Sequence[Point], mode: str

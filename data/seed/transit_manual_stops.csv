@@ -1,0 +1,12 @@
+# Almaty Airport confirms day 92 and night 3 serve both passenger terminals:
+# https://alaport.com/en/transports/bus
+# Terminal approach and bay locations from the airport's published route diagram:
+# https://informburo.kz/novosti/avtobusy-snova-stali-ostanavlivatsia-vozle-aeroporta-almaty
+# T1 uses the mapped terminal stop position (OSM node 12844683265).
+# T2 is approximate, on the public frontage near OSM terminal building 1180396891.
+# Relation 19593601 is Ogareva–Orbita-2 (night 3), distinct from other relations with ref 3.
+stop_id,kind,ref,relation_id,anchor_node,placement,lat,lon,name_ru,name_en,name_kk
+1db616e8-b482-4962-ac56-f4ec31918014,bus,92,3014420,12844683265,before,43.34745,77.01127,Аэропорт Алматы — терминал T2,Almaty Airport — Terminal T2,Алматы әуежайы — T2 терминалы
+b2dd4f99-bfcc-4d44-a3d7-9f10b4406fb1,bus,92,3014420,12844683265,replace,43.3460325,77.011753,Аэропорт Алматы — терминал T1,Almaty Airport — Terminal T1,Алматы әуежайы — T1 терминалы
+1db616e8-b482-4962-ac56-f4ec31918014,bus,3,19593601,5698201022,before,43.34745,77.01127,Аэропорт Алматы — терминал T2,Almaty Airport — Terminal T2,Алматы әуежайы — T2 терминалы
+b2dd4f99-bfcc-4d44-a3d7-9f10b4406fb1,bus,3,19593601,5698201022,before,43.3460325,77.011753,Аэропорт Алматы — терминал T1,Almaty Airport — Terminal T1,Алматы әуежайы — T1 терминалы

@@ -287,3 +287,24 @@ WHERE id = %(id)s
 """
 
 EVENT_DELETE = "DELETE FROM events WHERE id = %s"
+
+
+TARIFFS_LIST = """
+SELECT mode, valid_from, base_kzt, per_min_kzt, per_km_kzt, approximate, source,
+       version_id = (
+           SELECT candidate.version_id
+           FROM transport_tariffs AS candidate
+           WHERE candidate.mode = tariff.mode AND candidate.valid_from <= %s
+           ORDER BY candidate.valid_from DESC, candidate.version_id DESC
+           LIMIT 1
+       ) AS is_current
+FROM transport_tariffs AS tariff
+ORDER BY mode, valid_from DESC, version_id DESC
+"""
+
+TARIFF_INSERT = """
+INSERT INTO transport_tariffs (
+    mode, valid_from, base_kzt, per_min_kzt, per_km_kzt, approximate, source
+)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
+"""
