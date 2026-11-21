@@ -6,10 +6,10 @@
     "semantic_hash": ""
   },
   "JOL_SSOT.md": {
-    "mtime": 1795211101.1125176,
-    "seen": 1795214436.152902,
-    "ast_hash": "a2f01e10ec0155d26ef86e54da743445",
-    "semantic_hash": "a2f01e10ec0155d26ef86e54da743445"
+    "mtime": 1795231129.3942769,
+    "seen": 1795232945.420775,
+    "ast_hash": "1c88e1b1da4857ada14c9cb7f0131d54",
+    "semantic_hash": ""
   },
   "logo/jol-icon-1024.png": {
     "mtime": 1795212826.532123,
@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "TECH_PLAN.md": {
-    "mtime": 1795230400.6198945,
-    "seen": 1795230435.830994,
-    "ast_hash": "f8f87a3bd32ba40e9863bd97857c2f76",
+    "mtime": 1795235036.0553198,
+    "seen": 1795235060.322046,
+    "ast_hash": "e85b48bc1b68183260bd5370dbe6b42d",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -78,15 +78,15 @@
     "semantic_hash": ""
   },
   "ios/Jol/App/JolApp.swift": {
-    "mtime": 1795215673.7349977,
-    "seen": 1795215886.6300821,
-    "ast_hash": "0045e64a617dde929e4f19f835c87f0b",
+    "mtime": 1795233168.5076935,
+    "seen": 1795235060.319187,
+    "ast_hash": "1573c229367401efc6e3947fc9ebf807",
     "semantic_hash": ""
   },
   "ios/Jol/Core/AppConfig.swift": {
-    "mtime": 1795215673.7366228,
-    "seen": 1795215886.630083,
-    "ast_hash": "2b4dd34ae4577e3d9478c4ce31a65618",
+    "mtime": 1795233168.4792123,
+    "seen": 1795235060.319207,
+    "ast_hash": "09d2e09c58c1ac6e5a41e02d276bacbd",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/MapCamera.swift": {
@@ -96,15 +96,15 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/MapScreen.swift": {
-    "mtime": 1795222042.0357585,
-    "seen": 1795230435.827817,
-    "ast_hash": "ee5d48c7f4aedc75d43ad294116ab393",
+    "mtime": 1795233142.7566626,
+    "seen": 1795235060.319633,
+    "ast_hash": "b9a6a26abebada854d36811436802f03",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/MapView.swift": {
-    "mtime": 1795215673.7396386,
-    "seen": 1795215886.630084,
-    "ast_hash": "0df3e021955e984ae5fecef174454d44",
+    "mtime": 1795234204.4356058,
+    "seen": 1795235060.319634,
+    "ast_hash": "e6644caf6de8ade71d0b20735d193127",
     "semantic_hash": ""
   },
   "ios/Jol/Resources/Assets.xcassets/AccentColor.colorset/Contents.json": {
@@ -138,15 +138,15 @@
     "semantic_hash": ""
   },
   "ios/JolUITests/MapLaunchUITests.swift": {
-    "mtime": 1795215673.744267,
-    "seen": 1795215886.630087,
-    "ast_hash": "5343b36cc85fee503061ac9a51c6d5a4",
+    "mtime": 1795230950.122531,
+    "seen": 1795232945.4195158,
+    "ast_hash": "10f9395f8f9484fb44c8f1602818370e",
     "semantic_hash": ""
   },
   "ios/project.yml": {
-    "mtime": 1795221946.9437647,
-    "seen": 1795230435.828091,
-    "ast_hash": "f35154f7a352591d0520665df74401aa",
+    "mtime": 1795230950.1226437,
+    "seen": 1795232945.4195158,
+    "ast_hash": "1504557ecb75dd192cc977daf0f133fd",
     "semantic_hash": ""
   },
   "maps/build_tiles.sh": {
@@ -156,9 +156,9 @@
     "semantic_hash": ""
   },
   "maps/serve.py": {
-    "mtime": 1795221595.5153947,
-    "seen": 1795221804.0953002,
-    "ast_hash": "14fefeb79c01dab75a8749a1cbb34ec5",
+    "mtime": 1795234479.1677427,
+    "seen": 1795235060.320126,
+    "ast_hash": "2953a43bdfa4d0ef4f706d7fa34b897d",
     "semantic_hash": ""
   },
   "maps/style/build_styles.py": {
@@ -198,9 +198,9 @@
     "semantic_hash": ""
   },
   "server/app/config.py": {
-    "mtime": 1795221917.0927074,
-    "seen": 1795230435.829752,
-    "ast_hash": "63fc59829dd7ed2f06114663f34179be",
+    "mtime": 1795234551.478421,
+    "seen": 1795235060.3207328,
+    "ast_hash": "8ab30b40dbaf586fb37cedc2459eb19d",
     "semantic_hash": ""
   },
   "server/app/db.py": {
@@ -210,15 +210,15 @@
     "semantic_hash": ""
   },
   "server/app/errors.py": {
-    "mtime": 1795215770.5700395,
-    "seen": 1795215886.630094,
-    "ast_hash": "913a90690c32a303bd3ba1e69c8a5cac",
+    "mtime": 1795231265.2486587,
+    "seen": 1795232945.419892,
+    "ast_hash": "2af00e539d2977e2b9ef1fb82cb52f6e",
     "semantic_hash": ""
   },
   "server/app/i18n.py": {
-    "mtime": 1795221943.875229,
-    "seen": 1795230435.829814,
-    "ast_hash": "b0474a9d61f20f19a668062fd1ebac0f",
+    "mtime": 1795234162.2386022,
+    "seen": 1795235060.320767,
+    "ast_hash": "a260b72573d4c8fa387c2bbc6ea5184c",
     "semantic_hash": ""
   },
   "server/app/jobs/__init__.py": {
@@ -240,9 +240,9 @@
     "semantic_hash": ""
   },
   "server/app/main.py": {
-    "mtime": 1795221977.1784616,
-    "seen": 1795230435.8298829,
-    "ast_hash": "15c45e64eb3335065814e2dfe0ddff0e",
+    "mtime": 1795233295.9357862,
+    "seen": 1795235060.320816,
+    "ast_hash": "e17d361dc8ee32cd6c4b14584e1d961b",
     "semantic_hash": ""
   },
   "server/app/middleware.py": {
@@ -270,15 +270,15 @@
     "semantic_hash": ""
   },
   "server/app/worker.py": {
-    "mtime": 1795215850.954435,
-    "seen": 1795215886.6301,
-    "ast_hash": "6f2c66724d1c8bf3e2cbe0250f8bb550",
+    "mtime": 1795230950.12339,
+    "seen": 1795232945.4202769,
+    "ast_hash": "a02be2d6b41f24bb8e7fe401b885a3d8",
     "semantic_hash": ""
   },
   "server/pyproject.toml": {
-    "mtime": 1795221973.5131967,
-    "seen": 1795230435.830362,
-    "ast_hash": "2706a66e817869f75dc9a36a74fc857a",
+    "mtime": 1795230950.1235027,
+    "seen": 1795232945.420278,
+    "ast_hash": "d11592b60700ba3f41399acb9a0a9725",
     "semantic_hash": ""
   },
   "server/tests/__init__.py": {
@@ -288,9 +288,9 @@
     "semantic_hash": ""
   },
   "server/tests/conftest.py": {
-    "mtime": 1795230237.724279,
-    "seen": 1795230435.830384,
-    "ast_hash": "474909a01bedc6bccb95119722e3c979",
+    "mtime": 1795233995.5947294,
+    "seen": 1795235060.321436,
+    "ast_hash": "ad9e9df0dd615a76ccec068dad595894",
     "semantic_hash": ""
   },
   "server/tests/test_api.py": {
@@ -330,9 +330,9 @@
     "semantic_hash": ""
   },
   "docs/adr/0003-open-defaults.md": {
-    "mtime": 1795215742.7394428,
-    "seen": 1795215886.6301508,
-    "ast_hash": "2e18a564f7a1ce0ff6f97a5185e59b6a",
+    "mtime": 1795234714.0540407,
+    "seen": 1795235060.32208,
+    "ast_hash": "25fb446062fb25b58e9f2de9c6d15379",
     "semantic_hash": ""
   },
   "docs/adr/README.md": {
@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "ios/README.md": {
-    "mtime": 1795221595.5531251,
-    "seen": 1795221804.097142,
-    "ast_hash": "bbaba15b4ae3b83d1e4e5e41f84ae856",
+    "mtime": 1795231054.9070034,
+    "seen": 1795232945.421073,
+    "ast_hash": "8fe9de44bd66adcd4ba37ddc45085a1e",
     "semantic_hash": ""
   },
   "maps/demo/index.html": {
@@ -678,9 +678,9 @@
     "semantic_hash": ""
   },
   "data/osm/merge.py": {
-    "mtime": 1795217821.621364,
-    "seen": 1795217829.633178,
-    "ast_hash": "daf6d8d0c2c3499655e40f6f7e2245ef",
+    "mtime": 1795234000.624885,
+    "seen": 1795235060.319063,
+    "ast_hash": "a7d24bfaefac24c6d4154125d4bc7321",
     "semantic_hash": ""
   },
   "server/app/routing/__init__.py": {
@@ -744,9 +744,9 @@
     "semantic_hash": ""
   },
   "server/tests/test_osm_pipeline.py": {
-    "mtime": 1795217978.008622,
-    "seen": 1795217990.0776901,
-    "ast_hash": "73d1b7cfc5558cf25b6121a40d126a73",
+    "mtime": 1795234000.6278746,
+    "seen": 1795235060.321752,
+    "ast_hash": "ea0e5f3de5dcbfa8cadee3b98d5e9a2b",
     "semantic_hash": ""
   },
   "server/tests/test_routing.py": {
@@ -870,9 +870,9 @@
     "semantic_hash": ""
   },
   "docs/HANDOFF.md": {
-    "mtime": 1795230417.2284694,
-    "seen": 1795230435.8309948,
-    "ast_hash": "30bbb0cc6ccaed5d32f9e0ffeabc5a7c",
+    "mtime": 1795235057.7888415,
+    "seen": 1795235060.322047,
+    "ast_hash": "016bd6eb5462f9a45257171e0917c21c",
     "semantic_hash": ""
   },
   "docs/reviews/\u0428-21.md": {
@@ -900,15 +900,15 @@
     "semantic_hash": ""
   },
   "server/app/auth/api.py": {
-    "mtime": 1795221741.2993731,
-    "seen": 1795221804.095613,
-    "ast_hash": "065b05c4b9568e89396d3a824f8b1564",
+    "mtime": 1795232630.6098032,
+    "seen": 1795232945.419801,
+    "ast_hash": "b7a11431aa8cc82218be6199ada38185",
     "semantic_hash": ""
   },
   "server/app/auth/sessions.py": {
-    "mtime": 1795221782.148179,
-    "seen": 1795221804.095614,
-    "ast_hash": "f8ac4627fc5b7fdd073fed914ee9d5bb",
+    "mtime": 1795230950.1231067,
+    "seen": 1795232945.419853,
+    "ast_hash": "a8d66ae8066edadaa36545c6cabf77b6",
     "semantic_hash": ""
   },
   "server/tests/test_sessions.py": {
@@ -918,15 +918,15 @@
     "semantic_hash": ""
   },
   "ios/Jol/Core/SessionStore.swift": {
-    "mtime": 1795221917.0732815,
-    "seen": 1795230435.8277671,
-    "ast_hash": "0724341242417d293d453083a4458812",
+    "mtime": 1795230950.1221995,
+    "seen": 1795232945.419348,
+    "ast_hash": "481a7ea3c9540500ef0da192979fce68",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Auth/AppleSignInView.swift": {
-    "mtime": 1795222042.0356042,
-    "seen": 1795230435.827768,
-    "ast_hash": "87d536079e085c211be409513fae8e56",
+    "mtime": 1795231368.9004824,
+    "seen": 1795232945.419348,
+    "ast_hash": "703babfcb30a39c2cd5fd16ca3b9b96f",
     "semantic_hash": ""
   },
   "ios/JolTests/SessionStoreTests.swift": {
@@ -936,15 +936,15 @@
     "semantic_hash": ""
   },
   "ios/JolUITests/AppleSignInUITests.swift": {
-    "mtime": 1795222042.0427346,
-    "seen": 1795230435.828065,
-    "ast_hash": "c22cfeea69e018dbc479e34cc27b9b92",
+    "mtime": 1795231475.1148067,
+    "seen": 1795232945.4195142,
+    "ast_hash": "b6c93d539f7c01c690b65427bb0a8905",
     "semantic_hash": ""
   },
   "server/app/auth/apple.py": {
-    "mtime": 1795221953.051412,
-    "seen": 1795230435.829718,
-    "ast_hash": "58a9e23a1c74288b92f23147fce162bc",
+    "mtime": 1795230950.1229408,
+    "seen": 1795232945.419801,
+    "ast_hash": "bf91ca105bfa7ef227d57ce2c5317199",
     "semantic_hash": ""
   },
   "server/app/auth/email.py": {
@@ -1002,15 +1002,825 @@
     "semantic_hash": ""
   },
   "docs/reviews/\u0428-26.md": {
-    "mtime": 1795230314.5931427,
-    "seen": 1795230435.83139,
-    "ast_hash": "217219be98a3a8dcaa50b329cbb67f09",
+    "mtime": 1795230990.3178642,
+    "seen": 1795232945.421054,
+    "ast_hash": "5a2db5fe56da4bee931937aa994b33d2",
     "semantic_hash": ""
   },
   "docs/reviews/\u0428-27.md": {
     "mtime": 1795221998.8852515,
     "seen": 1795230435.8313909,
     "ast_hash": "eb5a27e96c1afc83cd419b66aa551746",
+    "semantic_hash": ""
+  },
+  "ios/Jol/App/AppContainer.swift": {
+    "mtime": 1795233195.648467,
+    "seen": 1795235060.319186,
+    "ast_hash": "9c43cdabe85fabbcc9fa4d3c6de5b71b",
+    "semantic_hash": ""
+  },
+  "ios/Jol/App/RootView.swift": {
+    "mtime": 1795231396.1364195,
+    "seen": 1795232945.419339,
+    "ast_hash": "8bd719e5d4afbfaab72a61f8149bd005",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Design/Metrics.swift": {
+    "mtime": 1795230760.636211,
+    "seen": 1795232945.419341,
+    "ast_hash": "effb8941a5894fea833e8f4c9f068567",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Design/Palette.swift": {
+    "mtime": 1795230760.634526,
+    "seen": 1795232945.419342,
+    "ast_hash": "b2fb4df8e8af2366d3ead1981ddc70bc",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Design/PlaceholderScreen.swift": {
+    "mtime": 1795230792.5971289,
+    "seen": 1795232945.419343,
+    "ast_hash": "eda9a3d06c33d35b855dfd42c415d656",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Design/Typography.swift": {
+    "mtime": 1795230760.6379063,
+    "seen": 1795232945.419343,
+    "ast_hash": "93faa76edc0d144f52d6c7ecf26606c5",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/InstallID.swift": {
+    "mtime": 1795230742.6003313,
+    "seen": 1795232945.419343,
+    "ast_hash": "1efef63c33caed8bf6de40f2c94a9327",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Localization/AppLanguage.swift": {
+    "mtime": 1795230824.7001905,
+    "seen": 1795232945.419344,
+    "ast_hash": "9b1f99eecc6038a36efd38d86db4d8ff",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Localization/L10n.swift": {
+    "mtime": 1795230760.6328058,
+    "seen": 1795232945.419344,
+    "ast_hash": "9b42524c54bcabfd63bf441d62225ff3",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/APIClient.swift": {
+    "mtime": 1795231012.110855,
+    "seen": 1795232945.419345,
+    "ast_hash": "983c0e45f56c10791b8a731a72edd8b1",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/APIError.swift": {
+    "mtime": 1795230703.0866857,
+    "seen": 1795232945.419345,
+    "ast_hash": "ccd39b304e146ab978d5864d15f47c63",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/Endpoint.swift": {
+    "mtime": 1795231368.900156,
+    "seen": 1795232945.4193459,
+    "ast_hash": "0198f4f0c1c6edbe7629e8cb9ff145a4",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/SSEClient.swift": {
+    "mtime": 1795231012.1104608,
+    "seen": 1795232945.4193459,
+    "ast_hash": "0485185042d0d9ac31ffd4ea0005247e",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/ServerMeta.swift": {
+    "mtime": 1795230742.59868,
+    "seen": 1795232945.419347,
+    "ast_hash": "b45d0dae174844d0c0d78ce3c01b3e76",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/TokenStore.swift": {
+    "mtime": 1795231374.3862827,
+    "seen": 1795232945.419347,
+    "ast_hash": "c9a7e128e461a3871cd9d21466cf0c26",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Auth/AuthService.swift": {
+    "mtime": 1795231368.9003744,
+    "seen": 1795232945.419349,
+    "ast_hash": "08cbfc55775165f6f2efa7e412d02274",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Auth/AuthState.swift": {
+    "mtime": 1795230792.5554187,
+    "seen": 1795232945.419349,
+    "ast_hash": "53378ac812bc68b3c506a8af7e6d4467",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Auth/SignInEntryView.swift": {
+    "mtime": 1795231800.991048,
+    "seen": 1795232945.41935,
+    "ast_hash": "81d33f6115371be961f4aa3cf37e9e3a",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Chat/ChatPanel.swift": {
+    "mtime": 1795232341.3031578,
+    "seen": 1795232945.41935,
+    "ast_hash": "8936ca4733ecd07208b53eaa33412aa8",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Chat/ChatScreen.swift": {
+    "mtime": 1795230792.5988562,
+    "seen": 1795232945.419351,
+    "ast_hash": "91cd931ae2383b10894a72a8cbec44f3",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Home/HomeScreen.swift": {
+    "mtime": 1795233195.64875,
+    "seen": 1795235060.3196118,
+    "ast_hash": "87ca9cb9292900a467cb59d4a3cac6f0",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlacesScreen.swift": {
+    "mtime": 1795233016.999266,
+    "seen": 1795235060.319639,
+    "ast_hash": "e0b43ddbf4787d63bfd2b2b8f5755ff3",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Profile/ProfileMenuSheet.swift": {
+    "mtime": 1795231800.9908159,
+    "seen": 1795232945.419394,
+    "ast_hash": "7983ba1788129ad7bb25653a044febe3",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Profile/ProfileModel.swift": {
+    "mtime": 1795231429.6417785,
+    "seen": 1795232945.419394,
+    "ast_hash": "c2130d7731da6f03a9a2fd44016b8fd7",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Profile/ProfileScreen.swift": {
+    "mtime": 1795230799.4613774,
+    "seen": 1795232945.419395,
+    "ast_hash": "72bbb17f0481866f3eaf1a5e8bc2a240",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Profile/ProfileSubscreens.swift": {
+    "mtime": 1795231429.6451354,
+    "seen": 1795232945.419395,
+    "ast_hash": "4d6c266936a9bb7d0fdf08e1193a000f",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Route/RouteScreen.swift": {
+    "mtime": 1795230792.6022952,
+    "seen": 1795232945.4193962,
+    "ast_hash": "29ff022ddd6f056472ed37326c55c7b0",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Sidebar/SidebarPanel.swift": {
+    "mtime": 1795233168.4793801,
+    "seen": 1795235060.319744,
+    "ast_hash": "e02dcad1d5a771fa345775a0906ee396",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Sidebar/SidebarScreen.swift": {
+    "mtime": 1795230792.6058626,
+    "seen": 1795232945.419397,
+    "ast_hash": "ab682f09833a339aa18497ef7513d971",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/System/FeatureGalleryScreen.swift": {
+    "mtime": 1795230799.4614854,
+    "seen": 1795232945.419397,
+    "ast_hash": "321acaa01e0d728c23d2b700fa9a8e5d",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/System/ServerStatusModel.swift": {
+    "mtime": 1795230792.5954778,
+    "seen": 1795232945.4193978,
+    "ast_hash": "2a08e4223a006fa7f2eed55d2d470014",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Trip/TripScreen.swift": {
+    "mtime": 1795230792.604112,
+    "seen": 1795232945.4193978,
+    "ast_hash": "1c03b4dd1663f8eb47fb44b761d77186",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/APIClientTests.swift": {
+    "mtime": 1795231016.8697872,
+    "seen": 1795232945.4194791,
+    "ast_hash": "1d77421d2f85130be3c442e1cbf4908d",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/FoundationTests.swift": {
+    "mtime": 1795231012.1111817,
+    "seen": 1795232945.4194958,
+    "ast_hash": "9d129d1c5fdecb6ee77f993684c5fbe1",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/ProfileTests.swift": {
+    "mtime": 1795231475.1180773,
+    "seen": 1795232945.4194958,
+    "ast_hash": "9c055d9281ca4d91dbe0e8a2ac2b2882",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/SSEParserTests.swift": {
+    "mtime": 1795230914.4271803,
+    "seen": 1795232945.419497,
+    "ast_hash": "b389f5a1e01222c83e13287cf834504e",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/StubURLProtocol.swift": {
+    "mtime": 1795231012.1110377,
+    "seen": 1795232945.4195142,
+    "ast_hash": "7e198b522dc1c0997e5ca93ec43dcc56",
+    "semantic_hash": ""
+  },
+  "ios/JolUITests/FeatureGalleryUITests.swift": {
+    "mtime": 1795230936.8346012,
+    "seen": 1795232945.419515,
+    "ast_hash": "68bd124ddf88a32a86021d7a696773c8",
+    "semantic_hash": ""
+  },
+  "ios/JolUITests/HomeScreenUITests.swift": {
+    "mtime": 1795232114.5480826,
+    "seen": 1795232945.419515,
+    "ast_hash": "266eb0260988e1bffb8e77861c436c58",
+    "semantic_hash": ""
+  },
+  "server/app/auth/accounts.py": {
+    "mtime": 1795230740.3850718,
+    "seen": 1795232945.4198,
+    "ast_hash": "90314ca335d9946092e5e8771a2c85e2",
+    "semantic_hash": ""
+  },
+  "server/app/auth/apple_grants.py": {
+    "mtime": 1795230740.3832417,
+    "seen": 1795232945.4198022,
+    "ast_hash": "535dcaa1450a168c80f4dbca70063867",
+    "semantic_hash": ""
+  },
+  "server/app/chat/__init__.py": {
+    "mtime": 1795230846.3551085,
+    "seen": 1795232945.41987,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "server/app/chat/api.py": {
+    "mtime": 1795234243.508927,
+    "seen": 1795235060.320571,
+    "ast_hash": "5eec9b5b20936945dce39a32494a47d3",
+    "semantic_hash": ""
+  },
+  "server/app/chat/brief.py": {
+    "mtime": 1795231860.7307189,
+    "seen": 1795232945.419871,
+    "ast_hash": "921e4994df734ef16dd220ef1c1261f9",
+    "semantic_hash": ""
+  },
+  "server/app/chat/deps.py": {
+    "mtime": 1795231389.930862,
+    "seen": 1795232945.419872,
+    "ast_hash": "cd6abd59e8370d12f9f944c40c4e1c10",
+    "semantic_hash": ""
+  },
+  "server/app/chat/engine.py": {
+    "mtime": 1795231437.1904674,
+    "seen": 1795232945.419872,
+    "ast_hash": "9a9383c33949f95ff2d147983ef4b464",
+    "semantic_hash": ""
+  },
+  "server/app/chat/guest.py": {
+    "mtime": 1795231389.9326258,
+    "seen": 1795232945.419873,
+    "ast_hash": "56a368252ef6e2d6a60332c76e2b262e",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/__init__.py": {
+    "mtime": 1795230887.967803,
+    "seen": 1795232945.419873,
+    "ast_hash": "8988b6e38ad9e470766115d1d2e98d64",
+    "semantic_hash": ""
+  },
+  "server/app/chat/ratelimit.py": {
+    "mtime": 1795231307.7782695,
+    "seen": 1795232945.419874,
+    "ast_hash": "8af8d6d6bac9b1a975649339b35cb428",
+    "semantic_hash": ""
+  },
+  "server/app/chat/sse.py": {
+    "mtime": 1795231307.7766488,
+    "seen": 1795232945.419874,
+    "ast_hash": "bfd78f2fdbb54e982d9453a80e398c47",
+    "semantic_hash": ""
+  },
+  "server/app/chat/store.py": {
+    "mtime": 1795231860.7311492,
+    "seen": 1795232945.4198751,
+    "ast_hash": "96e5ccb58aae2e22b543c29232fc586e",
+    "semantic_hash": ""
+  },
+  "server/app/chat/tools.py": {
+    "mtime": 1795231434.635145,
+    "seen": 1795232945.4198751,
+    "ast_hash": "6c1f01618bd3ad4f283c03ae741e32ae",
+    "semantic_hash": ""
+  },
+  "server/app/planner/__init__.py": {
+    "mtime": 1795232025.608344,
+    "seen": 1795232945.4200408,
+    "ast_hash": "e29e8aac39214c371e6f3c4f0e06abfa",
+    "semantic_hash": ""
+  },
+  "server/app/planner/area.py": {
+    "mtime": 1795232520.2760804,
+    "seen": 1795232945.420042,
+    "ast_hash": "b421c06318f5ac11aff0f1299871d3ce",
+    "semantic_hash": ""
+  },
+  "server/app/planner/candidates.py": {
+    "mtime": 1795232193.4501922,
+    "seen": 1795232945.420042,
+    "ast_hash": "e744cb4a38ce6080ff522bce30167d57",
+    "semantic_hash": ""
+  },
+  "server/app/planner/hours.py": {
+    "mtime": 1795232686.0407324,
+    "seen": 1795232945.420043,
+    "ast_hash": "38247e0a803d77c568b3c259608e17a6",
+    "semantic_hash": ""
+  },
+  "server/app/planner/interests.py": {
+    "mtime": 1795232193.45009,
+    "seen": 1795232945.420043,
+    "ast_hash": "f70b33fbfaf95d6d19c19c8e40ee3217",
+    "semantic_hash": ""
+  },
+  "server/app/planner/layout.py": {
+    "mtime": 1795234251.3137527,
+    "seen": 1795235060.320999,
+    "ast_hash": "4e623acb5ba98e7070775d276fda1a59",
+    "semantic_hash": ""
+  },
+  "server/app/planner/model.py": {
+    "mtime": 1795232047.902773,
+    "seen": 1795232945.420044,
+    "ast_hash": "7b569fbb95a33cd96cfa21260251a99f",
+    "semantic_hash": ""
+  },
+  "server/app/planner/scoring.py": {
+    "mtime": 1795232127.8727317,
+    "seen": 1795232945.4200451,
+    "ast_hash": "ab26538ada00852300efddc56b25e9b0",
+    "semantic_hash": ""
+  },
+  "server/app/planner/signals.py": {
+    "mtime": 1795232025.6117826,
+    "seen": 1795232945.4200451,
+    "ast_hash": "358bab238c1a1043aa9bed5a20709e75",
+    "semantic_hash": ""
+  },
+  "server/app/planner/sql.py": {
+    "mtime": 1795234008.7672198,
+    "seen": 1795235060.321048,
+    "ast_hash": "db8dd7760982c6f409bf02ad27ab5a9d",
+    "semantic_hash": ""
+  },
+  "server/app/planner/travel.py": {
+    "mtime": 1795234085.491889,
+    "seen": 1795235060.321049,
+    "ast_hash": "6cb7bf8888de43ac97e991b7fa273b47",
+    "semantic_hash": ""
+  },
+  "server/app/planner/weather.py": {
+    "mtime": 1795232520.2841837,
+    "seen": 1795232945.420047,
+    "ast_hash": "21aba7fe667fb618a2b85b65a08ad3f1",
+    "semantic_hash": ""
+  },
+  "server/app/providers/__init__.py": {
+    "mtime": 1795230846.3550656,
+    "seen": 1795232945.420047,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": ""
+  },
+  "server/app/providers/llm/__init__.py": {
+    "mtime": 1795230862.5768478,
+    "seen": 1795232945.4200478,
+    "ast_hash": "7c56f8503bb2893e59558231e40d7ca6",
+    "semantic_hash": ""
+  },
+  "server/app/providers/llm/base.py": {
+    "mtime": 1795230846.3573763,
+    "seen": 1795232945.4200478,
+    "ast_hash": "2e74cd86fc66650f0f1d748cfc6d1f95",
+    "semantic_hash": ""
+  },
+  "server/app/providers/llm/fake.py": {
+    "mtime": 1795230862.5752387,
+    "seen": 1795232945.420049,
+    "ast_hash": "f6cd2a6036e00a29077c104fd4fde3d8",
+    "semantic_hash": ""
+  },
+  "server/app/providers/llm/resilient.py": {
+    "mtime": 1795230846.3591394,
+    "seen": 1795232945.420049,
+    "ast_hash": "6f97925d11dce8176eb075e4b46b78f3",
+    "semantic_hash": ""
+  },
+  "server/tests/test_account_deletion.py": {
+    "mtime": 1795234422.4361124,
+    "seen": 1795235060.321569,
+    "ast_hash": "10b3fd39d82755fec3e501cb5059741c",
+    "semantic_hash": ""
+  },
+  "server/tests/test_chat.py": {
+    "mtime": 1795234280.298193,
+    "seen": 1795235060.32165,
+    "ast_hash": "522780449e3215a122d37a88d683f622",
+    "semantic_hash": ""
+  },
+  "server/tests/test_chat_guest.py": {
+    "mtime": 1795231513.4607694,
+    "seen": 1795232945.420496,
+    "ast_hash": "84951b3db82a296638cbb31c29b02f53",
+    "semantic_hash": ""
+  },
+  "server/tests/test_llm.py": {
+    "mtime": 1795230967.061635,
+    "seen": 1795232945.420512,
+    "ast_hash": "45ab83f158ac5e30707cf05e934d0b2d",
+    "semantic_hash": ""
+  },
+  "server/tests/test_planner_candidates.py": {
+    "mtime": 1795232193.4499617,
+    "seen": 1795232945.420616,
+    "ast_hash": "d75d245b6c1da2379d64e95094d1b635",
+    "semantic_hash": ""
+  },
+  "server/tests/test_planner_layout.py": {
+    "mtime": 1795233357.354862,
+    "seen": 1795235060.321815,
+    "ast_hash": "d7a6d4dbd35cf186c0905bde292c47f0",
+    "semantic_hash": ""
+  },
+  "server/tests/test_planner_scoring.py": {
+    "mtime": 1795232189.2550986,
+    "seen": 1795232945.4206169,
+    "ast_hash": "e8db1ad6eec2398aa378595f324eb583",
+    "semantic_hash": ""
+  },
+  "server/tests/test_prompts.py": {
+    "mtime": 1795230916.9448676,
+    "seen": 1795232945.4206321,
+    "ast_hash": "1a94836e10b7edb11c84bd55640abc19",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-14.md": {
+    "mtime": 1795231291.8076193,
+    "seen": 1795232945.420962,
+    "ast_hash": "89752ea1ea1786485714dc67d2f0eab1",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-15.md": {
+    "mtime": 1795232839.63014,
+    "seen": 1795232945.420963,
+    "ast_hash": "33b5ec145fd2c620182712fe98e36add",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-16.md": {
+    "mtime": 1795232839.6322553,
+    "seen": 1795232945.420963,
+    "ast_hash": "906e72b86aed156619abaa95125eb6fd",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-28-server.md": {
+    "mtime": 1795231096.05733,
+    "seen": 1795232945.42107,
+    "ast_hash": "2b887809b045eaa1915b85dc28d558c1",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-29.md": {
+    "mtime": 1795231096.0590594,
+    "seen": 1795232945.421071,
+    "ast_hash": "fee911e9af0842cf167903af7b6f2e89",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-30.md": {
+    "mtime": 1795231781.1433291,
+    "seen": 1795232945.421071,
+    "ast_hash": "7e70f10035830e89831036acfb2edefb",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-31.md": {
+    "mtime": 1795232301.4445496,
+    "seen": 1795232945.4210718,
+    "ast_hash": "54b0c8e61992fa3764649743dc38089c",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-33.md": {
+    "mtime": 1795232301.439902,
+    "seen": 1795232945.4210718,
+    "ast_hash": "3ece45363045c47257477dfb4529ab46",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-34.md": {
+    "mtime": 1795232881.6248739,
+    "seen": 1795232945.421073,
+    "ast_hash": "54dbde62375fb026c8c0db2d13253d0f",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/guest.en.v1.md": {
+    "mtime": 1795230887.9798555,
+    "seen": 1795232945.421421,
+    "ast_hash": "1d58aad266c78b06a0307c03bfedb00e",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/guest.ru.v1.md": {
+    "mtime": 1795230887.9817283,
+    "seen": 1795232945.421422,
+    "ast_hash": "fe7b6fcef700e683e4ae103f7b2343d5",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.en.v1.md": {
+    "mtime": 1795230887.972632,
+    "seen": 1795232945.4214232,
+    "ast_hash": "c84c1392cf82e976a8bf4a582121bd92",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.en.v2.md": {
+    "mtime": 1795231852.7806976,
+    "seen": 1795232945.4214232,
+    "ast_hash": "dc479883170f8e2c6a9d3dc0f642d7ef",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.ru.v1.md": {
+    "mtime": 1795230887.9772031,
+    "seen": 1795232945.4214242,
+    "ast_hash": "57bc1e1a27f8a0e87cefe536f791858f",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.ru.v2.md": {
+    "mtime": 1795231852.7807803,
+    "seen": 1795232945.4214242,
+    "ast_hash": "2de84f1d0d4429d4b543f051222e489b",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Networking/UITestSupport.swift": {
+    "mtime": 1795234209.7039533,
+    "seen": 1795235060.3194618,
+    "ast_hash": "3d38d40ea559f07874680d87223d895f",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/Navigator.swift": {
+    "mtime": 1795233090.4562268,
+    "seen": 1795235060.319635,
+    "ast_hash": "df847e36199ee0646e62692c320a2b8b",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlaceCardSheet.swift": {
+    "mtime": 1795233195.6519227,
+    "seen": 1795235060.319635,
+    "ast_hash": "0abab1ad5ea69fc5b971a6ce2a8c44c1",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlaceCardView.swift": {
+    "mtime": 1795233114.9200926,
+    "seen": 1795235060.3196359,
+    "ast_hash": "fe4f607643a65f84cf5cfbcaaa6c3339",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlaceCategoryStyle.swift": {
+    "mtime": 1795234209.704249,
+    "seen": 1795235060.3196359,
+    "ast_hash": "d88d9d8144d73e8cf9cd91d338b0086d",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlaceFormatting.swift": {
+    "mtime": 1795233090.4577384,
+    "seen": 1795235060.319637,
+    "ast_hash": "0495c7e63ff0e4786fa7b4e9cd51e77c",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlaceModels.swift": {
+    "mtime": 1795234204.4353867,
+    "seen": 1795235060.319638,
+    "ast_hash": "6dcc5625216b0febd7c6df55ee8b8572",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlacesModel.swift": {
+    "mtime": 1795233517.736533,
+    "seen": 1795235060.319638,
+    "ast_hash": "f5768ab981a67c51cd4e84f5fc2b7efe",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Places/PlacesService.swift": {
+    "mtime": 1795233017.0025053,
+    "seen": 1795235060.3196402,
+    "ast_hash": "7b3d0fc85252666a57deb9f9726ff398",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Route/CuratedRoutesViews.swift": {
+    "mtime": 1795233198.6738539,
+    "seen": 1795235060.319723,
+    "ast_hash": "7f1f5acf9766af7ed888ee3b422129df",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Resources/stub-style.json": {
+    "mtime": 1795233168.4819224,
+    "seen": 1795235060.319909,
+    "ast_hash": "3e9046c7c59caf66f42fed0dffe276e5",
+    "semantic_hash": ""
+  },
+  "ios/JolTests/PlacesTests.swift": {
+    "mtime": 1795234204.4358084,
+    "seen": 1795235060.319962,
+    "ast_hash": "cf04ddbdac7a28a7dbb729fc82165a03",
+    "semantic_hash": ""
+  },
+  "ios/JolUITests/PlacesUITests.swift": {
+    "mtime": 1795234209.7044249,
+    "seen": 1795235060.3200939,
+    "ast_hash": "db52a9f37265992b3f5a2aca32ce6c33",
+    "semantic_hash": ""
+  },
+  "server/app/chat/build_tool.py": {
+    "mtime": 1795234257.5413907,
+    "seen": 1795235060.320589,
+    "ast_hash": "bd86f7dd18d852f9b6aa1fa90943797f",
+    "semantic_hash": ""
+  },
+  "server/app/chat/edit_tools.py": {
+    "mtime": 1795234243.4605622,
+    "seen": 1795235060.320607,
+    "ast_hash": "db288ee2dd8aa93fc995789513849b30",
+    "semantic_hash": ""
+  },
+  "server/app/planner/budget.py": {
+    "mtime": 1795233687.7244227,
+    "seen": 1795235060.320948,
+    "ast_hash": "f31bdfc8ecbe8948d127b0e04e53f22d",
+    "semantic_hash": ""
+  },
+  "server/app/planner/build.py": {
+    "mtime": 1795234551.4790306,
+    "seen": 1795235060.320949,
+    "ast_hash": "1d1621e6cc27e4a8487e5c3b5ec46080",
+    "semantic_hash": ""
+  },
+  "server/app/providers/weather/__init__.py": {
+    "mtime": 1795234590.802179,
+    "seen": 1795235060.321155,
+    "ast_hash": "60f34ccf14074481104dd21ebe97e672",
+    "semantic_hash": ""
+  },
+  "server/app/providers/weather/base.py": {
+    "mtime": 1795234545.3443246,
+    "seen": 1795235060.321155,
+    "ast_hash": "a943f0451e047b70f0c103bedc58ad98",
+    "semantic_hash": ""
+  },
+  "server/app/providers/weather/open_meteo.py": {
+    "mtime": 1795234606.015839,
+    "seen": 1795235060.321156,
+    "ast_hash": "9f7be378ff3e37d003f121033e6730a0",
+    "semantic_hash": ""
+  },
+  "server/app/trips/__init__.py": {
+    "mtime": 1795233255.9466376,
+    "seen": 1795235060.321387,
+    "ast_hash": "314da1d8df5ed858ae1e5b70f6ed6e95",
+    "semantic_hash": ""
+  },
+  "server/app/trips/api.py": {
+    "mtime": 1795234251.3134487,
+    "seen": 1795235060.321388,
+    "ast_hash": "ce0886d2ec5ff6930e41573885fb79f2",
+    "semantic_hash": ""
+  },
+  "server/app/trips/edit.py": {
+    "mtime": 1795234393.554754,
+    "seen": 1795235060.321388,
+    "ast_hash": "0bd645772d733a6e73ec6e5475054fdc",
+    "semantic_hash": ""
+  },
+  "server/app/trips/read.py": {
+    "mtime": 1795234257.5416596,
+    "seen": 1795235060.321389,
+    "ast_hash": "98a1bdeafabfc3c70e7b8fb9d965a6de",
+    "semantic_hash": ""
+  },
+  "server/app/trips/store.py": {
+    "mtime": 1795234251.3137493,
+    "seen": 1795235060.321389,
+    "ast_hash": "b28cbf386fab3094b8e2c5acafb05448",
+    "semantic_hash": ""
+  },
+  "server/tests/fixtures/open_meteo/almaty_center.json": {
+    "mtime": 1795234489.824105,
+    "seen": 1795235060.321437,
+    "ast_hash": "d214a87b580d7ccc0c02d6ad06a3603e",
+    "semantic_hash": ""
+  },
+  "server/tests/fixtures/open_meteo/medeu_elevation.json": {
+    "mtime": 1795234495.3513453,
+    "seen": 1795235060.321437,
+    "ast_hash": "e3dd89f5ef09575ec68bd9f098870961",
+    "semantic_hash": ""
+  },
+  "server/tests/test_planner_budget.py": {
+    "mtime": 1795233416.7169464,
+    "seen": 1795235060.3217978,
+    "ast_hash": "8a0dd3ee69f47788aa4e654c6d282fd9",
+    "semantic_hash": ""
+  },
+  "server/tests/test_trip_edits.py": {
+    "mtime": 1795234414.924619,
+    "seen": 1795235060.321973,
+    "ast_hash": "f357c938cb7dfe46379faf87137000b4",
+    "semantic_hash": ""
+  },
+  "server/tests/test_trips.py": {
+    "mtime": 1795233524.9500484,
+    "seen": 1795235060.321973,
+    "ast_hash": "c2c56ccb521578e7271b50fd22360d61",
+    "semantic_hash": ""
+  },
+  "server/tests/test_trips_read.py": {
+    "mtime": 1795234251.3133345,
+    "seen": 1795235060.321974,
+    "ast_hash": "80cee42affb36babec30722438c10a6e",
+    "semantic_hash": ""
+  },
+  "server/tests/test_weather.py": {
+    "mtime": 1795234606.015697,
+    "seen": 1795235060.321974,
+    "ast_hash": "a7e915b74a8e2e04e22f4feecf0ad36a",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-18.md": {
+    "mtime": 1795234981.176829,
+    "seen": 1795235060.322289,
+    "ast_hash": "f4f2a0c55d06ae391768d3b899a77b52",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-19.md": {
+    "mtime": 1795234981.1784549,
+    "seen": 1795235060.32229,
+    "ast_hash": "9b8e9ebbe58e64df8c961052eba81c3d",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-35.md": {
+    "mtime": 1795233818.7485805,
+    "seen": 1795235060.322568,
+    "ast_hash": "61e25b2d207a931549891ec44b5cc05a",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-36.md": {
+    "mtime": 1795233818.7503765,
+    "seen": 1795235060.322569,
+    "ast_hash": "37abbb96ed120aeaa680fa956bcf3405",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-37-server.md": {
+    "mtime": 1795235047.2108274,
+    "seen": 1795235060.32257,
+    "ast_hash": "57ee9657a783229dcf2a7744efafd0a1",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-38.md": {
+    "mtime": 1795235047.2127042,
+    "seen": 1795235060.32257,
+    "ast_hash": "6057c8426cfebf24857306b9f69a377d",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-39.md": {
+    "mtime": 1795235047.2144616,
+    "seen": 1795235060.322571,
+    "ast_hash": "f274d40732fec9ea4f5a4e1171d6a3c9",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.en.v3.md": {
+    "mtime": 1795233579.9058273,
+    "seen": 1795235060.323045,
+    "ast_hash": "9a4f27b4730784794340b1c2ba0c4f21",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.en.v4.md": {
+    "mtime": 1795234263.0782716,
+    "seen": 1795235060.323045,
+    "ast_hash": "e0764edb6d430e63c10dba041a574e07",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.ru.v3.md": {
+    "mtime": 1795233579.9060788,
+    "seen": 1795235060.323083,
+    "ast_hash": "467420216e04aa00217e761af6dc542a",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.ru.v4.md": {
+    "mtime": 1795234267.9921339,
+    "seen": 1795235060.323084,
+    "ast_hash": "966934547ee529acbe026f5dad45a7b0",
     "semantic_hash": ""
   }
 }
