@@ -76,12 +76,12 @@ final class ChatUITests: XCTestCase {
         waitFor(app, "chat-message-user")
         XCTAssertEqual(element(app, "chat-message-user").label, "Plan 3 days in Almaty")
 
-        // The graph grows node by node and, while it is still growing, has no final node.
+        // The ring (details in ChatRingUITests) grows node by node and stays open while the route is not ready.
         waitFor(app, "graph-node-1")
-        XCTAssertFalse(element(app, "graph-final").exists, "the graph converges only on route_ready")
+        XCTAssertFalse(element(app, "graph-ring-closed").exists, "the ring closes only on route_ready")
         capture("chat-graph-growing")
         waitFor(app, "graph-node-3")
-        waitFor(app, "graph-final")
+        waitFor(app, "graph-ring-closed")
         XCTAssertEqual(element(app, "graph-node-1").label, "3 days, Dec 5-7")
         XCTAssertEqual(element(app, "graph-node-2").label, "Budget 900 000 tenge")
         XCTAssertEqual(element(app, "graph-node-3").label, "Wants museums")
@@ -126,7 +126,7 @@ final class ChatUITests: XCTestCase {
         waitForValue(element(app, "chat-map-places"), "2")
         capture("chat-map-places")
         app.buttons["chat-collapsed-bar"].tap()
-        waitFor(app, "graph-final", timeout: 5)
+        waitFor(app, "graph-ring-closed", timeout: 5)
         XCTAssertTrue(element(app, "chat-route-card").exists)
     }
 
@@ -139,7 +139,7 @@ final class ChatUITests: XCTestCase {
         XCTAssertFalse(element(app, "graph-node-1").exists)
 
         app.buttons["chat-retry"].tap()
-        waitFor(app, "graph-final")
+        waitFor(app, "graph-ring-closed")
         XCTAssertFalse(element(app, "chat-error").exists)
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "chat-message-user").count, 1,
                        "retry does not add a second bubble")
@@ -153,7 +153,7 @@ final class ChatUITests: XCTestCase {
         XCTAssertEqual(element(app, "chat-message-assistant").label, "Let me think")
 
         app.buttons["chat-retry"].tap()
-        waitFor(app, "graph-final")
+        waitFor(app, "graph-ring-closed")
         XCTAssertFalse(element(app, "chat-error").exists)
         XCTAssertFalse(app.staticTexts["Let me think"].exists, "the failed half answer is replaced")
     }
@@ -182,7 +182,7 @@ final class ChatUITests: XCTestCase {
 
         // Messages, the rebuilt graph (converged: the chat has a trip) and the pins restored from the trip.
         waitFor(app, "chat-transcript")
-        waitFor(app, "graph-final")
+        waitFor(app, "graph-ring-closed")
         XCTAssertEqual(element(app, "graph-node-1").label, "3 days, Dec 5-7")
         XCTAssertEqual(element(app, "graph-node-2").label, "Budget 900 000 tenge")
         waitForValue(element(app, "chat-map-places"), "2")
@@ -246,8 +246,8 @@ final class ChatUITests: XCTestCase {
     func testRussianInterface() {
         let app = launch(language: "ru")
         send(app, "Составь маршрут на 3 дня")
-        waitFor(app, "graph-final")
-        XCTAssertEqual(element(app, "graph-final").label, "Маршрут готов")
+        waitFor(app, "graph-ring-closed")
+        XCTAssertEqual(element(app, "graph-ring-closed").label, "Маршрут готов")
         XCTAssertEqual(app.buttons["chat-open-route"].label, "Открыть полную карту")
         XCTAssertTrue(app.staticTexts["3 дня"].exists)
     }

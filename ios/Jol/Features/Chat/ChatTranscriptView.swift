@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Scrollable body of an active chat: graph, messages, proposal buttons, failure, route card.
+/// Scrollable body of an active chat: messages, proposal buttons, failure, route card.
 struct ChatTranscriptView: View {
     let model: ChatModel
     let onRetry: () -> Void
     let onNewChat: () -> Void
-    let onOpenRoute: () -> Void
     let onGuestSignIn: () -> Void
     var showsGuestBanner = false
 
@@ -15,10 +14,6 @@ struct ChatTranscriptView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: JolSpacing.md) {
-                    if !state.graph.isEmpty || state.isConverged {
-                        ChatGraphView(nodes: state.graph, converged: state.isConverged)
-                            .padding(.bottom, JolSpacing.xs)
-                    }
                     ForEach(state.messages) { message in
                         MessageRow(message: message, state: state.proposals[message.proposalID ?? UUID()]) { accept in
                             if let id = message.proposalID { model.decide(id, accept: accept) }
@@ -32,7 +27,7 @@ struct ChatTranscriptView: View {
                         FailureRow(failure: failure, onRetry: onRetry, onNewChat: onNewChat)
                     }
                     if let route = state.route {
-                        RouteCard(route: route, onOpen: onOpenRoute)
+                        RouteCard(route: route)
                     }
                     if showsGuestBanner {
                         Button(action: onGuestSignIn) {
@@ -54,7 +49,6 @@ struct ChatTranscriptView: View {
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: state.messages.last?.text) { scrollToBottom(proxy) }
             .onChange(of: state.messages.count) { scrollToBottom(proxy) }
-            .onChange(of: state.graph.count) { scrollToBottom(proxy) }
             .onChange(of: state.isConverged) { scrollToBottom(proxy) }
             .onChange(of: state.failure) { scrollToBottom(proxy) }
             .onAppear { proxy.scrollTo("chat-bottom", anchor: .bottom) }
@@ -218,7 +212,6 @@ private struct FailureRow: View {
 /// "Route ready": the assistant offers the full map (Ш-37 builds the real screen; until then a day list).
 private struct RouteCard: View {
     let route: RouteReady
-    let onOpen: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
@@ -236,16 +229,6 @@ private struct RouteCard: View {
                     .foregroundStyle(JolColor.danger)
                     .accessibilityIdentifier("route-over-budget")
             }
-            Button(action: onOpen) {
-                Text("Open full map")
-                    .font(JolFont.headline)
-                    .foregroundStyle(JolColor.onBrand)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, JolSpacing.md)
-                    .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("chat-open-route")
         }
         .padding(JolSpacing.md)
         .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))

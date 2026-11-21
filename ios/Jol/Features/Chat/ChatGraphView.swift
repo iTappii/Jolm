@@ -1,104 +1,228 @@
 import SwiftUI
 
-/// The single-branch graph of theses (SSOT §11.2): a vertical line with one dot and one chip per thesis. Nodes
-/// appear with a spring as the conversation goes; when the route is ready the line bends into one final node
-/// "Route ready" and the dots turn solid.
+/// The thesis ring (SSOT §11.2): a small ring above the input field, at the trailing side. Every thesis is a dot on
+/// a circle (12 o'clock, clockwise) with an arrow from the previous one; a new dot appears with a spring and the dots
+/// re-distribute evenly. While the route is not ready the ring is open; on `route_ready` the last arrow back to the
+/// first dot is drawn and the ring closes. Next to it: the latest thesis (the full text of a tapped dot) and, once the
+/// route is ready, «Open full map».
 struct ChatGraphView: View {
     let nodes: [GraphNode]
-    let converged: Bool
+    let closed: Bool
+    let onOpenRoute: () -> Void
 
-    private static let railWidth: CGFloat = 16
-    private static let dotSize: CGFloat = 10
-    private static let dotTop: CGFloat = 12
+    @State private var selected: Int?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var selectedNode: GraphNode? { nodes.first { $0.ord == selected } }
+    private var caption: GraphNode? { selectedNode ?? nodes.last }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(nodes.enumerated()), id: \.element.ord) { index, node in
-                row(node, isFirst: index == 0, isLast: index == nodes.count - 1)
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.6, anchor: .topLeading).combined(with: .opacity),
-                        removal: .opacity
-                    ))
+        HStack(alignment: .bottom, spacing: JolSpacing.md) {
+            VStack(alignment: .trailing, spacing: JolSpacing.sm) {
+                if let caption {
+                    captionView(caption)
+                }
+                if closed {
+                    openButton
+                }
             }
-            if converged {
-                finalRow
-                    .transition(.scale(scale: 0.6, anchor: .topLeading).combined(with: .opacity))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            if !nodes.isEmpty {
+                ring
             }
         }
-        .animation(.spring(duration: 0.5, bounce: 0.25), value: nodes)
-        .animation(.spring(duration: 0.6, bounce: 0.2), value: converged)
+        .onChange(of: nodes.count) { selected = nil }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("chat-graph")
     }
 
-    private func row(_ node: GraphNode, isFirst: Bool, isLast: Bool) -> some View {
-        let continues = !isLast || converged
-        return HStack(alignment: .top, spacing: JolSpacing.sm) {
-            ZStack(alignment: .top) {
-                // The line runs through the dot: from the top edge (not for the first dot) to the bottom edge
-                // (not for the last dot while the graph is still growing).
-                Rectangle()
-                    .fill(JolColor.brand.opacity(0.45))
-                    .frame(width: 2)
-                    .padding(.top, isFirst ? Self.dotTop + Self.dotSize / 2 : 0)
-                    .frame(maxHeight: continues ? .infinity : Self.dotTop + Self.dotSize / 2, alignment: .top)
-                Circle()
-                    .fill(converged ? JolColor.brand : JolColor.surfaceElevated)
-                    .overlay(Circle().stroke(JolColor.brand, lineWidth: 2))
-                    .frame(width: Self.dotSize, height: Self.dotSize)
-                    .padding(.top, Self.dotTop)
+    private func captionView(_ node: GraphNode) -> some View {
+        let isSelected = node.ord == selected
+        return Text(verbatim: node.text)
+            .font(JolFont.caption)
+            .foregroundStyle(isSelected ? JolColor.textPrimary : JolColor.textSecondary)
+            .lineLimit(isSelected ? nil : 2)
+            .multilineTextAlignment(.trailing)
+            .padding(.horizontal, isSelected ? JolSpacing.md : 0)
+            .padding(.vertical, isSelected ? JolSpacing.xs + 2 : 0)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: JolRadius.md).fill(JolColor.surface)
+                    RoundedRectangle(cornerRadius: JolRadius.md).stroke(JolColor.brand.opacity(0.7), lineWidth: 1)
+                }
             }
-            .frame(width: Self.railWidth)
-            Text(verbatim: node.text)
-                .font(JolFont.callout)
-                .foregroundStyle(JolColor.textPrimary)
+            .onTapGesture { if isSelected { selected = nil } }
+            .accessibilityHidden(!isSelected)
+            .accessibilityIdentifier(isSelected ? "graph-node-detail" : "graph-caption")
+    }
+
+    private var openButton: some View {
+        Button(action: onOpenRoute) {
+            Label("Open full map", systemImage: "map.fill")
+                .font(JolFont.callout.weight(.semibold))
+                .foregroundStyle(JolColor.onBrand)
                 .padding(.horizontal, JolSpacing.md)
-                .padding(.vertical, JolSpacing.xs + 2)
-                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
-                .overlay(
-                    RoundedRectangle(cornerRadius: JolRadius.md)
-                        .stroke(converged ? JolColor.brand.opacity(0.5) : .clear, lineWidth: 1)
-                )
-                .padding(.vertical, 3)
-                .accessibilityIdentifier("graph-node-\(node.ord)")
+                .padding(.vertical, JolSpacing.sm)
+                .background(JolColor.brand, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
+        .accessibilityIdentifier("chat-open-route")
+    }
+
+    // MARK: - Ring
+
+    private var ring: some View {
+        let count = Double(nodes.count)
+        let side = RingGeometry.side(nodes: nodes.count)
+        return ZStack {
+            ForEach(0..<RingGeometry.arrowCount(nodes: nodes.count, closed: closed), id: \.self) { index in
+                RingArrow(index: index, count: count, reduceMotion: reduceMotion)
+            }
+            ForEach(Array(nodes.enumerated()), id: \.element.ord) { index, node in
+                dot(node, number: index + 1)
+                    .modifier(RingPlacement(index: index, count: count))
+                    .transition(.scale(scale: 0.2).combined(with: .opacity))
+            }
+            if closed {
+                closedMark(visible: nodes.count >= 3)
+            }
+        }
+        .frame(width: side, height: side)
+        .animation(reduceMotion ? nil : .spring(duration: 0.55, bounce: 0.2), value: nodes.count)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.4), value: closed)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(summary)
+        .accessibilityValue(closed ? "closed" : "open")
+        .accessibilityIdentifier("chat-graph-ring")
+    }
+
+    private func dot(_ node: GraphNode, number: Int) -> some View {
+        let isSelected = node.ord == selected
+        return Button {
+            selected = isSelected ? nil : node.ord
+        } label: {
+            Text(verbatim: "\(number)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(JolColor.onBrand)
+                .frame(width: RingGeometry.nodeRadius * 2, height: RingGeometry.nodeRadius * 2)
+                .background(JolColor.brand, in: Circle())
+                .overlay(Circle().stroke(isSelected ? JolColor.textPrimary : JolColor.surfaceElevated, lineWidth: 2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: node.text))
+        .accessibilityIdentifier("graph-node-\(node.ord)")
+    }
+
+    /// The ring is closed: a check in the middle (when the ring is big enough to hold it).
+    @ViewBuilder
+    private func closedMark(visible: Bool) -> some View {
+        if visible {
+            Image(systemName: "checkmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(JolColor.brand)
+                .transition(.scale(scale: 0.3).combined(with: .opacity))
+                .accessibilityLabel(Text("Route ready"))
+                .accessibilityIdentifier("graph-ring-closed")
+        } else {
+            Color.clear.frame(width: 1, height: 1)
+                .accessibilityElement()
+                .accessibilityLabel(Text("Route ready"))
+                .accessibilityIdentifier("graph-ring-closed")
         }
     }
 
-    /// The branch ends here: the rail turns through a rounded elbow into the "Route ready" capsule.
-    private var finalRow: some View {
-        HStack(alignment: .top, spacing: 0) {
-            ConvergeElbow()
-                .stroke(JolColor.brand.opacity(0.45), lineWidth: 2)
-                .frame(width: Self.railWidth + JolSpacing.sm + 6, height: 20)
-            HStack(spacing: JolSpacing.xs + 2) {
-                Image(systemName: "checkmark.circle.fill")
-                Text("Route ready")
-            }
-            .font(JolFont.headline)
-            .foregroundStyle(JolColor.onBrand)
-            .padding(.horizontal, JolSpacing.md)
-            .padding(.vertical, JolSpacing.sm)
-            .background(JolColor.brand, in: Capsule())
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("graph-final")
-        }
-        .padding(.top, 2)
+    private var summary: Text {
+        closed ? Text("\(nodes.count) theses, route is ready") : Text("\(nodes.count) theses, route is not ready")
     }
 }
 
-/// Vertical rail that bends right at the bottom: from the dot column into the final capsule.
-private struct ConvergeElbow: Shape {
+/// Moves a node (drawn at the centre of the ring) to its place on the circle. Animatable by the node count, so while
+/// a node is added every dot glides along the circle to its new, evenly spread place.
+private struct RingPlacement: GeometryEffect {
+    let index: Int
+    var count: Double
+
+    var animatableData: Double {
+        get { count }
+        set { count = newValue }
+    }
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        let offset = RingGeometry.nodeOffset(index: index, count: count)
+        return ProjectionTransform(CGAffineTransform(translationX: offset.x, y: offset.y))
+    }
+}
+
+/// One arrow of the ring: an arc along the circle with an arrowhead. Drawn in when it appears.
+private struct RingArrow: View {
+    let index: Int
+    let count: Double
+    let reduceMotion: Bool
+    @State private var drawn = false
+
+    var body: some View {
+        ZStack {
+            ArrowArcShape(index: index, count: count)
+                .trim(from: 0, to: drawn ? 1 : 0)
+                .stroke(JolColor.brand, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+            ArrowHeadShape(index: index, count: count)
+                .fill(JolColor.brand)
+                .opacity(drawn ? 1 : 0)
+        }
+        .onAppear {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) { drawn = true }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct ArrowArcShape: Shape {
+    let index: Int
+    var count: Double
+
+    var animatableData: Double {
+        get { count }
+        set { count = newValue }
+    }
+
     func path(in rect: CGRect) -> Path {
-        let rail = 7.0
-        let radius = min(12, rect.height)
+        guard let arc = RingGeometry.arc(index: index, count: count) else { return Path() }
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let radius = RingGeometry.ringRadius(count: count)
+        let points = RingGeometry.arcPoints(start: arc.start, end: arc.end, radius: radius)
         var path = Path()
-        path.move(to: CGPoint(x: rail, y: 0))
-        path.addLine(to: CGPoint(x: rail, y: rect.maxY - radius))
-        path.addQuadCurve(
-            to: CGPoint(x: rail + radius, y: rect.maxY),
-            control: CGPoint(x: rail, y: rect.maxY)
-        )
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        for (offset, point) in points.enumerated() {
+            let absolute = CGPoint(x: center.x + point.x, y: center.y + point.y)
+            if offset == 0 {
+                path.move(to: absolute)
+            } else {
+                path.addLine(to: absolute)
+            }
+        }
+        return path
+    }
+}
+
+private struct ArrowHeadShape: Shape {
+    let index: Int
+    var count: Double
+
+    var animatableData: Double {
+        get { count }
+        set { count = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        guard let arc = RingGeometry.arc(index: index, count: count) else { return Path() }
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let points = RingGeometry.head(end: arc.end, radius: RingGeometry.ringRadius(count: count))
+            .map { CGPoint(x: center.x + $0.x, y: center.y + $0.y) }
+        var path = Path()
+        path.move(to: points[0])
+        path.addLine(to: points[1])
+        path.addLine(to: points[2])
+        path.closeSubpath()
         return path
     }
 }

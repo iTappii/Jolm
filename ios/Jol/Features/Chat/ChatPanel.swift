@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Expanded chat card (SSOT §11.1). Empty: the greeting «Начнём путешествие?», input, collapse button. Once a
-/// conversation exists: header with the trip brief, the graph and the messages, input at the bottom.
+/// conversation exists: header with the trip brief and the messages, the thesis ring above the input (trailing side),
+/// input at the bottom.
 struct ChatPanel: View {
     let model: ChatModel
     @Binding var draft: String
@@ -36,8 +37,11 @@ struct ChatPanel: View {
             } else if isActive {
                 ChatTranscriptView(
                     model: model, onRetry: onRetry, onNewChat: onNewChat,
-                    onOpenRoute: onOpenRoute, onGuestSignIn: onGuestSignIn, showsGuestBanner: showsGuestBanner
+                    onGuestSignIn: onGuestSignIn, showsGuestBanner: showsGuestBanner
                 )
+                if !model.state.graph.isEmpty || model.state.isConverged {
+                    ChatGraphView(nodes: model.state.graph, closed: model.state.isConverged, onOpenRoute: onOpenRoute)
+                }
             }
             inputBar
         }
