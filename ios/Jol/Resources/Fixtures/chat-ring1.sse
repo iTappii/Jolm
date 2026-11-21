@@ -1,9 +1,0 @@
-event: graph_node
-data: {"ord": 1, "kind": "fact", "text": "3 days, Dec 5-7"}
-
-event: text_delta
-data: {"text": "Noted 1. "}
-
-event: done
-data: {"message_id": 2, "usage": {"input_tokens": 10, "output_tokens": 20}}
-

@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Scrollable body of an active chat: messages, proposal buttons, failure, route card.
 struct ChatTranscriptView: View {
+    /// Height of the fade band at the top of the transcript, under the chain strip.
+    private static let topFade: CGFloat = 32
     let model: ChatModel
     let onRetry: () -> Void
     let onNewChat: () -> Void
@@ -47,6 +49,21 @@ struct ChatTranscriptView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollDismissesKeyboard(.interactively)
+            // Room for the fade below, so the first message is fully visible when scrolled to the top.
+            .contentMargins(.top, Self.topFade, for: .scrollContent)
+            // A clean top boundary under the chain strip: scrolled-up messages dissolve instead of being sliced
+            // (the top third of the band is fully clear, so no half-line peeks out under the labels).
+            .mask {
+                VStack(spacing: 0) {
+                    LinearGradient(
+                        stops: [.init(color: .clear, location: 0), .init(color: .clear, location: 0.3),
+                                .init(color: .black, location: 1)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: Self.topFade)
+                    Color.black
+                }
+            }
             .onChange(of: state.messages.last?.text) { scrollToBottom(proxy) }
             .onChange(of: state.messages.count) { scrollToBottom(proxy) }
             .onChange(of: state.isConverged) { scrollToBottom(proxy) }

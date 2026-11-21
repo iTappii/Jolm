@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// Expanded chat card (SSOT §11.1). Empty: the greeting «Начнём путешествие?», input, collapse button. Once a
-/// conversation exists: header with the trip brief and the messages, the thesis ring above the input (trailing side),
-/// input at the bottom.
+/// conversation exists: header, the answer chain (full width, SSOT §11.2), the messages, input at the bottom.
 struct ChatPanel: View {
     let model: ChatModel
     @Binding var draft: String
@@ -16,14 +15,26 @@ struct ChatPanel: View {
     let onOpenRoute: () -> Void
     let onGuestSignIn: () -> Void
     @FocusState private var focused: Bool
+    @State private var selectedNode: String?
 
     private var isActive: Bool { !model.state.isEmpty || model.isOpening || model.openFailed }
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
             header
-            if let brief = model.state.brief, !brief.isEmpty {
-                BriefChips(brief: brief)
+            if isActive, !model.state.chainNodes.isEmpty {
+                // The answer chain (SSOT §11.2): full card width, under the header, above the messages.
+                ChatGraphView(
+                    nodes: model.state.chainNodes, brief: model.state.brief ?? ChatBrief(),
+                    finished: model.state.isConverged, selected: $selectedNode
+                )
+                if selectedNode != nil || model.state.isConverged {
+                    ChatChainFooter(
+                        nodes: model.state.chainNodes, brief: model.state.brief ?? ChatBrief(),
+                        theses: model.state.graph, finished: model.state.isConverged, selected: selectedNode,
+                        onDeselect: { selectedNode = nil }, onOpenRoute: onOpenRoute
+                    )
+                }
             }
             if model.isOpening {
                 ProgressView()
@@ -39,9 +50,6 @@ struct ChatPanel: View {
                     model: model, onRetry: onRetry, onNewChat: onNewChat,
                     onGuestSignIn: onGuestSignIn, showsGuestBanner: showsGuestBanner
                 )
-                if !model.state.graph.isEmpty || model.state.isConverged {
-                    ChatGraphView(nodes: model.state.graph, closed: model.state.isConverged, onOpenRoute: onOpenRoute)
-                }
             }
             inputBar
         }
@@ -154,48 +162,8 @@ struct CollapsedChatBar: View {
     }
 }
 
-/// Compact brief summary: dates, budget, lodging (SSOT §4).
-private struct BriefChips: View {
-    let brief: ChatBrief
-    @Environment(\.locale) private var locale
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: JolSpacing.sm) {
-                if let dates = BriefFormatting.dates(start: brief.startDate, end: brief.endDate, locale: locale) {
-                    chip("calendar", Text(verbatim: dates)).accessibilityIdentifier("brief-dates")
-                }
-                if let budget = brief.budgetKzt {
-                    chip("banknote", Text(verbatim: BriefFormatting.budget(budget, locale: locale)))
-                        .accessibilityIdentifier("brief-budget")
-                }
-                if let has = brief.hasAccommodation {
-                    chip("bed.double", has ? Text("Has a place to stay") : Text("Needs a place to stay"))
-                        .accessibilityIdentifier("brief-lodging")
-                }
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("chat-brief")
-    }
-
-    private func chip(_ icon: String, _ label: Text) -> some View {
-        HStack(spacing: JolSpacing.xs) {
-            Image(systemName: icon)
-            label
-        }
-        .font(JolFont.caption.weight(.medium))
-        .foregroundStyle(JolColor.textPrimary)
-        .padding(.horizontal, JolSpacing.md)
-        .padding(.vertical, JolSpacing.xs + 2)
-        .background(JolColor.surface, in: Capsule())
-        .overlay(Capsule().stroke(JolColor.brand.opacity(0.6), lineWidth: 1))
-        .accessibilityElement(children: .combine)
-    }
-}
-
 enum BriefFormatting {
-    private static func parse(_ iso: String?) -> Date? {
+    static func day(_ iso: String?) -> Date? {
         guard let iso else { return nil }
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -209,7 +177,7 @@ enum BriefFormatting {
     static func dates(start: String?, end: String?, locale: Locale) -> String? {
         let style = Date.FormatStyle(timeZone: TimeZone(identifier: "Asia/Almaty") ?? .current)
             .day().month(.abbreviated).locale(locale)
-        switch (parse(start), parse(end)) {
+        switch (day(start), day(end)) {
         case let (from?, to?):
             return from == to ? from.formatted(style) : "\(from.formatted(style)) – \(to.formatted(style))"
         case let (from?, nil): return from.formatted(style)

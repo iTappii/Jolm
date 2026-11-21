@@ -51,6 +51,7 @@ from app.chat.brief import (
     BriefUpdate,
     apply_update,
     brief_data_block,
+    fill_entries,
     public_brief,
     today_almaty,
 )
@@ -152,6 +153,7 @@ async def get_chat(chat_id: UUID, request: Request):
         chat = await _own_chat(conn, user["id"], chat_id)
         messages = await store.chat_messages(conn, chat_id)
         brief = await store.get_brief(conn, chat_id)
+        filled_order = await store.get_filled_order(conn, chat_id)
         nodes = await store.graph_nodes(conn, chat_id)
     return dict(
         _chat_json(chat),
@@ -159,7 +161,7 @@ async def get_chat(chat_id: UUID, request: Request):
             {k: m[k] for k in ("id", "role", "content", "finish", "created_at", "proposal_id")}
             for m in messages
         ],
-        brief=public_brief(brief),
+        brief=dict(public_brief(brief), filled_order=filled_order),
         graph_nodes=nodes,
     )
 
@@ -329,6 +331,7 @@ async def _update_trip_brief(db, chat_id: UUID, locale: str, call: ToolCall) -> 
             return ToolOutcome({"ok": False, "error": str(exc)}, ok=False, error=str(exc))
         if changed:
             await store.save_brief(conn, chat_id, new)
+            await store.record_filled_order(conn, chat_id, fill_entries(current, new, changed))
     result = {"ok": True, "changed": changed, "brief": public_brief(new)}
     events = []
     if changed:

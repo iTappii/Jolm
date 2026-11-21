@@ -1,0 +1,8 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": 200000, "has_accommodation": true, "must_haves": ["Eastern cuisine", "Chinese food"], "interests": ["Museums"], "pace": "calm", "crowd_tolerance": 1, "missing": [], "complete": true}, "changed": ["must_haves", "interests", "pace", "crowd_tolerance"]}
+
+event: text_delta
+data: {"text": "Noted. "}
+
+event: done
+data: {"message_id": 3, "usage": {"input_tokens": 10, "output_tokens": 20}}

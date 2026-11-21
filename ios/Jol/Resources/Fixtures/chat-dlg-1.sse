@@ -1,0 +1,11 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": null, "has_accommodation": null, "must_haves": [], "interests": [], "pace": null, "crowd_tolerance": null, "missing": ["budget", "accommodation"], "complete": false}, "changed": ["start_date", "end_date"]}
+
+event: text_delta
+data: {"text": "Five days, noted. "}
+
+event: text_delta
+data: {"text": "What is your budget for the whole trip? "}
+
+event: done
+data: {"message_id": 2, "usage": {"input_tokens": 10, "output_tokens": 20}}

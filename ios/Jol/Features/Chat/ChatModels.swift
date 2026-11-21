@@ -41,6 +41,8 @@ struct ChatBrief: Decodable, Equatable, Sendable {
     var crowdTolerance: Int?
     var missing: [String] = []
     var complete = false
+    /// Order in which the tourist filled the fields (Ш-32b; only in `GET /v1/chats/{id}`): the chain's node order.
+    var filledOrder: [String] = []
 
     enum CodingKeys: String, CodingKey {
         case startDate = "start_date"
@@ -49,6 +51,7 @@ struct ChatBrief: Decodable, Equatable, Sendable {
         case hasAccommodation = "has_accommodation"
         case mustHaves = "must_haves"
         case interests, pace, missing, complete
+        case filledOrder = "filled_order"
         case crowdTolerance = "crowd_tolerance"
     }
 
@@ -66,6 +69,7 @@ struct ChatBrief: Decodable, Equatable, Sendable {
         crowdTolerance = try values.decodeIfPresent(Int.self, forKey: .crowdTolerance)
         missing = try values.decodeIfPresent([String].self, forKey: .missing) ?? []
         complete = try values.decodeIfPresent(Bool.self, forKey: .complete) ?? false
+        filledOrder = try values.decodeIfPresent([String].self, forKey: .filledOrder) ?? []
     }
 
     /// Nothing worth a chip yet.
@@ -270,7 +274,8 @@ struct ProposalsList: Decodable, Sendable {
 enum ChatEvent: Equatable, Sendable {
     case textDelta(String)
     case graphNode(GraphNode)
-    case briefUpdated(ChatBrief)
+    /// The brief and the names of the fields this update changed.
+    case briefUpdated(ChatBrief, changed: [String])
     case mapPlaces(reason: String, places: [MapPlace])
     case routeReady(RouteReady)
     case tripUpdated(TripUpdated)
@@ -289,7 +294,8 @@ enum ChatEvent: Equatable, Sendable {
         case "text_delta": return (try? decoder.decode(TextDelta.self, from: data)).map { .textDelta($0.text) }
         case "graph_node": return (try? decoder.decode(GraphNode.self, from: data)).map { .graphNode($0) }
         case "brief_updated":
-            return (try? decoder.decode(BriefUpdated.self, from: data)).map { .briefUpdated($0.brief) }
+            return (try? decoder.decode(BriefUpdated.self, from: data))
+                .map { .briefUpdated($0.brief, changed: $0.changed ?? []) }
         case "map_places":
             return (try? decoder.decode(MapPlacesPayload.self, from: data))
                 .map { .mapPlaces(reason: $0.reason ?? "chosen", places: $0.places) }
@@ -304,7 +310,10 @@ enum ChatEvent: Equatable, Sendable {
     }
 
     private struct TextDelta: Decodable { let text: String }
-    private struct BriefUpdated: Decodable { let brief: ChatBrief }
+    private struct BriefUpdated: Decodable {
+        let brief: ChatBrief
+        let changed: [String]?
+    }
     private struct ErrorPayload: Decodable {
         let code: String?
         let message: String?

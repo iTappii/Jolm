@@ -1,59 +1,193 @@
 import SwiftUI
 
-/// The thesis ring (SSOT §11.2): a small ring above the input field, at the trailing side. Every thesis is a dot on
-/// a circle (12 o'clock, clockwise) with an arrow from the previous one; a new dot appears with a spring and the dots
-/// re-distribute evenly. While the route is not ready the ring is open; on `route_ready` the last arrow back to the
-/// first dot is drawn and the ring closes. Next to it: the latest thesis (the full text of a tapped dot) and, once the
-/// route is ready, «Open full map».
+/// The answer chain (SSOT §11.2): a strip at the top of the chat card, under the header. Every node is an answer of
+/// the tourist that filled a field of the brief (days, budget, lodging, a wish, …); the value they gave stands next to
+/// the node. Nodes go left to right in the order of the answers with a gentle wave, joined by straight lines; the chain
+/// is centred while it fits and the strip scrolls (to the newest node) when it does not. A new node comes in from the
+/// right and the others slide to re-centre; a changed answer only changes its label. When the route is ready a finish
+/// node (a flag) ends the chain. Tapping a node shows its full value (see `ChatChainFooter`).
 struct ChatGraphView: View {
-    let nodes: [GraphNode]
-    let closed: Bool
-    let onOpenRoute: () -> Void
+    let nodes: [ChainNode]
+    let brief: ChatBrief
+    let finished: Bool
+    @Binding var selected: String?
 
-    @State private var selected: Int?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
-    private var selectedNode: GraphNode? { nodes.first { $0.ord == selected } }
-    private var caption: GraphNode? { selectedNode ?? nodes.last }
+    /// Nodes on the strip: the answers, plus the finish node once the route is ready.
+    private var total: Int { nodes.count + (finished ? 1 : 0) }
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: JolSpacing.md) {
-            VStack(alignment: .trailing, spacing: JolSpacing.sm) {
-                if let caption {
-                    captionView(caption)
-                }
-                if closed {
-                    openButton
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            if !nodes.isEmpty {
-                ring
-            }
+        GeometryReader { proxy in
+            strip(viewport: proxy.size.width)
         }
-        .onChange(of: nodes.count) { selected = nil }
+        .frame(height: ChainGeometry.height)
+        .onChange(of: nodes.map(\.key)) { _, keys in
+            if let selected, !keys.contains(selected) { self.selected = nil }
+        }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("chat-graph")
+        .accessibilityLabel(summary)
+        .accessibilityValue(finished ? "ready" : "building")
+        .accessibilityIdentifier("chat-chain")
     }
 
-    private func captionView(_ node: GraphNode) -> some View {
-        let isSelected = node.ord == selected
-        return Text(verbatim: node.text)
-            .font(JolFont.caption)
-            .foregroundStyle(isSelected ? JolColor.textPrimary : JolColor.textSecondary)
-            .lineLimit(isSelected ? nil : 2)
-            .multilineTextAlignment(.trailing)
-            .padding(.horizontal, isSelected ? JolSpacing.md : 0)
-            .padding(.vertical, isSelected ? JolSpacing.xs + 2 : 0)
-            .background {
-                if isSelected {
-                    RoundedRectangle(cornerRadius: JolRadius.md).fill(JolColor.surface)
-                    RoundedRectangle(cornerRadius: JolRadius.md).stroke(JolColor.brand.opacity(0.7), lineWidth: 1)
+    private func full(_ node: ChainNode) -> String {
+        ChainLabels.full(node, brief: brief, locale: locale)
+    }
+
+    private func strip(viewport: CGFloat) -> some View {
+        let count = Double(total)
+        let width = ChainGeometry.contentWidth(count: count, viewport: viewport)
+        return ScrollViewReader { reader in
+            ScrollView(.horizontal, showsIndicators: false) {
+                ZStack(alignment: .topLeading) {
+                    ForEach(0..<ChainGeometry.connectorCount(nodes: total), id: \.self) { index in
+                        ChainConnector(index: index, count: count, viewport: viewport)
+                            .stroke(JolColor.brand, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                            .transition(.opacity)
+                    }
+                    ForEach(Array(nodes.enumerated()), id: \.element.key) { index, node in
+                        dot(node, index: index, count: count, viewport: viewport)
+                        label(node, index: index, count: count, viewport: viewport)
+                    }
+                    if finished {
+                        finishNode(index: nodes.count, count: count, viewport: viewport)
+                    }
+                    // The end of the content, for scrolling to the newest node.
+                    Color.clear.frame(width: 1, height: 1).padding(.leading, width - 1).id("chain-end")
+                }
+                .frame(width: width, height: ChainGeometry.height, alignment: .topLeading)
+            }
+            // The content grows in the same transaction as the count: scroll once the layout has caught up.
+            .task(id: total) {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.4)) {
+                    reader.scrollTo("chain-end", anchor: .trailing)
                 }
             }
-            .onTapGesture { if isSelected { selected = nil } }
-            .accessibilityHidden(!isSelected)
-            .accessibilityIdentifier(isSelected ? "graph-node-detail" : "graph-caption")
+        }
+        .animation(reduceMotion ? nil : .spring(duration: 0.55, bounce: 0.15), value: total)
+    }
+
+    private func dot(_ node: ChainNode, index: Int, count: Double, viewport: CGFloat) -> some View {
+        let isSelected = node.key == selected
+        let center = ChainGeometry.nodeCenter(index: Double(index), count: count, viewport: viewport)
+        return Button {
+            selected = isSelected ? nil : node.key
+        } label: {
+            Image(systemName: Self.symbol(node.kind))
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(JolColor.onBrand)
+                .frame(width: ChainGeometry.nodeRadius * 2, height: ChainGeometry.nodeRadius * 2)
+                .background(JolColor.brand, in: Circle())
+                .overlay(Circle().stroke(isSelected ? JolColor.textPrimary : JolColor.surfaceElevated, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: full(node)))
+        .accessibilityIdentifier("graph-node-\(index + 1)")
+        .position(center)
+        .transition(.opacity.combined(with: .offset(x: ChainGeometry.step, y: 0)))
+    }
+
+    /// The value next to a node: above a high node, below a low one. Decorative for VoiceOver (the node carries it).
+    private func label(_ node: ChainNode, index: Int, count: Double, viewport: CGFloat) -> some View {
+        Text(verbatim: ChainLabels.short(node, brief: brief, locale: locale))
+            .font(.system(size: 10, weight: node.key == selected ? .bold : .medium))
+            .foregroundStyle(JolColor.textPrimary)
+            .lineLimit(1)
+            .frame(width: ChainGeometry.labelWidth, height: ChainGeometry.labelHeight)
+            .position(ChainGeometry.labelCenter(index: index, count: count, viewport: viewport))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .transition(.opacity)
+    }
+
+    /// The route is ready: a flag node closes the chain.
+    private func finishNode(index: Int, count: Double, viewport: CGFloat) -> some View {
+        let center = ChainGeometry.nodeCenter(index: Double(index), count: count, viewport: viewport)
+        return Image(systemName: "flag.checkered")
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(JolColor.brand)
+            .frame(width: ChainGeometry.nodeRadius * 2, height: ChainGeometry.nodeRadius * 2)
+            .background(JolColor.surface, in: Circle())
+            .overlay(Circle().stroke(JolColor.brand, lineWidth: 1.8))
+            .accessibilityLabel(Text("Route ready"))
+            .accessibilityIdentifier("graph-chain-finish")
+            .position(center)
+            .transition(.opacity.combined(with: .offset(x: ChainGeometry.step, y: 0)))
+    }
+
+    private static func symbol(_ kind: ChainNode.Kind) -> String {
+        switch kind {
+        case .dates: "calendar"
+        case .budget: "banknote"
+        case .lodging: "bed.double.fill"
+        case .mustHave: "star.fill"
+        case .interests: "sparkles"
+        case .pace: "figure.walk"
+        case .crowd: "person.2.fill"
+        }
+    }
+
+    private var summary: Text {
+        finished ? Text("\(nodes.count) answers, route is ready") : Text("\(nodes.count) answers, route is not ready")
+    }
+}
+
+/// What goes with the chain under the strip, above the messages: the full value of a tapped node (and the AI's
+/// thesis, if any) and, once the route is ready, «Open full map».
+struct ChatChainFooter: View {
+    let nodes: [ChainNode]
+    let brief: ChatBrief
+    /// Theses the AI wrote (`graph_node`): the detail of a tapped node, never nodes of their own.
+    let theses: [GraphNode]
+    let finished: Bool
+    let selected: String?
+    let onDeselect: () -> Void
+    let onOpenRoute: () -> Void
+    @Environment(\.locale) private var locale
+
+    private var selectedIndex: Int? { nodes.firstIndex { $0.key == selected } }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: JolSpacing.sm) {
+            if let index = selectedIndex {
+                detail(nodes[index], index: index)
+            }
+            if finished {
+                openButton
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.bottom, JolSpacing.xs)
+    }
+
+    private func full(_ node: ChainNode) -> String {
+        ChainLabels.full(node, brief: brief, locale: locale)
+    }
+
+    private func detail(_ node: ChainNode, index: Int) -> some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(verbatim: full(node))
+                .font(JolFont.caption.weight(.semibold))
+                .foregroundStyle(JolColor.textPrimary)
+                .accessibilityIdentifier("graph-node-detail")
+            if let thesis = theses.first(where: { $0.ord == index + 1 })?.text, thesis != full(node) {
+                Text(verbatim: thesis)
+                    .font(JolFont.caption)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .accessibilityIdentifier("graph-node-thesis")
+            }
+        }
+        .multilineTextAlignment(.trailing)
+        .padding(.horizontal, JolSpacing.md)
+        .padding(.vertical, JolSpacing.xs + 2)
+        .background {
+            RoundedRectangle(cornerRadius: JolRadius.md).fill(JolColor.surface)
+            RoundedRectangle(cornerRadius: JolRadius.md).stroke(JolColor.brand.opacity(0.7), lineWidth: 1)
+        }
+        .onTapGesture { onDeselect() }
     }
 
     private var openButton: some View {
@@ -69,117 +203,14 @@ struct ChatGraphView: View {
         .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
         .accessibilityIdentifier("chat-open-route")
     }
-
-    // MARK: - Ring
-
-    private var ring: some View {
-        let count = Double(nodes.count)
-        let side = RingGeometry.side(nodes: nodes.count)
-        return ZStack {
-            ForEach(0..<RingGeometry.arrowCount(nodes: nodes.count, closed: closed), id: \.self) { index in
-                RingArrow(index: index, count: count, reduceMotion: reduceMotion)
-            }
-            ForEach(Array(nodes.enumerated()), id: \.element.ord) { index, node in
-                dot(node, number: index + 1)
-                    .modifier(RingPlacement(index: index, count: count))
-                    .transition(.scale(scale: 0.2).combined(with: .opacity))
-            }
-            if closed {
-                closedMark(visible: nodes.count >= 3)
-            }
-        }
-        .frame(width: side, height: side)
-        .animation(reduceMotion ? nil : .spring(duration: 0.55, bounce: 0.2), value: nodes.count)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.4), value: closed)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(summary)
-        .accessibilityValue(closed ? "closed" : "open")
-        .accessibilityIdentifier("chat-graph-ring")
-    }
-
-    private func dot(_ node: GraphNode, number: Int) -> some View {
-        let isSelected = node.ord == selected
-        return Button {
-            selected = isSelected ? nil : node.ord
-        } label: {
-            Text(verbatim: "\(number)")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(JolColor.onBrand)
-                .frame(width: RingGeometry.nodeRadius * 2, height: RingGeometry.nodeRadius * 2)
-                .background(JolColor.brand, in: Circle())
-                .overlay(Circle().stroke(isSelected ? JolColor.textPrimary : JolColor.surfaceElevated, lineWidth: 2))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: node.text))
-        .accessibilityIdentifier("graph-node-\(node.ord)")
-    }
-
-    /// The ring is closed: a check in the middle (when the ring is big enough to hold it).
-    @ViewBuilder
-    private func closedMark(visible: Bool) -> some View {
-        if visible {
-            Image(systemName: "checkmark")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(JolColor.brand)
-                .transition(.scale(scale: 0.3).combined(with: .opacity))
-                .accessibilityLabel(Text("Route ready"))
-                .accessibilityIdentifier("graph-ring-closed")
-        } else {
-            Color.clear.frame(width: 1, height: 1)
-                .accessibilityElement()
-                .accessibilityLabel(Text("Route ready"))
-                .accessibilityIdentifier("graph-ring-closed")
-        }
-    }
-
-    private var summary: Text {
-        closed ? Text("\(nodes.count) theses, route is ready") : Text("\(nodes.count) theses, route is not ready")
-    }
 }
 
-/// Moves a node (drawn at the centre of the ring) to its place on the circle. Animatable by the node count, so while
-/// a node is added every dot glides along the circle to its new, evenly spread place.
-private struct RingPlacement: GeometryEffect {
+/// One connector of the chain: a straight segment between two neighbouring nodes. Animatable by the node count, so it
+/// follows its nodes while they slide.
+private struct ChainConnector: Shape {
     let index: Int
     var count: Double
-
-    var animatableData: Double {
-        get { count }
-        set { count = newValue }
-    }
-
-    func effectValue(size: CGSize) -> ProjectionTransform {
-        let offset = RingGeometry.nodeOffset(index: index, count: count)
-        return ProjectionTransform(CGAffineTransform(translationX: offset.x, y: offset.y))
-    }
-}
-
-/// One arrow of the ring: an arc along the circle with an arrowhead. Drawn in when it appears.
-private struct RingArrow: View {
-    let index: Int
-    let count: Double
-    let reduceMotion: Bool
-    @State private var drawn = false
-
-    var body: some View {
-        ZStack {
-            ArrowArcShape(index: index, count: count)
-                .trim(from: 0, to: drawn ? 1 : 0)
-                .stroke(JolColor.brand, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-            ArrowHeadShape(index: index, count: count)
-                .fill(JolColor.brand)
-                .opacity(drawn ? 1 : 0)
-        }
-        .onAppear {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) { drawn = true }
-        }
-        .accessibilityHidden(true)
-    }
-}
-
-private struct ArrowArcShape: Shape {
-    let index: Int
-    var count: Double
+    let viewport: CGFloat
 
     var animatableData: Double {
         get { count }
@@ -187,42 +218,10 @@ private struct ArrowArcShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        guard let arc = RingGeometry.arc(index: index, count: count) else { return Path() }
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let radius = RingGeometry.ringRadius(count: count)
-        let points = RingGeometry.arcPoints(start: arc.start, end: arc.end, radius: radius)
+        let curve = ChainGeometry.connector(index: index, count: count, viewport: viewport)
         var path = Path()
-        for (offset, point) in points.enumerated() {
-            let absolute = CGPoint(x: center.x + point.x, y: center.y + point.y)
-            if offset == 0 {
-                path.move(to: absolute)
-            } else {
-                path.addLine(to: absolute)
-            }
-        }
-        return path
-    }
-}
-
-private struct ArrowHeadShape: Shape {
-    let index: Int
-    var count: Double
-
-    var animatableData: Double {
-        get { count }
-        set { count = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        guard let arc = RingGeometry.arc(index: index, count: count) else { return Path() }
-        let center = CGPoint(x: rect.midX, y: rect.midY)
-        let points = RingGeometry.head(end: arc.end, radius: RingGeometry.ringRadius(count: count))
-            .map { CGPoint(x: center.x + $0.x, y: center.y + $0.y) }
-        var path = Path()
-        path.move(to: points[0])
-        path.addLine(to: points[1])
-        path.addLine(to: points[2])
-        path.closeSubpath()
+        path.move(to: curve.start)
+        path.addLine(to: curve.end)
         return path
     }
 }

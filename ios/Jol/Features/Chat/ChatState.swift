@@ -46,6 +46,8 @@ struct ChatState: Equatable, Sendable {
     /// Theses of the single-branch graph (SSOT §11.2), ordered by `ord`.
     var graph: [GraphNode] = []
     var brief: ChatBrief?
+    /// Keys of the chain nodes in the order of the tourist's answers (`ChainNodes`); the node values come from `brief`.
+    var chainOrder: [String] = []
     /// Pins the chat put on the map. They replace each other for the guest (`search`), accumulate for a trip.
     var mapPlaces: [MapPlace] = []
     /// Bumped on every change to `mapPlaces` — the map redraws and animates when it changes.
@@ -59,8 +61,11 @@ struct ChatState: Equatable, Sendable {
     var proposals: [UUID: ProposalState] = [:]
     private var localCounter = 0
 
+    /// The nodes of the chain (SSOT §11.2): one per answered brief field, in the order of the answers.
+    var chainNodes: [ChainNode] { ChainNodes.nodes(brief: brief, order: chainOrder) }
+
     var isConverged: Bool { route != nil }
-    var isEmpty: Bool { messages.isEmpty && graph.isEmpty }
+    var isEmpty: Bool { messages.isEmpty && graph.isEmpty && chainOrder.isEmpty }
 
     // MARK: - Local actions
 
@@ -95,7 +100,9 @@ struct ChatState: Equatable, Sendable {
             guard !graph.contains(where: { $0.ord == node.ord }) else { return }
             graph.append(node)
             graph.sort { $0.ord < $1.ord }
-        case .briefUpdated(let brief):
+        case .briefUpdated(let brief, let changed):
+            let added = ChainNodes.keys(changed: changed, previous: self.brief, current: brief)
+            chainOrder = ChainNodes.merged(chainOrder, with: added)
             self.brief = brief
         case .mapPlaces(let reason, let places):
             addMapPlaces(places, replacing: reason == "search")
@@ -153,6 +160,7 @@ struct ChatState: Equatable, Sendable {
         }
         graph = detail.graphNodes.sorted { $0.ord < $1.ord }
         brief = detail.brief
+        chainOrder = ChainNodes.normalized(detail.brief?.filledOrder ?? [])
         self.route = route
         self.proposals = proposals
         for message in messages {

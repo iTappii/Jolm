@@ -35,12 +35,13 @@ final class ChatReductionTests: XCTestCase {
             event("graph_node", "{\"ord\":2,\"kind\":\"fact\",\"text\":\"Budget\"}"),
             .graphNode(GraphNode(ord: 2, kind: "fact", text: "Budget"))
         )
-        guard case .briefUpdated(let brief) = event(
+        guard case .briefUpdated(let brief, let changed) = event(
             "brief_updated",
             "{\"brief\":{\"start_date\":\"2026-12-05\",\"end_date\":\"2026-12-07\",\"budget_kzt\":900000,"
                 + "\"has_accommodation\":false,\"must_haves\":[\"plov\"],\"missing\":[\"accommodation\"],"
                 + "\"complete\":false},\"changed\":[\"budget_kzt\"]}"
         ) else { return XCTFail("brief_updated did not decode") }
+        XCTAssertEqual(changed, ["budget_kzt"])
         XCTAssertEqual(brief.budgetKzt, 900_000)
         XCTAssertEqual(brief.hasAccommodation, false)
         XCTAssertEqual(brief.mustHaves, ["plov"])
@@ -184,6 +185,10 @@ final class ChatReductionTests: XCTestCase {
         XCTAssertEqual(state.mapPlaces.map(\.name), ["Fixture Museum", "Fixture Cafe"])
         XCTAssertEqual(state.brief?.budgetKzt, 900_000)
         XCTAssertEqual(state.brief?.hasAccommodation, true)
+        // The chain has the answers (days, budget, lodging, the wish), not the three theses of the stream.
+        XCTAssertEqual(
+            state.chainNodes.map(\.key), ["dates", "budget_kzt", "has_accommodation", "must_haves:Fixture Museum"]
+        )
         XCTAssertFalse(state.isStreaming)
         XCTAssertNil(state.failure)
     }
@@ -218,6 +223,7 @@ final class ChatReductionTests: XCTestCase {
         let route = RouteReady(tripID: UUID())
         let state = ChatState(detail: detail, route: route, proposals: [:])
         XCTAssertEqual(state.graph.map(\.text), ["A", "B"])
+        XCTAssertTrue(state.chainNodes.isEmpty, "theses alone make no chain nodes")
         XCTAssertEqual(state.messages.map(\.role), [.user, .assistant])
         XCTAssertEqual(state.messages.last?.proposalID, proposal)
         XCTAssertEqual(state.proposals[proposal], .pending, "without a known status the buttons are offered")

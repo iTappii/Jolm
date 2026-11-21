@@ -1,0 +1,8 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": 200000, "has_accommodation": null, "must_haves": [], "interests": [], "pace": null, "crowd_tolerance": null, "missing": ["accommodation"], "complete": false}, "changed": ["budget_kzt"]}
+
+event: text_delta
+data: {"text": "Do you already have a place to stay? "}
+
+event: done
+data: {"message_id": 2, "usage": {"input_tokens": 10, "output_tokens": 20}}

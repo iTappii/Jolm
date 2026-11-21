@@ -7,7 +7,8 @@ import Foundation
 ///
 /// Scenario switches (by the text of the user's message): "busy" → the first attempt answers 409 `chat_busy`,
 /// "full" → 409 `chat_full`, "boom" → the first attempt streams an `error` event; the retry then succeeds;
-/// "#ring6" / "#ring3" / "#ring1" → a stream with that many theses (the first one also with `route_ready`).
+/// "#dlg0" … "#dlg7" → the turns of a recorded dialog for the answer chain (Ш-32b): a question, then the answers
+/// days → budget → lodging → a wish → a changed budget → `route_ready`.
 enum ChatStub {
     static let chatID = "66666666-6666-4666-8666-666666666666"
     static let oldChatID = "55555555-5555-4555-8555-555555555555"
@@ -91,11 +92,10 @@ enum ChatStub {
         if lowered.contains("full") { return error(409, "chat_full", "This chat is full.") }
         if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
         if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
-        // Ring fixtures (Ш-32a): 6 theses and a ready route / 3 theses, route not ready / 1 thesis.
-        for (marker, name) in [("#ring6", "chat-ring6"), ("#ring3", "chat-ring3"), ("#ring1", "chat-ring1")]
-        where lowered.contains(marker) {
+        // Chain dialog (Ш-32b): "#dlg3 …" replays the third turn of the recorded dialog.
+        for turn in 0...7 where lowered.contains("#dlg\(turn)") {
             sent.append(text)
-            return stream(name)
+            return stream("chat-dlg-\(turn)")
         }
         sent.append(text)
         tripBuilt = true
@@ -129,7 +129,8 @@ enum ChatStub {
 
     private static let brief = """
     {"start_date":"2026-12-05","end_date":"2026-12-07","budget_kzt":900000,"has_accommodation":true,\
-    "must_haves":["Fixture Museum"],"interests":[],"pace":null,"crowd_tolerance":null,"missing":[],"complete":true}
+    "must_haves":["Fixture Museum"],"interests":[],"pace":null,"crowd_tolerance":null,"missing":[],"complete":true,\
+    "filled_order":["start_date","end_date","budget_kzt","has_accommodation","must_haves:Fixture Museum"]}
     """
 
     private static func oldChatDetail() -> String {

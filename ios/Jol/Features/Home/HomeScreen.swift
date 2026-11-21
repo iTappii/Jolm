@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Main screen (SSOT §11.1, §11.4): the map fills the screen; a collapsible chat floats above it;
-/// the profile button sits bottom-left; a swipe from the left edge opens the side panel.
+/// the profile button sits top-right (mirror of the side-panel button); a swipe from the left edge opens the
+/// side panel.
 struct HomeScreen: View {
     @Environment(AppContainer.self) private var container
     @State private var chatExpanded = true
@@ -37,6 +38,7 @@ struct HomeScreen: View {
                 )
             } else {
                 overlay
+                attributionLine
             }
             SidebarPanel(
                 isOpen: $sidebarOpen,
@@ -176,7 +178,8 @@ struct HomeScreen: View {
     private var overlay: some View {
         VStack(spacing: JolSpacing.sm) {
             if chatExpanded {
-                Spacer(minLength: 0)
+                // The card never reaches the top button row (side panel / profile), even with the keyboard up.
+                Spacer(minLength: Self.topButtonsClearance)
                 ChatPanel(
                     model: container.chat,
                     draft: $draft,
@@ -202,14 +205,14 @@ struct HomeScreen: View {
                 Spacer(minLength: 0)
             }
             RouteBar(model: container.places)
-            attribution
-            bottomBar
+            if !chatExpanded { bottomBar }
         }
-        // Keeps the bar above MapLibre's logo / attribution ornaments at the bottom of the map.
-        .padding(.bottom, 44)
+        // The card ends just above the static attribution line (see `attributionLine`).
+        .padding(.bottom, Self.attributionClearance)
         .overlay(alignment: .leading) {
             EdgeSwipeStrip { sidebarOpen = true }
         }
+        .overlay(alignment: .topTrailing) { profileButton }
         .overlay(alignment: .topLeading) {
             Button {
                 sidebarOpen = true
@@ -227,37 +230,46 @@ struct HomeScreen: View {
         }
     }
 
-    private var attribution: some View {
-        Text("© OpenStreetMap contributors")
-            .font(.caption2)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(.thinMaterial, in: Capsule())
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.horizontal, JolSpacing.sm)
-            .accessibilityIdentifier("osm-attribution")
+    /// «© OpenStreetMap contributors», pinned to the bottom of the screen. It lives outside the overlay that follows
+    /// the keyboard and ignores the keyboard safe area: the keyboard slides over it, it never rides up.
+    private var attributionLine: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text("© OpenStreetMap contributors")
+                .font(.caption2)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(.thinMaterial, in: Capsule())
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.horizontal, JolSpacing.sm)
+                .accessibilityIdentifier("osm-attribution")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.keyboard)
+        .allowsHitTesting(false)
     }
 
-    private var bottomBar: some View {
-        HStack(spacing: JolSpacing.sm) {
-            Button {
-                profileOpen = true
-            } label: {
-                Image(systemName: "person.crop.circle")
-                    .font(.title2)
-                    .frame(width: 48, height: 48)
-                    .background(.thinMaterial, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Profile"))
-            .accessibilityIdentifier("open-profile-menu")
-            if !chatExpanded {
-                CollapsedChatBar(draft: draft, isTyping: container.chat.isStreaming) { chatExpanded = true }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+    private var profileButton: some View {
+        Button {
+            profileOpen = true
+        } label: {
+            Image(systemName: "person.crop.circle")
+                .font(.title3)
+                .frame(width: 44, height: 44)
+                .background(.thinMaterial, in: Circle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, JolSpacing.sm)
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Profile"))
+        .accessibilityIdentifier("open-profile-menu")
+        .padding(.trailing, JolSpacing.sm)
+        .padding(.top, JolSpacing.sm)
+    }
+
+    /// Collapsed chat: the bar has the bottom row to itself, full width.
+    private var bottomBar: some View {
+        CollapsedChatBar(draft: draft, isTyping: container.chat.isStreaming) { chatExpanded = true }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .padding(.horizontal, JolSpacing.sm)
     }
 }
 
@@ -271,7 +283,11 @@ extension HomeScreen {
     }
 
     /// Share of the screen the chat card takes once a conversation is on.
-    private static let conversationFraction: CGFloat = 0.56
+    private static let conversationFraction: CGFloat = 0.68
+    /// Height of the top button row (44pt buttons + their padding) the card must stay below.
+    private static let topButtonsClearance: CGFloat = 60
+    /// Space under the overlay for the static attribution line.
+    private static let attributionClearance: CGFloat = 26
 
     private var chatIsActive: Bool {
         let chat = container.chat
@@ -285,7 +301,7 @@ extension HomeScreen {
         }
         if container.places.selected == nil {
             // The live map keeps its pins above the open conversation.
-            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.08) : 0
+            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.03) : 0
         }
         let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
         return screenHeight * fraction

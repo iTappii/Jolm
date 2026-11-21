@@ -1,6 +1,6 @@
 import asyncio
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from pydantic import SecretStr
@@ -8,8 +8,17 @@ from starlette.requests import Request
 
 from app.auth import sessions
 from app.chat import api as chat_api
+from app.chat import store
 from app.chat.api import SendMessage
-from app.chat.brief import BriefError, BriefUpdate, apply_update, empty_brief, today_almaty
+from app.chat.brief import (
+    BriefError,
+    BriefUpdate,
+    apply_update,
+    empty_brief,
+    fill_entries,
+    merge_filled_order,
+    today_almaty,
+)
 from app.config import get_settings
 from app.db import fetch_all, fetch_one
 from app.providers.llm import FakeLLM, LLMError, TextDelta
@@ -87,6 +96,7 @@ async def test_create_list_and_read_a_chat(chat_env, conn):
     assert brief["budget_kzt"] is None and brief["must_haves"] == []
 
     detail = (await chat_env.client.get("/v1/chats/%s" % chat["id"], headers=headers)).json()
+    assert detail["brief"]["filled_order"] == []
     assert detail["messages"] == [] and detail["graph_nodes"] == []
     assert detail["brief"]["complete"] is False
     assert detail["brief"]["missing"] == ["dates", "budget", "accommodation"]
@@ -291,6 +301,15 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "crowd_tolerance": None,
         "missing": [],
         "complete": True,
+        # Ш-32b: order of the answers, for the ring in the chat
+        "filled_order": [
+            "start_date",
+            "end_date",
+            "budget_kzt",
+            "has_accommodation",
+            "must_haves:Плов-центр",
+            "pace",
+        ],
     }
     assert [(n["ord"], n["text"]) for n in detail["graph_nodes"]] == [
         (1, "5 days in Almaty"),
@@ -729,3 +748,48 @@ def test_today_is_the_almaty_date(monkeypatch):
 
     monkeypatch.setattr(brief_module, "datetime", Clock)
     assert brief_module.today_almaty().isoformat() == "2026-11-22"
+
+
+def test_fill_entries_and_merge_keep_the_order_of_answers():
+    today = date(2026, 12, 1)
+    first, changed = apply_update(
+        empty_brief(), BriefUpdate(budget_kzt=200000, must_haves=["Plov", "Museums"]), today
+    )
+    entries = fill_entries(empty_brief(), first, changed)
+    assert entries == ["budget_kzt", "must_haves:Plov", "must_haves:Museums"]
+    # a later answer: new must-have, a changed budget, a removed must-have
+    second, changed = apply_update(
+        first,
+        BriefUpdate(
+            budget_kzt=300000, must_haves=["Sushi"], remove_must_haves=["Plov"], pace="calm"
+        ),
+        today,
+    )
+    later = fill_entries(first, second, changed)
+    assert later == ["budget_kzt", "must_haves:Sushi", "pace"]
+    order = merge_filled_order(entries, later)
+    # the changed budget keeps its place; nothing repeats
+    assert order == [
+        "budget_kzt",
+        "must_haves:Plov",
+        "must_haves:Museums",
+        "must_haves:Sushi",
+        "pace",
+    ]
+    assert merge_filled_order(order, ["budget_kzt", "pace"]) == order
+
+
+async def test_record_filled_order_appends_without_repeats(chat_env, conn):
+    from uuid import UUID
+
+    headers = await sign_in(conn)
+    chat = await new_chat(chat_env, headers)
+    cid = UUID(chat["id"])
+    await store.lock_brief(conn, cid)
+    await store.record_filled_order(conn, cid, ["budget_kzt", "start_date"])
+    await store.record_filled_order(conn, cid, ["start_date", "must_haves:Plov"])
+    assert await store.get_filled_order(conn, cid) == [
+        "budget_kzt",
+        "start_date",
+        "must_haves:Plov",
+    ]

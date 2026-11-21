@@ -6,7 +6,7 @@ from uuid import UUID
 
 from psycopg.types.json import Jsonb
 
-from app.chat.brief import empty_brief
+from app.chat.brief import empty_brief, merge_filled_order
 from app.db import execute, fetch_all, fetch_one
 
 MAX_GRAPH_NODES = 30
@@ -179,6 +179,28 @@ async def save_brief(conn, chat_id: UUID, brief: Dict[str, Any]) -> None:
             chat_id,
         ),
     )
+
+
+async def get_filled_order(conn, chat_id: UUID) -> List[str]:
+    row = await fetch_one(
+        conn, "SELECT filled_order FROM trip_briefs WHERE chat_id = %s", (chat_id,)
+    )
+    return list(row["filled_order"]) if row else []
+
+
+async def record_filled_order(conn, chat_id: UUID, entries: List[str]) -> None:
+    """Appends the entries not yet in `trip_briefs.filled_order`. Call after `lock_brief`, which
+    holds the row, so two concurrent updates cannot lose each other's entries."""
+    if not entries:
+        return
+    order = await get_filled_order(conn, chat_id)
+    merged = merge_filled_order(order, entries)
+    if merged != order:
+        await execute(
+            conn,
+            "UPDATE trip_briefs SET filled_order = %s WHERE chat_id = %s",
+            (Jsonb(merged), chat_id),
+        )
 
 
 async def graph_nodes(conn, chat_id: UUID) -> List[dict]:
