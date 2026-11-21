@@ -231,7 +231,10 @@ struct TripMapOverlay: View {
         .accessibilityHint(Text("Opens the budget"))
         .accessibilityIdentifier("trip-budget-chip")
     }
+}
 
+// Budget, warnings and problem texts of the panel.
+extension TripMapOverlay {
     private func budgetLabel(total: Int?, over: Bool) -> Text {
         var parts = [Text("Budget")]
         if let total { parts.append(Text(verbatim: TripFormatting.kzt(total, locale: locale))) }

@@ -74,11 +74,20 @@ final class SidebarUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["chat-greeting"].waitForExistence(timeout: 5))
     }
 
+    func testGuestHintOpensTheSignInGate() {
+        let app = launch(signedIn: false)
+        openSidebar(app)
+        let hint = app.buttons["sidebar-guest-hint"]
+        XCTAssertTrue(hint.waitForExistence(timeout: 5))
+        hint.tap()
+        XCTAssertTrue(element(app, "account-gate").waitForExistence(timeout: 5), app.debugDescription)
+    }
+
     func testPanelIsLocalizedInRussian() {
         let app = launch(signedIn: false, language: "ru")
         openSidebar(app)
         XCTAssertTrue(app.staticTexts["Недавние чаты"].exists)
         XCTAssertTrue(app.buttons["sidebar-new-chat"].label.contains("Новый чат"))
-        XCTAssertTrue(app.staticTexts["Войдите, чтобы сохранять чаты и поездки."].exists)
+        XCTAssertEqual(app.buttons["sidebar-guest-hint"].label, "Войдите, чтобы сохранять чаты и поездки.")
     }
 }

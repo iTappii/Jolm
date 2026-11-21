@@ -54,3 +54,13 @@
   (ссылки `about-osm`, `about-open-meteo`, `about-privacy`, `about-version`) прошёл; `swiftlint` → 0.
 - Не проверено: открытие ссылок в Safari; тёмная тема/Dynamic Type/VoiceOver на экране «О приложении»;
   сборка Release (манифест MapLibre, предупреждения Xcode о privacy manifest); юридическая корректность текстов.
+
+## Ревью координатора (2026-11-21)
+
+Код прочитан выборочно (ключевые места), ветка влита в `sh-22-24-auth`. После слияния: два `AdaptiveStack`
+сведены в один (`Core/Design/AdaptiveLayout.swift`), конфликты в `TripMapOverlay`/`TripDayListView`
+(офлайн-копия Ш-42 + доступность Ш-52) объединены вручную, гостевая подсказка боковой панели стала кнопкой
+входа, отступ карты учитывает высокую карточку на крупном шрифте. Перезапуск координатором:
+`make ci` → 852 passed, 1 skipped; `xcodebuild … iPhone 17 test` → юнит 237/237, UI 95 (1 пропущен,
+1 упавший `SidebarUITests.testPanelIsLocalizedInRussian` — тест искал текст вместо кнопки; исправлен,
+`SidebarUITests`+`HomeScreenUITests` 12/12); `swiftlint` 0.

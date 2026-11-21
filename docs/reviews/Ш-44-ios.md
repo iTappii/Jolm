@@ -34,3 +34,13 @@
 ## Результат полного прогона
 
 `xcodebuild … test -skip-testing:JolUITests/AppleSignInUITests` (iPhone 18 Pro): JolTests 208 тестов, 0 ошибок (+20: `ContentTests` 8, `ContentFlowTests` 12); JolUITests 66 тестов, 1 пропущен (`ChatUITests.testGuestReceivesAnAnswerFromTheLocalAPI`, нужен живой API), в первом прогоне упал один — `SignInGateUITests.testRateLimitedAddressShowsCountdownMessage` (поле `sign-in-destination` не появилось за 10 с; к Ш-44 не относится, симулятор в этом прогоне работал втрое медленнее обычного: 30 минут вместо 13); повторный запуск всех четырёх тестов `SignInGateUITests` — все прошли. Новые `ContentUITests` (7) прошли и в полном прогоне, и отдельно. `swiftlint` — 0 нарушений.
+
+## Ревью координатора (2026-11-21)
+
+Код прочитан выборочно (ключевые места), ветка влита в `sh-22-24-auth`. После слияния: два `AdaptiveStack`
+сведены в один (`Core/Design/AdaptiveLayout.swift`), конфликты в `TripMapOverlay`/`TripDayListView`
+(офлайн-копия Ш-42 + доступность Ш-52) объединены вручную, гостевая подсказка боковой панели стала кнопкой
+входа, отступ карты учитывает высокую карточку на крупном шрифте. Перезапуск координатором:
+`make ci` → 852 passed, 1 skipped; `xcodebuild … iPhone 17 test` → юнит 237/237, UI 95 (1 пропущен,
+1 упавший `SidebarUITests.testPanelIsLocalizedInRussian` — тест искал текст вместо кнопки; исправлен,
+`SidebarUITests`+`HomeScreenUITests` 12/12); `swiftlint` 0.

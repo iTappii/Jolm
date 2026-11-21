@@ -7,6 +7,8 @@ struct SidebarPanel: View {
     let onNewChat: () -> Void
     var onOpenRoutes: () -> Void = {}
     var onOpenFavorites: () -> Void = {}
+    /// A guest taps the hint: the sign-in gate opens (nothing is lost — a guest chat has no history anyway).
+    var onSignIn: () -> Void = {}
     /// Saved trips of a signed-in user (nil: nothing to list, e.g. a guest); a row opens the full route map.
     var trips: ChatModel.Load<[TripSummary]>?
     var onOpenTrip: (UUID) -> Void = { _ in }
@@ -154,10 +156,15 @@ struct SidebarPanel: View {
             .accessibilityIdentifier("sidebar-chats")
         case nil:
             // A guest chat has no memory and no history (SSOT §3.1): say so instead of "no chats yet".
-            Text("Sign in to keep your chats and trips.")
-                .font(JolFont.callout)
-                .foregroundStyle(JolColor.textSecondary)
-                .accessibilityIdentifier("sidebar-guest-hint")
+            Button(action: onSignIn) {
+                Text("Sign in to keep your chats and trips.")
+                    .font(JolFont.callout)
+                    .foregroundStyle(JolColor.brandText)
+                    .multilineTextAlignment(.leading)
+                    .frame(minHeight: JolTarget.minimum)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("sidebar-guest-hint")
         default:
             Text("No chats yet")
                 .font(JolFont.callout)

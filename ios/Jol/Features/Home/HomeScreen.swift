@@ -5,6 +5,7 @@ import SwiftUI
 /// side panel.
 struct HomeScreen: View {
     @Environment(AppContainer.self) private var container
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var chatExpanded = true
     @State private var draft = ""
     @State private var sidebarOpen = false
@@ -49,6 +50,10 @@ struct HomeScreen: View {
                 },
                 onOpenRoutes: { routesOpen = true },
                 onOpenFavorites: { container.gate.requireAccount { favoritesOpen = true } },
+                onSignIn: {
+                    sidebarOpen = false
+                    container.gate.requireAccount {}
+                },
                 trips: container.auth.isSignedIn ? container.tripMap.summaries : nil,
                 onOpenTrip: { id in
                     chatExpanded = false
@@ -235,6 +240,9 @@ struct HomeScreen: View {
 
     /// «© OpenStreetMap contributors», pinned to the bottom of the screen. It lives outside the overlay that follows
     /// the keyboard and ignores the keyboard safe area: the keyboard slides over it, it never rides up.
+}
+
+extension HomeScreen {
     private var attributionLine: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -274,9 +282,7 @@ struct HomeScreen: View {
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .padding(.horizontal, JolSpacing.sm)
     }
-}
 
-extension HomeScreen {
     private var gatePresented: Binding<Bool> {
         // While a place card is up, the card presents the sheet itself (a view cannot present two sheets).
         Binding(
@@ -306,7 +312,9 @@ extension HomeScreen {
             // The live map keeps its pins above the open conversation.
             return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.03) : 0
         }
-        let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
+        // At accessibility text sizes the card opens at the taller detent (PlaceCardSheet), keep the pin above it.
+        let tall = container.directions.isActive || typeSize.isAccessibilitySize
+        let fraction = tall ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
         return screenHeight * fraction
     }
 
