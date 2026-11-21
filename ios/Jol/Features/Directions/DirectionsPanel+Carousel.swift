@@ -62,6 +62,7 @@ extension DirectionsPanel {
         } label: {
             HStack(spacing: JolSpacing.xs) {
                 Image(systemName: DirectionsFormatting.symbol(first?.mode ?? .walk))
+                    .accessibilityHidden(true)
                 if let first {
                     Text(DirectionsFormatting.clock(DirectionsFormatting.minutes(first.durationS), language: language))
                         .font(JolFont.caption.weight(.semibold))
@@ -69,11 +70,12 @@ extension DirectionsPanel {
             }
             .padding(.horizontal, JolSpacing.md)
             .padding(.vertical, JolSpacing.sm)
+            .frame(minHeight: JolTarget.minimum)
             .foregroundStyle(current ? JolColor.onBrand : JolColor.textPrimary)
             .background(current ? JolColor.brand : JolColor.surface, in: Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(DirectionsFormatting.pageTitle(page.kind)))
+        .accessibilityLabel(chipLabel(page, first: first))
         .accessibilityAddTraits(current ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("directions-chip-\(page.kind.slug)")
     }
@@ -88,8 +90,11 @@ extension DirectionsPanel {
                 Text("\(model.pageIndex + 1) / \(model.pages.count)")
                     .font(JolFont.caption)
                     .foregroundStyle(JolColor.textTertiary)
+                    .accessibilityLabel(Text("Page \(model.pageIndex + 1) of \(model.pages.count)"))
                     .accessibilityIdentifier("directions-page-counter")
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
             ForEach(Array(page.variants.enumerated()), id: \.offset) { index, option in
                 variantRow(option, index: index, page: page)
             }
@@ -99,10 +104,11 @@ extension DirectionsPanel {
     private func variantRow(_ option: DirectionOption, index: Int, page: TransportPage) -> some View {
         let selected = model.selectedVariant(of: page) == index
         return Button { model.selectVariant(index) } label: {
-            HStack(spacing: JolSpacing.md) {
+            AdaptiveStack(spacing: JolSpacing.md) {
                 Image(systemName: DirectionsFormatting.symbol(option.mode))
                     .font(.title3)
                     .frame(width: 40, height: 40)
+                    .accessibilityHidden(true)
                     .background(selected ? JolColor.brand : JolColor.surface, in: Circle())
                     .foregroundStyle(selected ? JolColor.onBrand : JolColor.textPrimary)
                 VStack(alignment: .leading, spacing: JolSpacing.xxs) {
@@ -114,7 +120,7 @@ extension DirectionsPanel {
                     detailLine(option, index: index, count: page.variants.count)
                 }
                 Spacer(minLength: JolSpacing.sm)
-                VStack(alignment: .trailing, spacing: JolSpacing.xxs) {
+                VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: JolSpacing.xxs) {
                     Text(DirectionsFormatting.duration(option, language: language)).font(JolFont.headline)
                     Text("Arrive \(DirectionsFormatting.arrival(option, departedAt: model.answeredAt))")
                         .font(JolFont.caption.weight(.semibold))
@@ -133,7 +139,9 @@ extension DirectionsPanel {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(variantLabel(option, index: index, count: page.variants.count))
+        .accessibilityHint(selected ? Text("") : Text("Shows this way on the map"))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("direction-variant-\(page.kind.slug)-\(index + 1)")
     }
@@ -157,5 +165,37 @@ extension DirectionsPanel {
             }
         }
         .font(JolFont.caption)
+    }
+
+    /// Spoken form of a chip: «Walk, 12 min».
+    func chipLabel(_ page: TransportPage, first: DirectionOption?) -> Text {
+        var parts = [Text(DirectionsFormatting.pageTitle(page.kind))]
+        if let first {
+            parts.append(Text(verbatim: DirectionsFormatting.clock(
+                DirectionsFormatting.minutes(first.durationS), language: language)))
+        }
+        return Text.spoken(parts)
+    }
+
+    /// Spoken form of a variant row: mode, time, arrival, price, tag/distance, congestion (its icon is decorative).
+    func variantLabel(_ option: DirectionOption, index: Int, count: Int) -> Text {
+        let mode = Text(DirectionsFormatting.title(option.mode))
+        let title = option.transitRef.map { mode + Text(verbatim: " " + $0) } ?? mode
+        let arrival = DirectionsFormatting.arrival(option, departedAt: model.answeredAt)
+        var parts = [
+            title,
+            Text(verbatim: DirectionsFormatting.duration(option, language: language)),
+            Text("Arrive \(arrival)"),
+            Text(verbatim: DirectionsFormatting.price(option, language: language))
+        ]
+        if option.recommended {
+            parts.append(Text("Recommended"))
+        } else if index == 0 && count > 1 {
+            parts.append(Text("Optimal"))
+        } else {
+            parts.append(Text(verbatim: DirectionsFormatting.distance(option.distanceM, language: language)))
+        }
+        if let congestion = DirectionsFormatting.congestion(option) { parts.append(Text(congestion)) }
+        return Text.spoken(parts)
     }
 }

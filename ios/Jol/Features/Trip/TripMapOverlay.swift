@@ -11,6 +11,7 @@ struct TripMapOverlay: View {
     let onSelectPlace: (TripPlace) -> Void
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var budgetOpen = false
 
     var body: some View {
@@ -81,11 +82,13 @@ struct TripMapOverlay: View {
         return Button { model.selectDay(index) } label: {
             HStack(spacing: JolSpacing.xs) {
                 Circle().fill(Color(TripMapModel.dayColor(index))).frame(width: 10, height: 10)
+                    .accessibilityHidden(true)
                 Text("Day \(index + 1)").font(JolFont.callout.weight(.semibold))
                 Text(verbatim: TripFormatting.dayDate(day.date, locale: locale)).font(JolFont.caption)
             }
             .padding(.horizontal, JolSpacing.md)
             .padding(.vertical, JolSpacing.sm)
+            .frame(minHeight: JolTarget.minimum)
             .foregroundStyle(JolColor.textPrimary)
             .background(
                 selected ? AnyShapeStyle(JolColor.surfaceElevated) : AnyShapeStyle(.thinMaterial), in: Capsule()
@@ -93,7 +96,8 @@ struct TripMapOverlay: View {
             .overlay(Capsule().stroke(selected ? Color(TripMapModel.dayColor(index)) : .clear, lineWidth: 2))
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("trip-day-chip-\(index + 1)")
     }
 
@@ -106,6 +110,7 @@ struct TripMapOverlay: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.horizontal, JolSpacing.sm)
             .accessibilityIdentifier("osm-attribution")
+            .accessibilityHidden(true)
     }
 
     // MARK: - Panel
@@ -115,6 +120,7 @@ struct TripMapOverlay: View {
             switch model.phase {
             case .idle, .loading:
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityLabel(Text("Loading"))
                     .accessibilityIdentifier("trip-loading")
             case .failed:
                 VStack(spacing: JolSpacing.md) {
@@ -144,22 +150,41 @@ struct TripMapOverlay: View {
 
     @ViewBuilder private var loadedPanel: some View {
         if let day = model.day {
+            if typeSize.isAccessibilitySize {
+                // Large type: header, warnings and stops scroll together so the list is never squeezed out.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: JolSpacing.sm) {
+                        dayHeader(day)
+                        warnings
+                        TripDayListView(model: model, day: day, onSelectPlace: onSelectPlace)
+                    }
+                }
+                .accessibilityIdentifier("trip-day-list")
+            } else {
+                dayHeader(day)
+                warnings
+                ScrollView {
+                    TripDayListView(model: model, day: day, onSelectPlace: onSelectPlace)
+                }
+                .accessibilityIdentifier("trip-day-list")
+            }
+        }
+    }
+
+    private func dayHeader(_ day: TripDay) -> some View {
+        AdaptiveStack(rowAlignment: .firstTextBaseline) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Day \(model.dayIndex + 1)")
                     .font(JolFont.headline)
                     .foregroundStyle(Color(model.dayColor))
                     .accessibilityIdentifier("trip-day-title")
+                    .accessibilityAddTraits(.isHeader)
                 Text(verbatim: TripFormatting.dayDate(day.date, locale: locale))
                     .font(JolFont.callout)
                     .foregroundStyle(JolColor.textSecondary)
-                Spacer()
-                budgetChip
             }
-            warnings
-            ScrollView {
-                TripDayListView(model: model, day: day, onSelectPlace: onSelectPlace)
-            }
-            .accessibilityIdentifier("trip-day-list")
+            if !typeSize.isAccessibilitySize { Spacer() }
+            budgetChip
         }
     }
 
@@ -168,7 +193,7 @@ struct TripMapOverlay: View {
         let total = model.trip?.totalCostKzt ?? model.trip?.budget?.totalKzt
         return Button { budgetOpen = true } label: {
             HStack(spacing: JolSpacing.xs) {
-                if over { Image(systemName: "exclamationmark.triangle.fill") }
+                if over { Image(systemName: "exclamationmark.triangle.fill").accessibilityHidden(true) }
                 if let total {
                     Text(verbatim: TripFormatting.kzt(total, locale: locale))
                 } else {
@@ -179,17 +204,27 @@ struct TripMapOverlay: View {
             .foregroundStyle(over ? JolColor.danger : JolColor.textPrimary)
             .padding(.horizontal, JolSpacing.md)
             .padding(.vertical, JolSpacing.xs + 2)
+            .frame(minHeight: JolTarget.minimum)
             .background(JolColor.surface, in: Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(budgetLabel(total: total, over: over))
+        .accessibilityHint(Text("Opens the budget"))
         .accessibilityIdentifier("trip-budget-chip")
+    }
+
+    private func budgetLabel(total: Int?, over: Bool) -> Text {
+        var parts = [Text("Budget")]
+        if let total { parts.append(Text(verbatim: TripFormatting.kzt(total, locale: locale))) }
+        if over { parts.append(Text("Over budget")) }
+        return Text.spoken(parts)
     }
 
     @ViewBuilder private var warnings: some View {
         if let trip = model.trip, trip.budgetDetail?.isOver ?? trip.budget?.isOver ?? false {
             Button { budgetOpen = true } label: {
                 HStack(spacing: JolSpacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(systemName: "exclamationmark.triangle.fill").accessibilityHidden(true)
                     overText(trip).multilineTextAlignment(.leading)
                     Spacer(minLength: 0)
                     if trip.needsBudgetChoice { Text("Choose").fontWeight(.semibold) }

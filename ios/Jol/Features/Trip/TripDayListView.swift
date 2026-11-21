@@ -8,6 +8,7 @@ struct TripDayListView: View {
     let onSelectPlace: (TripPlace) -> Void
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
+    @ScaledMetric(relativeTo: .callout) private var badgeSize: CGFloat = 28
 
     var body: some View {
         dayList(day)
@@ -36,8 +37,9 @@ struct TripDayListView: View {
                     Text("\(number)")
                         .font(JolFont.callout.weight(.bold))
                         .foregroundStyle(JolColor.onBrand)
-                        .frame(width: 28, height: 28)
+                        .frame(width: badgeSize, height: badgeSize)
                         .background(Color(model.dayColor), in: Circle())
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: JolSpacing.xxs) {
                         HStack(spacing: JolSpacing.xs) {
                             Text(verbatim: item.place.name).font(JolFont.body.weight(.semibold))
@@ -55,16 +57,19 @@ struct TripDayListView: View {
             .buttonStyle(.plain)
             .foregroundStyle(JolColor.textPrimary)
             .accessibilityElement(children: .combine)
+            .accessibilityHint(Text("Opens the place card"))
             .accessibilityIdentifier("trip-stop-\(number)")
             Button { model.remove(item) } label: {
                 Image(systemName: "minus.circle")
                     .font(.title3)
                     .foregroundStyle(JolColor.textTertiary)
-                    .frame(width: 36, height: 36)
+                    .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(model.isWorking)
             .accessibilityLabel(Text("Remove from the route"))
+            .accessibilityValue(Text(verbatim: item.place.name))
             .accessibilityIdentifier("trip-stop-remove-\(number)")
         }
         .padding(.vertical, JolSpacing.xs)
@@ -93,6 +98,7 @@ struct TripDayListView: View {
                 Image(systemName: DirectionsFormatting.symbol(option?.mode ?? .walk))
                     .frame(width: 28)
                     .foregroundStyle(JolColor.textSecondary)
+                    .accessibilityHidden(true)
                 if let option {
                     Text(verbatim: DirectionsFormatting.duration(option, language: container.language.code))
                     Text(verbatim: "· " + DirectionsFormatting.price(option, language: container.language.code))
@@ -105,16 +111,33 @@ struct TripDayListView: View {
                 }
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption).foregroundStyle(JolColor.textTertiary)
+                    .accessibilityHidden(true)
             }
             .font(JolFont.caption)
             .foregroundStyle(JolColor.textSecondary)
             .padding(.vertical, JolSpacing.xs)
+            .frame(minHeight: JolTarget.minimum)
             .padding(.horizontal, JolSpacing.sm)
             .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(legLabel(leg, option: option, late: late))
+        .accessibilityHint(Text("Shows the ways to get there"))
         .accessibilityIdentifier("trip-leg-row")
+    }
+
+    /// «Walk, 12 min, Free, Arrives late» — the row's spoken form (its icons are decorative).
+    private func legLabel(_ leg: TripLeg, option: DirectionOption?, late: Int) -> Text {
+        guard let option else { return Text("Way not calculated") }
+        let language = container.language.code
+        var parts = [
+            Text(DirectionsFormatting.title(option.mode)),
+            Text(verbatim: DirectionsFormatting.duration(option, language: language)),
+            Text(verbatim: DirectionsFormatting.price(option, language: language))
+        ]
+        if late > 0 { parts.append(Text("Arrives late")) }
+        return Text.spoken(parts)
     }
 }

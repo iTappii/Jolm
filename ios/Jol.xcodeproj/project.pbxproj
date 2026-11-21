@@ -12,6 +12,7 @@
 		0AF5836797901E1569DC372A /* MapCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E09803410885F6C9BFFC51B /* MapCamera.swift */; };
 		0B3D2CA182539F51ED8A5D6D /* BookingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3111B5557089024A7672A29F /* BookingModel.swift */; };
 		0EACD818F8DE4387340D20A8 /* RingGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0FB079D33E9492687FBA628 /* RingGeometry.swift */; };
+		0FBEBD9589B7B9B1E61332E2 /* AdaptiveLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */; };
 		117736267B8E9A647C40C09E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C930643C06F8340CDAC60B /* Palette.swift */; };
 		13B2E6C9381441F0DF712807 /* AccountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A542D7E9F0C6A239B2A1E48D /* AccountGate.swift */; };
 		162DC8792CA9C4A1999C8AA2 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D73DF7C32AFE83616666D73F /* APIClientTests.swift */; };
@@ -99,6 +100,7 @@
 		A75008D41601C959AEE822C6 /* FavoritesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF5917E0A81AFE480DB86C /* FavoritesUITests.swift */; };
 		AC1C9198147AEFD76BC9C851 /* PlacesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F5293DA021AA64E97F6AC9 /* PlacesTests.swift */; };
 		ACA942099D8C98137B336646 /* chat-ring1.sse in Resources */ = {isa = PBXBuildFile; fileRef = 6BB766FCEC1A5B7809BD904E /* chat-ring1.sse */; };
+		ACF8C659F37F77FACB7208F0 /* AccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76948EF829EB585BA12510DC /* AccessibilityUITests.swift */; };
 		AD32BEEAEB9FDD8DA16943EA /* PlacePhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476C3D54E3C44A5E52E60072 /* PlacePhotoView.swift */; };
 		B048EF3286A17804669E3F38 /* PlaceholderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E19CEC85799ADE6F510091C /* PlaceholderScreen.swift */; };
 		B100C53B5A1FABA301260C7C /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7498BAA9B71AC1649C4D2088 /* HomeScreen.swift */; };
@@ -240,6 +242,7 @@
 		6ED0F82A0F0A56C98ECCD954 /* MapCoordinator+Directions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MapCoordinator+Directions.swift"; sourceTree = "<group>"; };
 		6F2B1EF6D16636071B0C4C90 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		7498BAA9B71AC1649C4D2088 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		76948EF829EB585BA12510DC /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
 		789E3FA15B29957EBBDF4CC4 /* UITestTripStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestTripStub.swift; sourceTree = "<group>"; };
 		7BC957D2AE795231563F5969 /* ChatModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModelTests.swift; sourceTree = "<group>"; };
 		80396B931A9E49A29B64CB6B /* ProfileSubscreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSubscreens.swift; sourceTree = "<group>"; };
@@ -249,6 +252,7 @@
 		8366C471BD9C69866C22ABD1 /* ChatModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModels.swift; sourceTree = "<group>"; };
 		84367B2746DCF01FA55C7DD0 /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
 		84DAB833243844B9C00E1390 /* ChatState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatState.swift; sourceTree = "<group>"; };
+		86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveLayout.swift; sourceTree = "<group>"; };
 		87F2D0F10A503A8F7880E855 /* AppleSignIn.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppleSignIn.xcstrings; sourceTree = "<group>"; };
 		888050248C0E848FDC24BFD9 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		8A4C7FECA6D7895754955CC1 /* TripScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripScreen.swift; sourceTree = "<group>"; };
@@ -323,6 +327,7 @@
 		2296E6EEDBF0DAA91E5066DB /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */,
 				F7D86038F238C4B214FAE5A3 /* Metrics.swift */,
 				90C930643C06F8340CDAC60B /* Palette.swift */,
 				4E19CEC85799ADE6F510091C /* PlaceholderScreen.swift */,
@@ -537,6 +542,7 @@
 		968E3472597435655733FB65 /* JolUITests */ = {
 			isa = PBXGroup;
 			children = (
+				76948EF829EB585BA12510DC /* AccessibilityUITests.swift */,
 				BDF6AA0343574A8A1C667370 /* AppleSignInUITests.swift */,
 				195D8398CDE2DF5D1A3DC2B5 /* ChatRingUITests.swift */,
 				5CF518F92A81A0E245F743E9 /* ChatUITests.swift */,
@@ -844,6 +850,7 @@
 				D8AB5D3F871A9CE3FE7866F9 /* APIClient.swift in Sources */,
 				5BF1B6A30AFD4B05EABF99DC /* APIError.swift in Sources */,
 				13B2E6C9381441F0DF712807 /* AccountGate.swift in Sources */,
+				0FBEBD9589B7B9B1E61332E2 /* AdaptiveLayout.swift in Sources */,
 				44AB54A3C3ADB7FE16448568 /* AppConfig.swift in Sources */,
 				F30098217D0A120E433BC16B /* AppContainer.swift in Sources */,
 				70D41705E29094BC2E9784EC /* AppLanguage.swift in Sources */,
@@ -944,6 +951,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ACF8C659F37F77FACB7208F0 /* AccessibilityUITests.swift in Sources */,
 				85D350B17CBA765367DF36C5 /* AppleSignInUITests.swift in Sources */,
 				2EE1FEFFC619291CA3B7448A /* ChatRingUITests.swift in Sources */,
 				5314921D201A2603A0028E91 /* ChatUITests.swift in Sources */,

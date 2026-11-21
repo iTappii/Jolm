@@ -7,6 +7,7 @@ struct BookingSheet: View {
     let kinds: [BookingKind]
     @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var kind: BookingKind
     @State private var start = BookingSheet.defaultStart(hour: 19)
     @State private var end = BookingSheet.defaultStart(hour: 12, daysAhead: 2)
@@ -55,11 +56,8 @@ struct BookingSheet: View {
             }
             if kinds.count > 1 {
                 Section {
-                    Picker("What to book", selection: $kind) {
-                        ForEach(kinds) { item in Text(Self.title(item)).tag(item) }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("booking-kind")
+                    kindPicker
+                        .accessibilityIdentifier("booking-kind")
                 }
             }
             Section {
@@ -110,6 +108,18 @@ struct BookingSheet: View {
         .onChange(of: kind) { _, _ in model.edit() }
     }
 
+    /// Segments for few/short options; a menu at accessibility sizes, where segments would be cut off.
+    @ViewBuilder private var kindPicker: some View {
+        let picker = Picker("What to book", selection: $kind) {
+            ForEach(kinds) { item in Text(Self.title(item)).tag(item) }
+        }
+        if typeSize.isAccessibilitySize {
+            picker.pickerStyle(.menu)
+        } else {
+            picker.pickerStyle(.segmented)
+        }
+    }
+
     private func submit() {
         model.submit(BookingRequest(
             placeID: place.id, kind: kind, partySize: party,
@@ -123,10 +133,11 @@ struct BookingSheet: View {
     // MARK: - Result
 
     private func result(_ booking: Booking) -> some View {
-        VStack(spacing: JolSpacing.lg) {
+        ScrollView { VStack(spacing: JolSpacing.lg) {
             Image(systemName: Self.statusSymbol(booking.status))
                 .font(.system(size: 56))
                 .foregroundStyle(Self.statusColor(booking.status))
+                .accessibilityHidden(true)
             Text(Self.statusText(booking.status))
                 .font(JolFont.title)
                 .multilineTextAlignment(.center)
@@ -142,15 +153,15 @@ struct BookingSheet: View {
             }
             if booking.status == "pending" {
                 Button("Check the status") { model.refresh() }
+                    .frame(minHeight: JolTarget.minimum)
                     .accessibilityIdentifier("booking-refresh")
             }
             Text("Nothing was paid. The venue confirms the details with you.")
                 .font(JolFont.caption)
                 .foregroundStyle(JolColor.textSecondary)
                 .multilineTextAlignment(.center)
-            Spacer()
         }
-        .padding(JolSpacing.xl)
+        .padding(JolSpacing.xl) }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("booking-result")
