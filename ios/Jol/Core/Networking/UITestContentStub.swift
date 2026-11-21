@@ -46,7 +46,9 @@ enum UITestContent {
     }
 
     static func reviewsJSON(placeID: String) -> String {
-        guard placeID == UITestSupport.secondPlaceID else {
+        // `-JolStubReviewsForAll`: every place has the two reviews (screenshots of the list on the museum card).
+        let forAll = ProcessInfo.processInfo.arguments.contains("-JolStubReviewsForAll")
+        guard placeID == UITestSupport.secondPlaceID || forAll else {
             return "{\"items\":[],\"next_cursor\":null,\"summary\":{\"count\":0,\"average\":null}}"
         }
         return """

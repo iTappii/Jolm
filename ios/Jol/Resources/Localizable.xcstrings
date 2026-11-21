@@ -1655,6 +1655,16 @@
         }
       }
     },
+    "Loading" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузка"
+          }
+        }
+      }
+    },
     "Location access is off, so directions start from the map centre. Pan the map to move the start." : {
       "localizations" : {
         "ru" : {
@@ -2015,6 +2025,16 @@
         }
       }
     },
+    "Not available yet" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пока недоступно"
+          }
+        }
+      }
+    },
     "Not crowded" : {
       "localizations" : {
         "ru" : {
@@ -2131,6 +2151,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Часы работы"
+          }
+        }
+      }
+    },
+    "Opens the website" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает сайт"
           }
         }
       }
@@ -2265,6 +2295,16 @@
         }
       }
     },
+    "Price, ₸" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цена, ₸"
+          }
+        }
+      }
+    },
     "Profile" : {
       "localizations" : {
         "ru" : {
@@ -2301,6 +2341,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Сейчас пусто"
+          }
+        }
+      }
+    },
+    "Rating" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оценка"
           }
         }
       }
@@ -2551,6 +2601,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Самокат"
+          }
+        }
+      }
+    },
+    "Sections" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разделы карточки"
+          }
+        }
+      }
+    },
+    "Selected photo" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбранное фото"
           }
         }
       }

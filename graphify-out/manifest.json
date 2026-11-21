@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Auth/SignInEntryView.swift": {
-    "mtime": 1795269553.9604287,
-    "seen": 1795276863.914888,
-    "ast_hash": "ca92e427eda48cc197d68886eebe9ce5",
+    "mtime": 1795277030.0606158,
+    "seen": 1795283899.2481291,
+    "ast_hash": "6f753c528b00dc0d160ed4fec0efb4a8",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatPanel.swift": {
@@ -1572,15 +1572,15 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlaceCardSheet.swift": {
-    "mtime": 1795269553.966265,
-    "seen": 1795276863.914947,
-    "ast_hash": "776d41fb1716aa87b61f8a8d6ed92475",
+    "mtime": 1795277608.1835146,
+    "seen": 1795283899.249417,
+    "ast_hash": "94991008452bc021185fe8587eb3e63d",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlaceCardView.swift": {
-    "mtime": 1795272539.5233302,
-    "seen": 1795276863.9149492,
-    "ast_hash": "036c5bca579348dcf838065fda0af1f7",
+    "mtime": 1795282241.060861,
+    "seen": 1795283899.249418,
+    "ast_hash": "a047a9f5103d2d8eb73ec0691e828814",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlaceCategoryStyle.swift": {
@@ -1866,9 +1866,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Core/Networking/UITestContentStub.swift": {
-    "mtime": 1795274308.6962984,
-    "seen": 1795276863.914876,
-    "ast_hash": "2c3e5061c7728f5f013dd1cdc742d2be",
+    "mtime": 1795277608.185567,
+    "seen": 1795283899.247846,
+    "ast_hash": "d481f7944447448134e531f60e08155d",
     "semantic_hash": ""
   },
   "ios/Jol/Core/Networking/UITestExtraStub.swift": {
@@ -2016,9 +2016,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Content/ContentSheet.swift": {
-    "mtime": 1795274473.4763486,
-    "seen": 1795276863.914908,
-    "ast_hash": "19366a01e0794146272c1ce153ff2f6a",
+    "mtime": 1795277013.5329595,
+    "seen": 1795283899.248574,
+    "ast_hash": "b61a5b37acef3091d703933133908015",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Content/PhotoSanitizer.swift": {
@@ -2028,9 +2028,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Content/PlaceReviewsView.swift": {
-    "mtime": 1795274293.2653623,
-    "seen": 1795276863.9149098,
-    "ast_hash": "9d5bb798b4b6cda44378b38963259903",
+    "mtime": 1795277000.3510761,
+    "seen": 1795283899.248598,
+    "ast_hash": "a7baddfe5e19833cd71d61a63cb820af",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Content/ReviewsModel.swift": {
@@ -2148,9 +2148,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Favorites/FavoritesSheet.swift": {
-    "mtime": 1795269553.9646332,
-    "seen": 1795276863.914933,
-    "ast_hash": "e7f30ea3247b0167cdc48e6fa29d76d1",
+    "mtime": 1795277030.0611553,
+    "seen": 1795283899.249044,
+    "ast_hash": "dea86046edbeaf2a35e2a02ed8e4ef74",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/MapCoordinator+Chat.swift": {
@@ -2220,9 +2220,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlaceCardTabs.swift": {
-    "mtime": 1795274293.2855854,
-    "seen": 1795276863.914948,
-    "ast_hash": "e54aa2e575518384bbf5eaf001d3af89",
+    "mtime": 1795276978.0634801,
+    "seen": 1795283899.249418,
+    "ast_hash": "7be2b81b1adc8ebaa7e83d1f911f4202",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlacePhotoView.swift": {
@@ -3087,6 +3087,180 @@
     "mtime": 1795269553.9907753,
     "seen": 1795276863.915425,
     "ast_hash": "99a9a272c496f8c9eca655d6df9a7217",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Core/Design/Accessibility.swift": {
+    "mtime": 1795276952.9774466,
+    "seen": 1795283899.247514,
+    "ast_hash": "7c48ea74b4b25deadbf8c8fd57ef8f0e",
+    "semantic_hash": ""
+  },
+  "ios/JolUITests/A11yCardUITests.swift": {
+    "mtime": 1795282044.927496,
+    "seen": 1795283899.250617,
+    "ast_hash": "507a50c5ff82f057b7d9ce438aaad6e2",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-52-a11y-card.md": {
+    "mtime": 1795283896.102437,
+    "seen": 1795283899.256901,
+    "ast_hash": "f79d9b6fefedfe53d2756e13008888b3",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/address-card-ax3-dark.png": {
+    "mtime": 1795282461.0984433,
+    "seen": 1795283899.257718,
+    "ast_hash": "99591a4442aefe28480fb47bdbf22dd5",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/address-card-ax3-light.png": {
+    "mtime": 1795282616.7229562,
+    "seen": 1795283899.257719,
+    "ast_hash": "de3afdbcb4b3662e841ba9e6422bb927",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-ax3-large-dark.png": {
+    "mtime": 1795282474.9098823,
+    "seen": 1795283899.25772,
+    "ast_hash": "1bdf346fefdd119d956d7620bcbfc85b",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-ax3-large-light.png": {
+    "mtime": 1795282630.4048295,
+    "seen": 1795283899.2577212,
+    "ast_hash": "04daa0d01df78163dda0875d53f03cd6",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-ax3-third-dark.png": {
+    "mtime": 1795282473.2797246,
+    "seen": 1795283899.2577212,
+    "ast_hash": "a732aabe772bc4f8bf05255490c8a798",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-ax3-third-light.png": {
+    "mtime": 1795282628.8190274,
+    "seen": 1795283899.2577221,
+    "ast_hash": "459a46e9ca038f537a1fd6644bb2acdb",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-normal-large-dark.png": {
+    "mtime": 1795282488.67143,
+    "seen": 1795283899.2577221,
+    "ast_hash": "0871edbf86f322056b40a5be6ab9c357",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-normal-large-light.png": {
+    "mtime": 1795282643.836987,
+    "seen": 1795283899.2577229,
+    "ast_hash": "4ec58b3873b64f04008412d941cc1a2c",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-reviews-ax3-dark.png": {
+    "mtime": 1795282554.7331233,
+    "seen": 1795283899.2577229,
+    "ast_hash": "0d004a6d8f410b032ed817e42c937472",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-reviews-ax3-light.png": {
+    "mtime": 1795282712.697171,
+    "seen": 1795283899.2577238,
+    "ast_hash": "fdd9cc9e19cc10a543f665aefddd3286",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-reviews-empty-ax3-dark.png": {
+    "mtime": 1795282476.6033854,
+    "seen": 1795283899.257725,
+    "ast_hash": "2dac6572a2a8261418051d230adfde15",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/card-reviews-empty-ax3-light.png": {
+    "mtime": 1795282632.0673902,
+    "seen": 1795283899.257725,
+    "ast_hash": "022a3d923c612c5c78bb83a278c4f9ef",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/content-form-ax3-dark.png": {
+    "mtime": 1795282508.6533244,
+    "seen": 1795283899.257726,
+    "ast_hash": "5599644d132c416e7da8832c855a8485",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/content-form-ax3-light.png": {
+    "mtime": 1795282663.646641,
+    "seen": 1795283899.257726,
+    "ast_hash": "8799fe50ebb936e7d994ec42443e2711",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/content-form-normal-ru-dark.png": {
+    "mtime": 1795282524.6409082,
+    "seen": 1795283899.257727,
+    "ast_hash": "7158b3cab090eb244204c4563e9dfdd2",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/content-form-normal-ru-light.png": {
+    "mtime": 1795282679.6058464,
+    "seen": 1795283899.257727,
+    "ast_hash": "695da217f7ba8ff378f7ebb102205acc",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/favorites-ax3-dark.png": {
+    "mtime": 1795282540.1080198,
+    "seen": 1795283899.257728,
+    "ast_hash": "0c01c4ed62054ae6d7853b7e6d1ceb50",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/favorites-ax3-light.png": {
+    "mtime": 1795282697.1117997,
+    "seen": 1795283899.257729,
+    "ast_hash": "c89c950695e5068fb926e8b62245cf32",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-1-dark.png": {
+    "mtime": 1795282572.20233,
+    "seen": 1795283899.257729,
+    "ast_hash": "b1222cfc4562ccaecc6c47659ed765d4",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-1-light.png": {
+    "mtime": 1795282728.9880908,
+    "seen": 1795283899.25773,
+    "ast_hash": "400c8acddc9cb44b25c4f8eb6abdf1ce",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-2-dark.png": {
+    "mtime": 1795282574.4304183,
+    "seen": 1795283899.25773,
+    "ast_hash": "b9a865783db148f1d22a87e61141b89f",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-2-light.png": {
+    "mtime": 1795282731.1179729,
+    "seen": 1795283899.257731,
+    "ast_hash": "4ccc5e6863b9294c7bbe7c6f78f95b14",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-code-dark.png": {
+    "mtime": 1795282576.262928,
+    "seen": 1795283899.257731,
+    "ast_hash": "e6e04f5a9f45ef770bad8543d9ad0962",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-ax3-code-light.png": {
+    "mtime": 1795282733.493268,
+    "seen": 1795283899.2577322,
+    "ast_hash": "35555bd5bb36a78ab402e2492aa86601",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-normal-dark.png": {
+    "mtime": 1795282593.4931026,
+    "seen": 1795283899.2577322,
+    "ast_hash": "448dd347e2697439f6287d3890cc46a0",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-card/gate-normal-light.png": {
+    "mtime": 1795282755.2308347,
+    "seen": 1795283899.257733,
+    "ast_hash": "2a68be1a0a5569f943239fe0c0129ab5",
     "semantic_hash": ""
   }
 }

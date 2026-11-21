@@ -5,6 +5,7 @@ struct FavoritesSheet: View {
     let model: FavoritesModel
     let onOpen: (PlaceSummary) -> Void
     @Environment(\.dismiss) private var dismiss
+    @ScaledMetric(relativeTo: .headline) private var iconSize: CGFloat = 36
 
     var body: some View {
         NavigationStack {
@@ -25,11 +26,12 @@ struct FavoritesSheet: View {
     private var content: some View {
         switch model.state {
         case .idle, .loading where model.items.isEmpty:
-            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityLabel(Text("Loading"))
         case .failed:
             VStack(spacing: JolSpacing.md) {
                 Text("Couldn't load favorites").foregroundStyle(JolColor.textSecondary)
                 Button("Retry") { Task { await model.load() } }
+                    .minTapTarget()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("favorites-failed")
@@ -37,7 +39,9 @@ struct FavoritesSheet: View {
             if model.items.isEmpty {
                 VStack(spacing: JolSpacing.sm) {
                     Image(systemName: "heart").font(.largeTitle).foregroundStyle(JolColor.textTertiary)
+                        .accessibilityHidden(true)
                     Text("No favorites yet").foregroundStyle(JolColor.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityIdentifier("favorites-empty")
@@ -50,11 +54,16 @@ struct FavoritesSheet: View {
                         HStack(spacing: JolSpacing.md) {
                             let style = PlaceCategoryStyle.style(for: place.category)
                             Image(systemName: style.symbol)
-                                .frame(width: 36, height: 36)
+                                .frame(width: iconSize, height: iconSize)
                                 .background(style.color.opacity(0.18), in: Circle())
                                 .foregroundStyle(style.color)
-                            Text(place.name).font(JolFont.headline).foregroundStyle(JolColor.textPrimary)
+                                .accessibilityHidden(true)
+                            Text(place.name)
+                                .font(JolFont.headline)
+                                .foregroundStyle(JolColor.textPrimary)
+                                .multilineTextAlignment(.leading)
                         }
+                        .frame(minHeight: 44)
                     }
                     .accessibilityIdentifier("favorite-row")
                 }

@@ -11,6 +11,7 @@ struct ContentSheet: View {
     @State private var draft = SubmissionDraft()
     @State private var pickerItem: PhotosPickerItem?
     @State private var model: ContentModel?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationStack {
@@ -118,6 +119,7 @@ struct ContentSheet: View {
                     .frame(height: 140)
                     .frame(maxWidth: .infinity)
                     .clipShape(RoundedRectangle(cornerRadius: JolRadius.lg))
+                    .accessibilityLabel(Text("Selected photo"))
                     .accessibilityIdentifier("content-photo-preview")
                 Button("Remove the photo", role: .destructive) {
                     model.clearPhoto()
@@ -137,25 +139,27 @@ struct ContentSheet: View {
     // MARK: - Result
 
     private func resultView(_ result: SubmissionResult) -> some View {
-        VStack(spacing: JolSpacing.lg) {
-            Image(systemName: result.isRejected ? "xmark.octagon.fill" : "checkmark.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(result.isRejected ? JolColor.danger : JolColor.brand)
-            Text(result.isRejected ? "It didn't pass the automatic check" : "Thank you!")
-                .font(JolFont.title)
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier("content-result-title")
-            Text(result.isRejected
-                 ? "Nothing was published and no bonus is paid. Check the text and try again."
-                 : "It is published and will be checked later. A bonus comes after the check.")
-                .font(JolFont.callout)
-                .foregroundStyle(JolColor.textSecondary)
-                .multilineTextAlignment(.center)
-                .accessibilityIdentifier("content-result-note")
-            Spacer()
+        ScrollView {
+            VStack(spacing: JolSpacing.lg) {
+                Image(systemName: result.isRejected ? "xmark.octagon.fill" : "checkmark.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(result.isRejected ? JolColor.danger : JolColor.brandText)
+                    .accessibilityHidden(true)
+                Text(result.isRejected ? "It didn't pass the automatic check" : "Thank you!")
+                    .font(JolFont.title)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("content-result-title")
+                Text(result.isRejected
+                     ? "Nothing was published and no bonus is paid. Check the text and try again."
+                     : "It is published and will be checked later. A bonus comes after the check.")
+                    .font(JolFont.callout)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("content-result-note")
+            }
+            .padding(JolSpacing.xl)
+            .frame(maxWidth: .infinity)
         }
-        .padding(JolSpacing.xl)
-        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("content-result")
     }
@@ -166,18 +170,23 @@ private extension ContentSheet {
 
     @ViewBuilder private var reviewFields: some View {
         Section {
-            HStack(spacing: JolSpacing.sm) {
+            HStack(spacing: 0) {
                 ForEach(1...5, id: \.self) { star in
                     Button { draft.rating = star } label: {
                         Image(systemName: star <= draft.rating ? "star.fill" : "star")
                             .font(.title2)
-                            .foregroundStyle(star <= draft.rating ? JolColor.brand : JolColor.textTertiary)
+                            .foregroundStyle(star <= draft.rating ? JolColor.brandText : JolColor.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("\(star) of 5"))
+                    .accessibilityAddTraits(star == draft.rating ? .isSelected : [])
                     .accessibilityIdentifier("content-star-\(star)")
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text("Rating"))
             TextField("Your review (optional)", text: $draft.text, axis: .vertical)
                 .lineLimit(3...8)
                 .accessibilityIdentifier("content-review-text")
@@ -187,17 +196,18 @@ private extension ContentSheet {
     @ViewBuilder private var menuFields: some View {
         Section {
             ForEach($draft.menuItems) { $item in
-                HStack {
+                AdaptiveStack {
                     TextField("Dish", text: $item.name)
-                    TextField("₸", text: $item.price)
+                    TextField("Price, ₸", text: $item.price)
                         .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 90)
+                        .multilineTextAlignment(typeSize.isAccessibilitySize ? .leading : .trailing)
+                        .frame(maxWidth: typeSize.isAccessibilitySize ? .infinity : 110)
                 }
             }
             .onDelete { draft.menuItems.remove(atOffsets: $0) }
             if draft.menuItems.count < 30 {
                 Button { draft.menuItems.append(MenuItemDraft()) } label: { Label("Add a dish", systemImage: "plus") }
+                    .frame(minHeight: 44)
                     .accessibilityIdentifier("content-menu-add")
             }
         } header: {

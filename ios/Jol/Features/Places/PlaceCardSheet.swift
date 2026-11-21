@@ -11,9 +11,12 @@ struct PlaceCardSheet: View {
     let model: PlacesModel
     let directions: DirectionsModel
     @Binding var detent: PresentationDetent
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        let base = directions.isActive ? Self.directionsDetent : Self.cardDetent
+        // Large text needs room: a third of the screen holds only the photo and half a title (Ш-52).
+        let big = directions.isActive || typeSize.isAccessibilitySize
+        let base = big ? Self.directionsDetent : Self.cardDetent
         PlaceCardView(model: model, directions: directions)
             .presentationDetents([base, .large], selection: $detent)
             .presentationBackgroundInteraction(.enabled(upThrough: base))
@@ -21,5 +24,6 @@ struct PlaceCardSheet: View {
             // Solid: with the default translucent sheet material the orange map clusters shine through the card.
             .presentationBackground(JolColor.surfaceElevated)
             .presentationCornerRadius(JolRadius.xl)
+            .onAppear { if typeSize.isAccessibilitySize, detent == Self.cardDetent { detent = Self.directionsDetent } }
     }
 }

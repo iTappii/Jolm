@@ -9,7 +9,7 @@ struct RatingStars: View {
             ForEach(1...5, id: \.self) { star in
                 Image(systemName: star <= rating ? "star.fill" : "star")
                     .font(.caption)
-                    .foregroundStyle(star <= rating ? JolColor.brand : JolColor.textTertiary)
+                    .foregroundStyle(star <= rating ? JolColor.brandText : JolColor.textSecondary)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -34,6 +34,7 @@ struct PlaceReviewsView: View {
                     .font(JolFont.callout.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, JolSpacing.sm)
+                    .frame(minHeight: 44)
                     .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
             }
             .buttonStyle(.plain)
@@ -46,11 +47,13 @@ struct PlaceReviewsView: View {
         switch model.phase {
         case .idle, .loading:
             ProgressView().frame(maxWidth: .infinity).padding(.vertical, JolSpacing.lg)
+                .accessibilityLabel(Text("Loading"))
                 .accessibilityIdentifier("place-reviews-loading")
         case .failed:
-            HStack {
+            AdaptiveStack {
                 Text("Couldn't load the reviews").font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
                 Button("Retry") { Task { await model.reload() } }
+                    .minTapTarget()
                     .accessibilityIdentifier("place-reviews-retry")
             }
         case .loaded:
@@ -61,6 +64,7 @@ struct PlaceReviewsView: View {
     private var empty: some View {
         VStack(spacing: JolSpacing.sm) {
             Image(systemName: "text.bubble").font(.largeTitle).foregroundStyle(JolColor.textTertiary)
+                .accessibilityHidden(true)
             Text("No reviews yet").font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
         }
         .frame(maxWidth: .infinity)
@@ -70,8 +74,8 @@ struct PlaceReviewsView: View {
 
     @ViewBuilder private var list: some View {
         if let summary = model.summary, let average = summary.average {
-            HStack(spacing: JolSpacing.xs) {
-                Image(systemName: "star.fill").foregroundStyle(JolColor.brand)
+            AdaptiveStack(spacing: JolSpacing.xs) {
+                Image(systemName: "star.fill").foregroundStyle(JolColor.brandText).accessibilityHidden(true)
                 Text(verbatim: average.formatted(.number.precision(.fractionLength(1)).locale(locale)))
                     .font(JolFont.headline)
                 Text("\(summary.count) reviews").font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
@@ -89,15 +93,16 @@ struct PlaceReviewsView: View {
             ProgressView().frame(maxWidth: .infinity)
         } else if model.moreFailed {
             Button("Retry") { Task { await model.loadMore() } }
+                .minTapTarget()
                 .accessibilityIdentifier("place-reviews-more-retry")
         }
     }
 
     private func row(_ review: PlaceReview) -> some View {
         VStack(alignment: .leading, spacing: JolSpacing.xxs) {
-            HStack {
+            AdaptiveStack {
                 RatingStars(rating: review.rating)
-                Spacer()
+                Spacer(minLength: JolSpacing.sm)
                 if let date = review.date {
                     Text(date, format: .dateTime.day().month(.abbreviated).year().locale(locale))
                         .font(JolFont.caption)
@@ -107,7 +112,7 @@ struct PlaceReviewsView: View {
             if let text = review.text, !text.isEmpty {
                 Text(verbatim: text).font(JolFont.body).foregroundStyle(JolColor.textPrimary)
             }
-            HStack(spacing: JolSpacing.xs) {
+            AdaptiveStack(spacing: JolSpacing.xs) {
                 if let name = review.authorName, !name.isEmpty {
                     Text(verbatim: name)
                 } else {

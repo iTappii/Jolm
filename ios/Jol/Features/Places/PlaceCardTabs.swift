@@ -10,6 +10,7 @@ struct PlaceTabContent: View {
     @Environment(AppContainer.self) private var container
     @State private var bookingOpen = false
     @State private var contentOpen = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
@@ -31,14 +32,14 @@ struct PlaceTabContent: View {
 
     @ViewBuilder
     private var overview: some View {
-        HStack(spacing: JolSpacing.sm) {
+        AdaptiveStack(spacing: JolSpacing.sm) {
             if let name = detail.category?.name {
                 Text(name).font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
             }
             if let open = detail.openNow {
                 Text(open ? "Open now" : "Closed")
                     .font(JolFont.caption.weight(.semibold))
-                    .foregroundStyle(open ? Color.green : JolColor.danger)
+                    .foregroundStyle(open ? JolColor.statusOpen : JolColor.danger)
                     .accessibilityIdentifier("place-open-now")
             }
         }
@@ -55,10 +56,13 @@ struct PlaceTabContent: View {
             Label { Text("Typical visit \(parts.hours) h \(parts.minutes) min").font(JolFont.callout) } icon: {
                 Image(systemName: "clock").foregroundStyle(JolColor.textSecondary)
             }
+            .foregroundStyle(JolColor.textPrimary)
         }
         hoursTable(detail.hours)
         if let site = detail.website, let url = URL(string: site), url.scheme?.hasPrefix("http") == true {
-            Button { openURL(url) } label: { Label(site, systemImage: "safari").lineLimit(1) }
+            Button { openURL(url) } label: { Label(site, systemImage: "safari").lineLimit(2) }
+                .minTapTarget()
+                .accessibilityHint(Text("Opens the website"))
                 .accessibilityIdentifier("place-website")
         }
         NavigatorButton(place: place)
@@ -81,6 +85,7 @@ struct PlaceTabContent: View {
                     .foregroundStyle(JolColor.onBrand)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, JolSpacing.sm)
+                    .frame(minHeight: 44)
                     .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
             }
             .buttonStyle(.plain)
@@ -94,6 +99,7 @@ struct PlaceTabContent: View {
                     .font(JolFont.callout)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, JolSpacing.sm)
+                    .frame(minHeight: 44)
                     .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
             }
             .buttonStyle(.plain)
@@ -135,7 +141,7 @@ struct PlaceTabContent: View {
     }
 
     private func priceRow(_ label: LocalizedStringKey, _ value: Int) -> some View {
-        HStack(spacing: JolSpacing.xs) {
+        AdaptiveStack(spacing: JolSpacing.xs) {
             Text(label).foregroundStyle(JolColor.textSecondary)
             Text(PlaceFormatting.tenge(value)).foregroundStyle(JolColor.textPrimary)
         }
@@ -150,15 +156,16 @@ struct PlaceTabContent: View {
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Text("Opening hours").font(JolFont.headline)
                 ForEach(0..<7, id: \.self) { day in
-                    HStack {
+                    AdaptiveStack(alignment: .firstTextBaseline) {
                         Text(Self.weekdayNames[day])
-                        Spacer()
+                        if typeSize.isAccessibilitySize == false { Spacer() }
                         if let text = PlaceFormatting.intervals(hours.first { $0.weekday == day }) {
                             Text(text)
                         } else {
                             Text("Closed").foregroundStyle(JolColor.textSecondary)
                         }
                     }
+                    .accessibilityElement(children: .combine)
                     .font(JolFont.callout.weight(day == today ? .semibold : .regular))
                     .foregroundStyle(JolColor.textPrimary)
                 }
@@ -191,6 +198,7 @@ struct PlaceTabContent: View {
                 .font(JolFont.callout.weight(.semibold))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, JolSpacing.sm)
+                .frame(minHeight: 44)
                 .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
         }
         .buttonStyle(.plain)
