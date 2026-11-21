@@ -4,6 +4,9 @@ Before any work, read the product SSOT — it is the source of truth and overrid
 
 @JOL_SSOT.md
 
+Текущее состояние работы, незаконченные задачи и что делать дальше — `docs/HANDOFF.md`.
+Прочитай его в начале каждой новой сессии, до любой работы.
+
 - The code currently in this repo comes from the previous Jol project. Do not rely on its logic;
   only the map approach (OpenStreetMap + MapLibre) is carried over.
 - No ORM. Raw, parameterized SQL on PostgreSQL; migrations are plain `.sql` files.
