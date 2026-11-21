@@ -14,7 +14,7 @@ from tests.test_chat import sign_in
 from tests.test_places import add_place
 
 NOW = datetime(2026, 12, 1, tzinfo=timezone.utc)
-VISIT = (NOW + timedelta(days=1)).isoformat()
+VISIT = (NOW + timedelta(days=1, hours=7)).isoformat()  # 12:00 in Almaty
 CHECKOUT = (NOW + timedelta(days=3)).isoformat()
 URL = "/v1/bookings"
 
@@ -55,7 +55,8 @@ async def place(conn):
 async def test_book_from_card_and_read_confirmation(client, conn, place, kind, details):
     await link_partner(conn, place, kind)
     card = (await client.get("/v1/places/" + place)).json()
-    assert card["booking"] == {"available": True, "kinds": [kind]}
+    assert card["booking"]["available"] is True and card["booking"]["kinds"] == [kind]
+    assert card["booking"]["limits"] == {kind: adapters.STUB_LIMITS[kind].to_json()}
     headers = await sign_in(conn)
     response = await client.post(
         URL, headers=headers, json={"place_id": place, "kind": kind, **details}
@@ -133,7 +134,7 @@ async def test_pagination_at_equal_timestamps(client, conn, place):
     assert (await client.get(URL + "?cursor=invalid", headers=headers)).status_code == 422
 
 
-async def test_unavailable_and_invalid_requests_create_no_booking(client, conn, place):
+async def test_unavailable_and_invalid_requests_create_no_booking(client, conn, place, monkeypatch):
     await link_partner(conn, place, "table", "room", "ticket", "food")
     headers = await sign_in(conn)
     for details in (
@@ -146,7 +147,12 @@ async def test_unavailable_and_invalid_requests_create_no_booking(client, conn, 
     ):
         response = await client.post(URL, headers=headers, json={"place_id": place, **details})
         assert response.status_code == 422, response.text
-    too_large = {"place_id": place, "kind": "table", "starts_at": VISIT, "party_size": 11}
+
+    async def refuse(self, request):
+        return adapters.Availability(False, "full")
+
+    monkeypatch.setattr(adapters.StubAdapter, "availability", refuse)
+    too_large = {"place_id": place, "kind": "table", "starts_at": VISIT, "party_size": 4}
     unavailable = await client.post(URL, headers=headers, json=too_large)
     assert (
         unavailable.status_code == 409
@@ -199,3 +205,52 @@ async def test_pending_booking_refreshes_through_its_adapter(client, conn, place
     result = await client.get(URL + "/" + response.json()["id"], headers=headers)
     assert result.json()["status"] == "declined"
     assert (await client.get(URL, headers=headers)).json()["items"] == [result.json()]
+
+
+async def test_requests_outside_the_partner_limits_are_refused_with_codes(client, conn, place):
+    await link_partner(conn, place, "table", "room", "ticket", "food")
+    headers = await sign_in(conn)
+
+    async def refused(body, code):
+        response = await client.post(URL, headers=headers, json={"place_id": place, **body})
+        assert response.status_code == 422, response.text
+        assert response.json()["error"]["code"] == code, response.text
+
+    at = lambda **kw: (NOW + timedelta(**kw)).isoformat()  # noqa: E731
+    await refused({"kind": "table", "starts_at": VISIT, "party_size": 11}, "party_too_large")
+    await refused({"kind": "food", "party_size": 11}, "party_too_large")
+    await refused({"kind": "table", "starts_at": at(minutes=10)}, "booking_too_soon")
+    await refused({"kind": "table", "starts_at": at(days=61, hours=7)}, "booking_too_far")
+    await refused(
+        {"kind": "table", "starts_at": at(days=1, hours=2)}, "booking_outside_hours"
+    )  # 07:00
+    await refused(
+        {"kind": "table", "starts_at": at(days=1, hours=19)}, "booking_outside_hours"
+    )  # 00:00
+    await refused({"kind": "room", "starts_at": VISIT, "ends_at": at(days=40)}, "stay_too_long")
+    assert (await client.get(URL, headers=headers)).json()["items"] == []
+    # the edges are inside: 10:00 and 23:00 local, a party of ten, the longest stay
+    for body in (
+        {"kind": "table", "starts_at": at(days=1, hours=5), "party_size": 10},
+        {"kind": "table", "starts_at": at(days=1, hours=18)},
+        {"kind": "room", "starts_at": VISIT, "ends_at": at(days=31, hours=7)},
+    ):
+        response = await client.post(URL, headers=headers, json={"place_id": place, **body})
+        assert response.status_code == 201, response.text
+
+
+async def test_limits_below_the_minimum_and_localized_messages(client, conn, place, monkeypatch):
+    await link_partner(conn, place, "table")
+    headers = await sign_in(conn)
+    strict = adapters.BookingLimits(party_min=2, party_max=4)
+    monkeypatch.setattr(adapters.StubAdapter, "limits", lambda self, kind: strict)
+    card = (await client.get("/v1/places/" + place)).json()
+    assert card["booking"]["limits"]["table"]["party_min"] == 2
+    body = {"place_id": place, "kind": "table", "starts_at": VISIT, "party_size": 1}
+    response = await client.post(URL, headers=dict(headers, **{"Accept-Language": "ru"}), json=body)
+    error = response.json()["error"]
+    assert response.status_code == 422 and error["code"] == "party_too_small"
+    assert "меньше" in error["message"]
+    monkeypatch.setattr(adapters.StubAdapter, "limits", lambda self, kind: None)  # no limits
+    body["party_size"] = 8  # no limits declared: only the partner availability (stub: up to 10)
+    assert (await client.post(URL, headers=headers, json=body)).status_code == 201

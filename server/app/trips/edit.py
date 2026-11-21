@@ -3,7 +3,13 @@
 An edit re-times ONE day (`planner.layout.retime_day`): the stops the person saw keep their
 order, transitions are rebuilt with real legs, the other days are not touched, the whole planner
 is not re-run. The trip's `version` grows by one; `changed_days` tell the client what to reload.
-Everything runs in the caller's transaction with the trip row locked (`FOR UPDATE`).
+Everything runs in the caller's transaction, in two phases (plan-then-apply, Ш-38 coordinator
+№1 / Ш-40 №3): first the plan is computed with NO row lock (all router and Valhalla calls
+happen here, reading the trip by `version`), then the trip row is locked (`FOR UPDATE`), its
+`version` is compared with the planned one and only the writes are done under the lock. If the
+trip changed in between, nothing is written and `AppError(409, "trip_changed")` is raised; the
+API retries the whole request once (a fresh transaction, so the lock is released) and answers
+409 `trip_changed` when it changes again.
 
 Decisions (docs/adr/0003-open-defaults.md):
 - A must-have stop is not removed or replaced unless `force` is true (409 `must_have` otherwise):
@@ -29,13 +35,14 @@ from app.errors import AppError
 from app.places import service
 from app.planner import hours as hrs
 from app.planner import sql as planner_sql
-from app.planner.area import ALMATY_BBOX
+from app.planner.area import ALMATY_BBOX, ALMATY_CENTRE
 from app.planner.build import leg_tools
 from app.planner.layout import NON_MEAL_CATEGORIES, KeptStop, RetimedDay, retime_day
 from app.planner.model import Place, place_from_row
 from app.planner.travel import PreferredLegs
-from app.routing.base import Point
+from app.routing.base import Point, RoutingUnavailable
 from app.routing.fake import haversine_m
+from app.routing.service import get_directions
 from app.trips import read, store
 
 log = logging.getLogger(__name__)
@@ -151,10 +158,29 @@ async def _save_trip(
 
 
 # --- loading ----------------------------------------------------------------------------
-async def _locked_trip(conn, user_id: UUID, trip_id: UUID) -> Dict[str, Any]:
+TRIP_CHANGED = "trip_changed"
+
+
+async def _plan_trip(
+    conn, user_id: UUID, trip_id: UUID, expected_version: Optional[int] = None
+) -> Dict[str, Any]:
+    """Phase 1: the user's trip WITHOUT a lock. `expected_version` (a proposal's plan version)
+    that no longer matches is `trip_changed` too."""
+    trip = await store.get_trip_row(conn, user_id, trip_id)
+    if trip is None:
+        raise AppError(404, "not_found")
+    if expected_version is not None and trip["version"] != expected_version:
+        raise AppError(409, TRIP_CHANGED)
+    return trip
+
+
+async def _lock_unchanged(conn, user_id: UUID, trip_id: UUID, version: int) -> Dict[str, Any]:
+    """Phase 2: lock the trip row and check that it is still the version that was planned."""
     trip = await store.get_trip_row(conn, user_id, trip_id, lock=True)
     if trip is None:
         raise AppError(404, "not_found")
+    if trip["version"] != version:
+        raise AppError(409, TRIP_CHANGED)
     return trip
 
 
@@ -281,11 +307,18 @@ def _result(
 
 # --- remove -----------------------------------------------------------------------------
 async def remove_item(
-    conn, router: Any, user_id: UUID, trip_id: UUID, item_id: UUID, locale: str, force: bool = False
+    conn,
+    router: Any,
+    user_id: UUID,
+    trip_id: UUID,
+    item_id: UUID,
+    locale: str,
+    force: bool = False,
+    expected_version: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Remove a stop and re-time its day. Raises 404 (foreign / missing trip or item) and 409
-    `must_have` (a must-have without `force`)."""
-    trip = await _locked_trip(conn, user_id, trip_id)
+    """Remove a stop and re-time its day. Raises 404 (foreign / missing trip or item), 409
+    `must_have` (a must-have without `force`) and 409 `trip_changed` (see the module doc)."""
+    trip = await _plan_trip(conn, user_id, trip_id, expected_version)
     items = await store.main_items(conn, trip_id)
     target = _find_item(items, item_id)
     if target["is_must_have"] and not force:
@@ -295,6 +328,7 @@ async def remove_item(
     stops = [_kept(r, places[r["place_id"]]) for r in rows if r["id"] != item_id]
     result = await _retime(conn, router, trip, day, items, stops)
 
+    trip = await _lock_unchanged(conn, user_id, trip_id, trip["version"])
     await store.replace_day(conn, trip_id, day, result.plan)
     warnings, unmet = list(trip["warnings"]), list(trip["must_have_unmet"])
     if target["is_must_have"]:
@@ -407,13 +441,15 @@ async def replace_item(
     force: bool = False,
     forecast: Any = None,
     record_signal: bool = True,
+    expected_version: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Replace a stop with another place (by id, category slug or name) in the same position of
     the same day. The first candidate that fits the day without pushing anything out is used;
-    409 `no_replacement` when none does, 409 `must_have` for a must-have without `force`."""
+    409 `no_replacement` when none does, 409 `must_have` for a must-have without `force`, 409
+    `trip_changed` (see the module doc)."""
     if sum(x is not None and x != "" for x in (place_id, category, query)) != 1:
         raise AppError(422, "validation_error", "Give exactly one of place_id, category, query")
-    trip = await _locked_trip(conn, user_id, trip_id)
+    trip = await _plan_trip(conn, user_id, trip_id, expected_version)
     items = await store.main_items(conn, trip_id)
     target = _find_item(items, item_id)
     if target["is_must_have"] and not force:
@@ -433,6 +469,7 @@ async def replace_item(
         raise AppError(409, "no_replacement")
     new_place, result = chosen
 
+    trip = await _lock_unchanged(conn, user_id, trip_id, trip["version"])
     item_ids = await store.replace_day(conn, trip_id, day, result.plan)
     warnings, unmet = list(trip["warnings"]), list(trip["must_have_unmet"])
     if target["is_must_have"]:
@@ -503,14 +540,15 @@ async def move_item(
     to_day: date,
     locale: str,
     forecast: Any = None,
+    expected_version: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Move a stop to the end of another day of the trip and re-time both days.
 
     404 for a foreign / missing trip or item, 422 when `to_day` is outside the trip or the same
-    day, 409 `proposal_not_applicable` when the stop no longer fits there. No memory signal: the
-    move is not a statement of taste.
+    day, 409 `proposal_not_applicable` when the stop no longer fits there, 409 `trip_changed`
+    (see the module doc). No memory signal: the move is not a statement of taste.
     """
-    trip = await _locked_trip(conn, user_id, trip_id)
+    trip = await _plan_trip(conn, user_id, trip_id, expected_version)
     items = await store.main_items(conn, trip_id)
     target = _find_item(items, item_id)
     if to_day == target["day"] or not trip["start_date"] <= to_day <= trip["end_date"]:
@@ -518,6 +556,7 @@ async def move_item(
     result_from, result_to = await plan_move(conn, router, trip, items, target, to_day, forecast)
     if not move_fits(target, result_from, result_to):
         raise AppError(409, "proposal_not_applicable")
+    trip = await _lock_unchanged(conn, user_id, trip_id, trip["version"])
     day = target["day"]
     await store.replace_day(conn, trip_id, day, result_from.plan)
     new_ids = await store.replace_day(conn, trip_id, to_day, result_to.plan)
@@ -538,50 +577,97 @@ async def move_item(
 
 
 # --- transport mode of a leg --------------------------------------------------------------
-async def set_leg_mode(
-    conn, user_id: UUID, trip_id: UUID, leg_id: UUID, mode: str
-) -> Dict[str, Any]:
-    """The person picks one of the leg's transport options.
+def _option_of(options: List[dict], mode: str, variant: int) -> Optional[dict]:
+    return next((o for o in options if o["mode"] == mode and o.get("variant", 0) == variant), None)
 
-    The leg's chosen mode, cost (the option's upper cost) and reserved travel time follow the
-    option; the trip's transport cost and total are recomputed and `version` grows (the plan the
-    client may have saved offline is now different). The day is NOT re-timed: stops keep their
-    times, so a slower option can arrive after the next stop starts: `late_by_s` > 0 says by how
-    much (the client shows it). The next re-timing of the day (an edit) honours the choice.
-    422 `validation_error` when the leg has no such option, 404 for a foreign / missing trip or leg.
+
+async def _fetch_variant(
+    conn, router: Any, trip: Dict[str, Any], leg: dict, mode: str, variant: int
+) -> Optional[dict]:
+    """Phase 1 of a choice of a path variant the plan did not store (the planner keeps only
+    variant 0 per mode): ask the router for the leg's alternatives (Ш-22a) at its departure time
+    and return the stored form of the one asked for, or None when there is no such variant."""
+    items = await store.main_items(conn, trip["id"])
+    by_id = {r["id"]: r for r in items}
+    destination = by_id[leg["to_item_id"]]
+    origin = by_id.get(leg["from_item_id"]) if leg["from_item_id"] else None
+    start = _point(origin) if origin else ALMATY_CENTRE  # the day's start point (no lodging yet)
+    _, legs = await leg_tools(conn, router, trip["start_date"])
+    try:
+        options = await get_directions(
+            legs.router, legs.network, legs.tariffs, start, _point(destination), leg["depart_at"]
+        )
+    except RoutingUnavailable:
+        raise AppError(503, "routing_unavailable") from None
+    found = next((o for o in options if o.mode == mode and o.variant == variant), None)
+    return found.model_dump(exclude_none=True, exclude={"steps"}) if found else None
+
+
+async def set_leg_mode(
+    conn,
+    user_id: UUID,
+    trip_id: UUID,
+    leg_id: UUID,
+    mode: str,
+    variant: Optional[int] = None,
+    router: Any = None,
+) -> Dict[str, Any]:
+    """The person picks one of the leg's transport options (and, optionally, one of its path
+    variants, Ш-22a: `variant`, default 0 = the optimal one).
+
+    The leg's chosen mode and variant, cost (the option's upper cost) and reserved travel time
+    follow the option; the trip's transport cost and total are recomputed and `version` grows (the
+    plan the client may have saved offline is now different). A variant the plan does not hold
+    (the planner stores variant 0 per mode) is asked from the router BEFORE the trip is locked
+    and added to the leg's `options`. The day is NOT re-timed: stops keep their times, so a slower
+    option can arrive after the next stop starts: `late_by_s` > 0 says by how much (and the leg
+    shows the same number in `GET /trips/{id}`). The next re-timing of the day (an edit) honours
+    the mode but goes back to variant 0.
+    422 `validation_error` when the leg has no such option, 404 for a foreign / missing trip or
+    leg, 409 `trip_changed` (see the module doc).
     """
-    trip = await _locked_trip(conn, user_id, trip_id)
+    trip = await _plan_trip(conn, user_id, trip_id)
     legs = await store.main_legs(conn, trip_id)
     leg = next((row for row in legs if row["id"] == leg_id), None)
     if leg is None:
         raise AppError(404, "not_found")
-    option = next((o for o in leg["options"] if o["mode"] == mode), None)
+    wanted = variant or 0
+    option = _option_of(leg["options"], mode, wanted)
+    added = False
+    if option is None and wanted > 0 and router is not None:
+        option = await _fetch_variant(conn, router, trip, leg, mode, wanted)
+        added = option is not None
     if option is None:
-        raise AppError(422, "validation_error", "This leg has no %r option" % mode)
+        raise AppError(
+            422, "validation_error", "This leg has no %r option, variant %d" % (mode, wanted)
+        )
     travel_s = int(round(option.get("duration_s_max") or option["duration_s"]))
+
+    trip = await _lock_unchanged(conn, user_id, trip_id, trip["version"])
+    options = list(leg["options"]) + ([option] if added else [])
     await execute(
         conn,
-        "UPDATE trip_legs SET chosen_mode = %s, cost_kzt = %s, travel_s = %s WHERE id = %s",
-        (mode, int(option["cost_kzt_max"]), travel_s, leg_id),
+        "UPDATE trip_legs SET chosen_mode = %s, chosen_variant = %s, cost_kzt = %s, travel_s = %s,"
+        " options = %s WHERE id = %s",
+        (mode, wanted, int(option["cost_kzt_max"]), travel_s, Jsonb(options), leg_id),
     )
     warnings, unmet = list(trip["warnings"]), list(trip["must_have_unmet"])
     budget, total = await recompute_budget(conn, trip, warnings)
     version = await _save_trip(conn, trip, budget, total, warnings, unmet)
 
-    leg["chosen_mode"], leg["cost_kzt"], leg["travel_s"] = (
-        mode,
-        int(option["cost_kzt_max"]),
-        travel_s,
-    )
+    leg.update(
+        chosen_mode=mode, chosen_variant=wanted, cost_kzt=int(option["cost_kzt_max"]),
+        travel_s=travel_s, options=options,
+    )  # fmt: skip
     destination = next(
         r for r in await store.main_items(conn, trip_id) if r["id"] == leg["to_item_id"]
     )
     arrives = leg["depart_at"] + timedelta(seconds=travel_s)
-    late = max(0, int((arrives - destination["starts_at"]).total_seconds()))
+    late = read.leg_late_by_s(leg, destination["starts_at"])
     return {
         "trip_id": str(trip_id),
         "version": version,
-        "leg": read.leg_json(leg),
+        "leg": read.leg_json(leg, destination["starts_at"]),
         "arrives_at": read.local(arrives),
         "late_by_s": late,
         "changed_days": [leg["day"].isoformat()],

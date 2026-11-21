@@ -56,8 +56,8 @@ async def test_list_trips_has_the_summary_of_each_trip(chat_env, conn):
     assert response.status_code == 200
     [item] = response.json()["items"]
     assert set(item) == {
-        "id", "chat_id", "start_date", "end_date", "days", "version", "status", "budget",
-        "updated_at",
+        "id", "title", "chat_id", "start_date", "end_date", "days", "version", "status",
+        "budget", "updated_at",
     }  # fmt: skip
     assert item["id"] == ready["trip_id"] and item["chat_id"] == chat["id"]
     assert item["days"] == 3 and item["version"] == 1 and item["status"] == "active"
@@ -88,7 +88,7 @@ async def test_get_trip_returns_everything_the_full_map_needs(chat_env, conn):
     assert response.status_code == 200, response.text
     trip = response.json()
     assert set(trip) == {
-        "id", "chat_id", "version", "status", "start_date", "end_date", "budget_kzt",
+        "id", "title", "chat_id", "version", "status", "start_date", "end_date", "budget_kzt",
         "total_cost_kzt", "budget_choice", "weather_checked_at", "created_at", "updated_at",
         "days", "budget", "warnings", "must_have_unmet", "events",
     }  # fmt: skip
@@ -123,7 +123,7 @@ async def test_get_trip_returns_everything_the_full_map_needs(chat_env, conn):
         for leg in d["legs"]:
             assert set(leg) == {
                 "id", "from_item_id", "to_item_id", "depart_at", "travel_s", "estimated",
-                "chosen_mode", "cost_kzt", "options",
+                "chosen_mode", "cost_kzt", "options", "variant", "late_by_s",
             }  # fmt: skip
             assert leg["chosen_mode"] in {o["mode"] for o in leg["options"]}
             assert all("geometry" in o and "cost_kzt_max" in o for o in leg["options"])

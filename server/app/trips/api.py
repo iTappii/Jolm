@@ -25,7 +25,7 @@ plan fits the budget or a choice was already made; 404 for a missing or foreign 
 """
 
 from datetime import datetime, timedelta
-from typing import Any, Literal, Optional
+from typing import Any, Awaitable, Callable, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, Response
@@ -50,6 +50,7 @@ router = APIRouter(prefix="/v1", tags=["trips"])
 
 class LegMode(BaseModel):
     mode: Literal["walk", "scooter", "bus", "metro", "taxi", "car"]
+    variant: Optional[int] = Field(None, ge=0, le=2)  # Ш-22a path variant; default 0
 
 
 class RemoveItem(BaseModel):
@@ -71,6 +72,21 @@ def _router(request: Request) -> Any:
     return getattr(request.app.state, "routing_provider", None) or FakeRouter()
 
 
+async def _edit(request: Request, work: Callable[[Any, dict], Awaitable[Any]]) -> Any:
+    """Run an edit in its own transaction; when the trip changed under it (409 `trip_changed`:
+    plan-then-apply, see `trips.edit`) run it once more from a fresh read. The second 409 goes
+    to the client."""
+    access = bearer_token(request)
+    for attempt in (1, 2):
+        try:
+            async with request.app.state.db.transaction() as conn:
+                user = await sessions.current_user(conn, access)
+                return await work(conn, user)
+        except AppError as exc:
+            if exc.code != edit.TRIP_CHANGED or attempt == 2:
+                raise
+
+
 @router.get("/trips")
 async def list_trips(
     request: Request,
@@ -81,7 +97,7 @@ async def list_trips(
     async with request.app.state.db.transaction() as conn:
         user = await sessions.current_user(conn, access)
         rows = await store.list_trips(conn, user["id"], limit, before)
-    return {"items": [read.summary_json(r) for r in rows]}
+    return {"items": [read.summary_json(r, _locale(request)) for r in rows]}
 
 
 @router.get("/trips/{trip_id}")
@@ -142,37 +158,39 @@ async def get_trip_offline(trip_id: UUID, request: Request):
 
 @router.post("/trips/{trip_id}/legs/{leg_id}/mode")
 async def set_leg_mode(trip_id: UUID, leg_id: UUID, payload: LegMode, request: Request):
-    access = bearer_token(request)
-    async with request.app.state.db.transaction() as conn:
-        user = await sessions.current_user(conn, access)
-        return await edit.set_leg_mode(conn, user["id"], trip_id, leg_id, payload.mode)
+    return await _edit(
+        request,
+        lambda conn, user: edit.set_leg_mode(
+            conn, user["id"], trip_id, leg_id, payload.mode, payload.variant, _router(request)
+        ),
+    )
 
 
 @router.post("/trips/{trip_id}/items/{item_id}/remove")
 async def remove_item(
     trip_id: UUID, item_id: UUID, request: Request, payload: Optional[RemoveItem] = None
 ):
-    access = bearer_token(request)
     locale = _locale(request)
-    async with request.app.state.db.transaction() as conn:
-        user = await sessions.current_user(conn, access)
-        return await edit.remove_item(
+    return await _edit(
+        request,
+        lambda conn, user: edit.remove_item(
             conn, _router(request), user["id"], trip_id, item_id, locale,
             force=bool(payload and payload.force),
-        )  # fmt: skip
+        ),
+    )  # fmt: skip
 
 
 @router.post("/trips/{trip_id}/items/{item_id}/replace")
 async def replace_item(trip_id: UUID, item_id: UUID, payload: ReplaceItem, request: Request):
-    access = bearer_token(request)
     locale = _locale(request)
-    async with request.app.state.db.transaction() as conn:
-        user = await sessions.current_user(conn, access)
-        return await edit.replace_item(
+    return await _edit(
+        request,
+        lambda conn, user: edit.replace_item(
             conn, _router(request), user["id"], trip_id, item_id, locale,
             place_id=payload.place_id, category=payload.category, query=payload.query,
             force=payload.force,
-        )  # fmt: skip
+        ),
+    )  # fmt: skip
 
 
 class BudgetChoice(BaseModel):
@@ -212,19 +230,18 @@ async def trip_proposals(trip_id: UUID, request: Request):
 @router.post("/proposals/{proposal_id}/accept")
 async def accept_proposal(proposal_id: UUID, request: Request):
     """Apply a proposal (409 `proposal_decided`, `proposal_stale`, `proposal_not_applicable`)."""
-    access = bearer_token(request)
     locale = _locale(request)
-    db = request.app.state.db
     provider = getattr(request.app.state, "weather_provider", None)
     forecast = None
     if provider is not None:  # outside the transaction: the provider has its own
         today = clock.local_today()
         forecast = await city_forecast(provider, [today + timedelta(days=i) for i in range(16)])
-    async with db.transaction() as conn:
-        user = await sessions.current_user(conn, access)
-        result = await live_proposals.accept(
+    result = await _edit(
+        request,
+        lambda conn, user: live_proposals.accept(
             conn, _router(request), user["id"], proposal_id, locale, forecast
-        )
+        ),
+    )
     if result is None:  # the expiry was committed above; now tell the client
         raise AppError(409, "proposal_stale")
     return result

@@ -12,9 +12,13 @@
     status: pending | confirmed | declined | cancelled | failed
 
 Errors: 404 unknown place; 422 `booking_not_supported` (no partner for that kind) or invalid body
-(`starts_at` in the past, per-kind fields); 409 `booking_unavailable` (the partner cannot take
+(`starts_at` in the past, per-kind fields); 422 outside the partner's limits (the card's
+`booking.limits`): `party_too_small`, `party_too_large`, `booking_too_soon`, `booking_too_far`,
+`booking_outside_hours`, `stay_too_long`; 409 `booking_unavailable` (the partner cannot take
 it); 429 `rate_limited` (20 per person per 24 hours). No payment in the app (ADR 0003 п.7).
-The place card tells which places take bookings: `booking: {"available": true, "kinds": [...]}`,
+The place card tells which places take bookings: `booking: {"available": true, "kinds": [...],
+"limits": {kind: {"party_min", "party_max", "min_lead_minutes", "max_advance_days",
+"hours": {"open": "HH:MM", "close": "HH:MM"} | null, "max_nights", "timezone"} | null}}`,
 null for a place with no partner.
 """
 

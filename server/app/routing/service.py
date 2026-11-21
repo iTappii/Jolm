@@ -24,6 +24,12 @@ MAX_VARIANTS = 3
 ALT_MAX_RATIO = 1.6
 # Variants closer than this to a kept one (both duration and distance) are the same path.
 NEAR_IDENTICAL = 0.03
+# Ш-22a coordinator: two routes whose shapes stay within this distance of each other (the larger
+# of the floor and the share of the longer route's length) are the same path, whatever the
+# timings say. Measured as a discrete Hausdorff distance over resampled points.
+SAME_PATH_FLOOR_M = 80.0
+SAME_PATH_SHARE = 0.02
+PATH_SAMPLES = 24
 
 
 def _traffic_max(depart_at: datetime) -> float:
@@ -130,6 +136,53 @@ def _near(a: float, b: float) -> bool:
     return abs(a - b) <= NEAR_IDENTICAL * max(a, b, 1.0)
 
 
+def _resample(points: List[Point], count: int) -> List[Point]:
+    """`count` points spread evenly along the path by length (straight segments)."""
+    if len(points) < 2:
+        return list(points) * count if points else []
+    cumulative = [0.0]
+    for a, b in zip(points, points[1:]):
+        cumulative.append(cumulative[-1] + haversine_m(a, b))
+    total = cumulative[-1]
+    out: List[Point] = []
+    index = 0
+    for k in range(count):
+        target = total * k / (count - 1)
+        while index < len(points) - 2 and cumulative[index + 1] < target:
+            index += 1
+        span = cumulative[index + 1] - cumulative[index]
+        t = (target - cumulative[index]) / span if span > 0 else 0.0
+        a, b = points[index], points[index + 1]
+        out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out
+
+
+def path_distance_m(a: str, b: str) -> Optional[float]:
+    """Discrete Hausdorff distance between two polyline6 paths over `PATH_SAMPLES` points each
+    (the largest gap from a point of one path to the nearest point of the other). None when a
+    path cannot be decoded."""
+    try:
+        first = _resample(decode_polyline6(a), PATH_SAMPLES)
+        second = _resample(decode_polyline6(b), PATH_SAMPLES)
+    except ValueError:
+        return None
+    if not first or not second:
+        return None
+
+    def directed(src: List[Point], dst: List[Point]) -> float:
+        return max(min(haversine_m(p, q) for q in dst) for p in src)
+
+    return max(directed(first, second), directed(second, first))
+
+
+def same_path(a: RouteResult, b: RouteResult) -> bool:
+    """True when the two routes follow practically the same streets."""
+    gap = path_distance_m(a.geometry, b.geometry)
+    return gap is not None and gap <= max(
+        SAME_PATH_FLOOR_M, SAME_PATH_SHARE * max(a.distance_m, b.distance_m)
+    )
+
+
 def _distinct_routes(results: List[RouteResult]) -> List[RouteResult]:
     """Drop alternatives that repeat a kept route (same shape, or the same time and length)
     or are far slower than the best one."""
@@ -141,6 +194,7 @@ def _distinct_routes(results: List[RouteResult]) -> List[RouteResult]:
         if any(
             r.geometry == k.geometry
             or (_near(r.duration_s, k.duration_s) and _near(r.distance_m, k.distance_m))
+            or same_path(r, k)
             for k in kept
         ):
             continue
@@ -255,8 +309,9 @@ async def get_directions(
         raise RoutingUnavailable("directions unavailable")
     base = depart_at if depart_at.tzinfo else depart_at.replace(tzinfo=ALMATY_TZ)
     for option in options:
+        # motor modes: the upper estimate (traffic), the person should not be told too early
         option.arrive_at = (
-            (base + timedelta(seconds=option.duration_s))
+            (base + timedelta(seconds=option.duration_s_max or option.duration_s))
             .astimezone(ALMATY_TZ)
             .isoformat(timespec="seconds")
         )

@@ -131,7 +131,9 @@ async def accept(
         raise AppError(404, "not_found")
     if proposal["status"] != "pending":
         raise AppError(409, "proposal_decided")
-    trip = await store.get_trip_row(conn, user_id, proposal["trip_id"], lock=True)
+    # plan-then-apply (Ш-38 №1): no trip lock here; the edit below plans without it and locks
+    # the row only to write, failing with 409 `trip_changed` if the plan moved meanwhile
+    trip = await store.get_trip_row(conn, user_id, proposal["trip_id"])
     if trip["version"] != proposal["trip_version"]:
         await live_store.expire(conn, [proposal_id])
         return None
@@ -142,13 +144,21 @@ async def accept(
         return None
     if proposal["kind"] == "move_day":
         result = await edit.move_item(
-            conn, router, user_id, trip["id"], item["id"], proposal["to_day"], locale, forecast
+            conn,
+            router,
+            user_id,
+            trip["id"],
+            item["id"],
+            proposal["to_day"],
+            locale,
+            forecast,
+            expected_version=proposal["trip_version"],
         )
     else:
         result = await edit.replace_item(
             conn, router, user_id, trip["id"], item["id"], locale,
             place_id=proposal["target_place_id"], force=True, forecast=forecast,
-            record_signal=False,
+            record_signal=False, expected_version=proposal["trip_version"],
         )  # fmt: skip
     await live_store.set_status(conn, proposal_id, "accepted")
     await live_store.expire_stale(conn, trip["id"], result["version"])

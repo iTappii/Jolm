@@ -64,7 +64,18 @@ def item_json(row: Dict[str, Any], locale: str) -> Dict[str, Any]:
     }
 
 
-def leg_json(row: Dict[str, Any]) -> Dict[str, Any]:
+def leg_late_by_s(row: Dict[str, Any], starts_at: Optional[datetime]) -> int:
+    """Seconds by which the leg's reserved travel ends after the next stop starts (0 = on time).
+    Computed on read from `depart_at + travel_s` and the destination's `starts_at`, so it is
+    always in line with what is stored (a transport choice does not re-time the day)."""
+    if starts_at is None:
+        return 0
+    arrives = row["depart_at"] + timedelta(seconds=row["travel_s"])
+    return max(0, int((arrives - starts_at).total_seconds()))
+
+
+def leg_json(row: Dict[str, Any], starts_at: Optional[datetime] = None) -> Dict[str, Any]:
+    """`starts_at`: start of the destination stop (for `late_by_s`)."""
     return {
         "id": str(row["id"]),
         "from_item_id": str(row["from_item_id"]) if row["from_item_id"] else None,
@@ -75,6 +86,8 @@ def leg_json(row: Dict[str, Any]) -> Dict[str, Any]:
         "chosen_mode": row["chosen_mode"],
         "cost_kzt": row["cost_kzt"],
         "options": row["options"],
+        "variant": row.get("chosen_variant", 0),
+        "late_by_s": leg_late_by_s(row, starts_at),
     }
 
 
@@ -93,8 +106,11 @@ def days_json(
         by_day.setdefault(row["day"], {"items": [], "legs": []})["items"].append(
             item_json(row, locale)
         )
+    starts = {row["id"]: row["starts_at"] for row in items}
     for row in legs:
-        by_day.setdefault(row["day"], {"items": [], "legs": []})["legs"].append(leg_json(row))
+        by_day.setdefault(row["day"], {"items": [], "legs": []})["legs"].append(
+            leg_json(row, starts.get(row["to_item_id"]))
+        )
     return [
         {"date": d.isoformat(), "items": v["items"], "legs": v["legs"]}
         for d, v in sorted(by_day.items())
@@ -184,6 +200,42 @@ def budget_json(
     return out
 
 
+MONTHS = {
+    "ru": ("янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"),
+    "en": ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+}
+CITY = {"ru": "Алматы", "en": "Almaty"}  # SSOT §15: Almaty is the only city of the first version
+
+
+def trip_title(start: date, end: date, locale: str) -> str:
+    """Human title derived from the city and dates, in the request's language: «Алматы, 5–7 дек»,
+    «Алматы, 28 ноя – 2 дек», «Almaty, Dec 5–7», «Almaty, Nov 28 – Dec 2». The year is added only
+    when the trip crosses a year boundary. Not stored: it follows Accept-Language."""
+    lang = "ru" if locale == "ru" else "en"
+    months = MONTHS[lang]
+
+    def one(d: date, year: bool = False) -> str:
+        text = (
+            "%d %s" % (d.day, months[d.month - 1])
+            if lang == "ru"
+            else ("%s %d" % (months[d.month - 1], d.day))
+        )
+        return "%s %d" % (text, d.year) if year else text
+
+    if start == end:
+        span = one(start)
+    elif (start.year, start.month) == (end.year, end.month):
+        span = (
+            "%d–%d %s" % (start.day, end.day, months[start.month - 1])
+            if lang == "ru"
+            else ("%s %d–%d" % (months[start.month - 1], start.day, end.day))
+        )
+    else:
+        crossing = start.year != end.year
+        span = "%s – %s" % (one(start, crossing), one(end, crossing))
+    return "%s, %s" % (CITY[lang], span)
+
+
 def trip_json(
     trip: Dict[str, Any],
     items: List[Dict[str, Any]],
@@ -195,6 +247,7 @@ def trip_json(
 ) -> Dict[str, Any]:
     return {
         "id": str(trip["id"]),
+        "title": trip_title(trip["start_date"], trip["end_date"], locale),
         "chat_id": str(trip["chat_id"]) if trip["chat_id"] else None,
         "version": trip["version"],
         "status": trip["status"],
@@ -216,10 +269,11 @@ def trip_json(
     }
 
 
-def summary_json(row: Dict[str, Any]) -> Dict[str, Any]:
+def summary_json(row: Dict[str, Any], locale: str = "en") -> Dict[str, Any]:
     budget = row["budget"] or {}
     return {
         "id": str(row["id"]),
+        "title": trip_title(row["start_date"], row["end_date"], locale),
         "chat_id": str(row["chat_id"]) if row["chat_id"] else None,
         "start_date": row["start_date"].isoformat(),
         "end_date": row["end_date"].isoformat(),
@@ -240,7 +294,14 @@ def chosen_option(leg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """The stored option the leg's chosen mode points at (its best path variant), or None."""
     mode = leg["chosen_mode"]
     fits = [o for o in leg["options"] or [] if o.get("mode") == mode]
-    fits.sort(key=lambda o: (o.get("variant", 0), not o.get("recommended", False)))
+    wanted = leg.get("chosen_variant", 0)
+    fits.sort(
+        key=lambda o: (
+            o.get("variant", 0) != wanted,
+            o.get("variant", 0),
+            not o.get("recommended", False),
+        )
+    )  # the chosen path variant first, then the best one
     return fits[0] if fits else None
 
 
@@ -310,6 +371,7 @@ def offline_json(
                 "travel_s": row["travel_s"],
                 "estimated": row["estimated"],
                 "mode": row["chosen_mode"],
+                "variant": row.get("chosen_variant", 0),
                 "cost_kzt": row["cost_kzt"],
                 "distance_m": option.get("distance_m") if option else None,
                 "geometry": option.get("geometry") if option else None,

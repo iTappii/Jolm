@@ -109,6 +109,34 @@ MESSAGES = {
         "en": "The booking partner is temporarily unavailable",
         "ru": "Сервис бронирования партнёра временно недоступен",
     },
+    "party_too_small": {
+        "en": "The party is smaller than this place accepts",
+        "ru": "Компания меньше, чем принимает это место",
+    },
+    "party_too_large": {
+        "en": "The party is larger than this place accepts",
+        "ru": "Компания больше, чем принимает это место",
+    },
+    "booking_too_soon": {
+        "en": "Too soon: this place needs more notice",
+        "ru": "Слишком скоро: месту нужно больше времени на подготовку",
+    },
+    "booking_too_far": {
+        "en": "Too far ahead: this place does not take bookings that early",
+        "ru": "Слишком далеко вперёд: место не принимает брони так заранее",
+    },
+    "booking_outside_hours": {
+        "en": "The place does not take bookings at that time of day",
+        "ru": "В это время суток место не принимает брони",
+    },
+    "stay_too_long": {
+        "en": "The stay is longer than this place accepts",
+        "ru": "Срок проживания больше, чем принимает это место",
+    },
+    "trip_changed": {
+        "en": "The trip was changed meanwhile; reload it and try again",
+        "ru": "Поездка изменилась; перезагрузите её и повторите",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

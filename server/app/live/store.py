@@ -120,19 +120,13 @@ async def proposals_of_trip(conn, trip_id: UUID, limit: int = 50) -> List[dict]:
 
 
 async def proposal_for_update(conn, user_id: UUID, proposal_id: UUID) -> Optional[dict]:
-    """The user's proposal with its trip locked (foreign and missing look the same: None)."""
-    trip = await fetch_one(
-        conn,
-        "SELECT t.id FROM trips t JOIN trip_change_proposals p ON p.trip_id = t.id "
-        "WHERE p.id = %s AND p.user_id = %s FOR UPDATE OF t",
-        (proposal_id, user_id),
-    )
-    if trip is None:
-        return None
+    """The user's proposal, its own row locked (foreign and missing look the same: None). The
+    trip row is NOT locked here: accepting plans without it and locks it only to write (Ш-38 №1)."""
     return await fetch_one(
         conn,
-        "SELECT " + PROPOSAL_COLS + " FROM trip_change_proposals WHERE id = %s",
-        (proposal_id,),
+        "SELECT " + PROPOSAL_COLS + " FROM trip_change_proposals "
+        "WHERE id = %s AND user_id = %s FOR UPDATE",
+        (proposal_id, user_id),
     )
 
 

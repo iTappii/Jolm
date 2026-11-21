@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Literal, Optional, Tuple
 from uuid import UUID, uuid4
+from zoneinfo import ZoneInfo
 
 from psycopg.types.json import Jsonb
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
@@ -91,20 +92,59 @@ ORDER BY b.created_at DESC, b.id DESC
 LIMIT %(limit)s
 """
 KINDS_FOR_PLACE = """
-SELECT DISTINCT k AS kind
+SELECT k AS kind, pr.adapter
 FROM partner_places pp
 JOIN partners pr ON pr.id = pp.partner_id AND pr.is_active
 CROSS JOIN LATERAL unnest(pp.kinds) AS k
 WHERE pp.place_id = %s AND pr.adapter = ANY(%s)
+ORDER BY pr.created_at, pr.id
 """
 
 
 async def card_block(conn, place_id: UUID) -> Optional[Dict[str, Any]]:
-    """`booking` of the place card: None for a place with no partner."""
+    """`booking` of the place card: None for a place with no partner. `limits` maps each offered
+    kind to the limits of the partner that would take it (the same one `create` picks); a kind
+    whose adapter declares none maps to null."""
     rows = await fetch_all(conn, KINDS_FOR_PLACE, (place_id, adapters.supported_names()))
-    offered = {row["kind"] for row in rows}
-    kinds = [kind for kind in KINDS if kind in offered]
-    return {"available": True, "kinds": kinds} if kinds else None
+    first: Dict[str, str] = {}
+    for row in rows:
+        first.setdefault(row["kind"], row["adapter"])
+    kinds = [kind for kind in KINDS if kind in first]
+    if not kinds:
+        return None
+    limits = {}
+    for kind in kinds:
+        declared = adapters.limits_of(adapters.get_adapter(first[kind]), kind)
+        limits[kind] = declared.to_json() if declared else None
+    return {"available": True, "kinds": kinds, "limits": limits}
+
+
+def check_limits(
+    limits: Optional[adapters.BookingLimits], body: BookingCreate, now: datetime
+) -> None:
+    """422 with a machine-readable code when the request is outside the partner's limits:
+    `party_too_small`, `party_too_large`, `booking_too_soon`, `booking_too_far`,
+    `booking_outside_hours`, `stay_too_long`."""
+    if limits is None:
+        return
+    if body.party_size < limits.party_min:
+        raise AppError(422, "party_too_small")
+    if body.party_size > limits.party_max:
+        raise AppError(422, "party_too_large")
+    if body.starts_at is not None:
+        if body.starts_at < now + timedelta(minutes=limits.min_lead_minutes):
+            raise AppError(422, "booking_too_soon")
+        if limits.max_advance_days is not None and body.starts_at > now + timedelta(
+            days=limits.max_advance_days
+        ):
+            raise AppError(422, "booking_too_far")
+        if limits.hours_open and limits.hours_close and body.kind != "room":
+            local = body.starts_at.astimezone(ZoneInfo(limits.timezone)).strftime("%H:%M")
+            if not limits.hours_open <= local <= limits.hours_close:
+                raise AppError(422, "booking_outside_hours")
+    if body.kind == "room" and limits.max_nights is not None and body.ends_at is not None:
+        if (body.ends_at - body.starts_at) > timedelta(days=limits.max_nights):
+            raise AppError(422, "stay_too_long")
 
 
 def booking_json(row: Dict[str, Any], locale: str) -> Dict[str, Any]:
@@ -154,6 +194,7 @@ async def create(
     adapter = adapters.get_adapter(link["adapter"]) if link else None
     if link is None or adapter is None:
         raise AppError(422, "booking_not_supported")
+    check_limits(adapters.limits_of(adapter, body.kind), body, now)
 
     booking_id = uuid4()
     request = adapters.BookingRequest(

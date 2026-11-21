@@ -283,7 +283,7 @@ async def main_legs(conn, trip_id: UUID) -> List[dict]:
         conn,
         """
         SELECT l.id, l.from_item_id, l.to_item_id, l.depart_at, l.options, l.chosen_mode,
-               l.travel_s, l.cost_kzt, l.estimated, i.day, i.ord
+               l.travel_s, l.cost_kzt, l.estimated, l.chosen_variant, i.day, i.ord
         FROM trip_legs l JOIN trip_items i ON i.id = l.to_item_id
         WHERE l.trip_id = %s AND l.variant = %s
         ORDER BY i.day, i.ord
