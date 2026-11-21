@@ -1,8 +1,10 @@
 """Validate native Apple identity tokens and exchange them for Jol sessions."""
 
+import logging
 import secrets
 import threading
 import time
+from typing import Optional
 
 import httpx
 import jwt
@@ -10,12 +12,13 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from app.auth import sessions
+from app.auth import apple_grants, sessions
 from app.config import get_settings
 from app.db import execute, fetch_one
 from app.errors import AppError
 from app.i18n import pick_locale
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/auth/apple", tags=["auth"])
 APPLE_ISSUER = "https://appleid.apple.com"
 APPLE_JWKS = f"{APPLE_ISSUER}/auth/keys"
@@ -76,6 +79,8 @@ class Challenge(BaseModel):
 
 class AppleSignIn(BaseModel):
     identity_token: str = Field(min_length=1, max_length=8192)
+    # Native authorization code; exchanged for a refresh token that account deletion revokes.
+    authorization_code: Optional[str] = Field(default=None, min_length=1, max_length=2048)
 
 
 @router.post("/challenge")
@@ -129,12 +134,35 @@ def verify_identity(token: str) -> tuple[str, str, int]:
         raise AppError(401, "unauthorized") from None
 
 
+async def _exchange_code(subject: str, code: Optional[str]) -> Optional[str]:
+    """Best effort: trade the authorization code for an encrypted refresh token.
+
+    Sign-in never fails because of this call. Without a stored token, deleting the account
+    cannot revoke the Apple grant (logged then).
+    """
+    if code is None:
+        return None
+    try:
+        exchanged = await apple_grants.get_apple_grants().exchange_code(code)
+        if exchanged is None:
+            return None
+        code_subject, refresh = exchanged
+        if code_subject != subject:
+            log.warning("apple authorization code belongs to another subject; ignored")
+            return None
+        return apple_grants.encrypt_token(refresh)
+    except apple_grants.AppleGrantError as exc:
+        log.warning("apple code exchange failed: %s", exc)
+        return None
+
+
 @router.post("")
 async def sign_in(payload: AppleSignIn, request: Request, response: Response) -> sessions.Tokens:
     subject, nonce_hash, expires_at = await run_in_threadpool(
         verify_identity, payload.identity_token
     )
     response.headers["Cache-Control"] = "no-store"
+    stored_token = await _exchange_code(subject, payload.authorization_code)
     async with request.app.state.db.transaction() as conn:
         await execute(conn, "DELETE FROM apple_consumed_challenges WHERE expires_at <= now()")
         consumed = await fetch_one(
@@ -149,6 +177,16 @@ async def sign_in(payload: AppleSignIn, request: Request, response: Response) ->
         )
         if consumed is None:
             raise AppError(401, "unauthorized")
-        return await sessions.sign_in(
+        tokens = await sessions.sign_in(
             conn, "apple", subject, pick_locale(request.headers.get("accept-language"))
         )
+        if stored_token is not None:
+            await execute(
+                conn,
+                """
+                UPDATE auth_identities SET provider_refresh_token = %s
+                WHERE provider = 'apple' AND subject = %s
+                """,
+                (stored_token, subject),
+            )
+        return tokens

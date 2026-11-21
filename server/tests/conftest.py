@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
+from types import SimpleNamespace
 
 import psycopg
 import pytest
@@ -40,6 +41,15 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "trip_lodging_options",  # trips hang off users and chats (Ш-36)
+    "trip_legs",
+    "trip_items",
+    "trips",
+    "chat_graph_nodes",  # chats hang off users, so TRUNCATE users needs them listed
+    "chat_messages",
+    "trip_briefs",
+    "chats",
+    "place_photos",  # author_user_id references users, so TRUNCATE users needs it listed
     "apple_consumed_challenges",
     "otp_codes",
     "sessions",
@@ -94,3 +104,26 @@ async def client(conn):
     app.state.db = TransactionalDatabase(conn)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
+
+
+@pytest.fixture
+async def chat_env(conn):
+    """App + client for chat tests; set `env.app.state.llm_provider` to a scripted `FakeLLM`."""
+    app = create_app()
+    app.state.db = TransactionalDatabase(conn)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield SimpleNamespace(app=app, client=c)
+
+
+def parse_sse(text: str) -> list:
+    """`[(event, data_dict), ...]` from a `text/event-stream` body; checks the framing."""
+    import json
+
+    events = []
+    for block in text.split("\n\n"):
+        if not block:
+            continue
+        lines = block.split("\n")
+        assert len(lines) == 2 and lines[0].startswith("event: ") and lines[1].startswith("data: ")
+        events.append((lines[0][len("event: ") :], json.loads(lines[1][len("data: ") :])))
+    return events

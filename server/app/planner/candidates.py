@@ -1,0 +1,185 @@
+"""Ш-33: pick the places a trip can use. Deterministic; the model is not involved.
+
+`select_candidates(conn, brief, ...)` returns a `Selection`:
+- `must_haves`: one entry per must-have wish, each with at least one place, or none and the
+  wish listed in `must_have_unmet`. A wish is never dropped silently.
+- `activities` / `food`: scored candidates (see scoring.py) for the rest of the plan, sized by
+  trip length and pace. Must-have places are always part of the selection and are not scored.
+The day layout (Ш-34) decides what actually fits; this step only chooses.
+"""
+
+import logging
+from dataclasses import dataclass, field
+from datetime import date
+from typing import Any, Dict, List, Mapping, Optional, Set
+from uuid import UUID
+
+from app.db import fetch_all
+from app.places import service
+from app.planner import scoring, sql
+from app.planner.area import ALMATY_BBOX
+from app.planner.interests import resolve
+from app.planner.model import Place, place_from_row
+from app.planner.signals import CrowdSource, EventBonus, UnknownCrowd, no_event_bonus
+
+log = logging.getLogger(__name__)
+
+POOL_QUERY_LIMIT = 5000  # most popular places read for scoring; Almaty has far fewer real sights
+MUST_HAVE_FETCH = 20
+NAME_ONLY_MIN_SIM = 0.4  # a name search for words that are not a known category
+NAME_STRICT_MIN_SIM = 0.8  # a name found alongside a category reading of the same words
+MAX_PER_MUST_HAVE = 3
+MIN_NAME_CHARS = 2
+
+
+@dataclass
+class MustHave:
+    text: str
+    places: List[Place]
+    how: str  # "name" | "category" | "none"
+
+
+@dataclass
+class Candidate:
+    place: Place
+    score: scoring.Score
+
+
+@dataclass
+class Selection:
+    days: int
+    pool: scoring.PoolSizes
+    must_haves: List[MustHave] = field(default_factory=list)
+    activities: List[Candidate] = field(default_factory=list)
+    food: List[Candidate] = field(default_factory=list)
+
+    @property
+    def must_have_unmet(self) -> List[str]:
+        # OPEN(SSOT §16.11): the planner goes on and the AI tells the person honestly.
+        return [m.text for m in self.must_haves if not m.places]
+
+    @property
+    def must_have_places(self) -> List[Place]:
+        """Distinct must-have places, in the order of the wishes."""
+        seen: Set[UUID] = set()
+        out: List[Place] = []
+        for wish in self.must_haves:
+            for place in wish.places:
+                if place.id not in seen:
+                    seen.add(place.id)
+                    out.append(place)
+        return out
+
+
+def trip_days(brief: Mapping[str, Any]) -> int:
+    start, end = brief.get("start_date"), brief.get("end_date")
+    if not isinstance(start, date) or not isinstance(end, date) or end < start:
+        raise ValueError("the brief needs start_date and end_date")
+    return (end - start).days + 1
+
+
+def places_per_must_have(days: int) -> int:
+    """How many places a category wish gets: 1 for 1-2 days, 2 for 3-5, 3 from 6 days."""
+    return min(MAX_PER_MUST_HAVE, 1 + days // 3)
+
+
+def _area() -> Dict[str, Any]:
+    west, south, east, north = ALMATY_BBOX
+    return {"west": west, "south": south, "east": east, "north": north}
+
+
+async def _resolve_must_have(conn, text: str, count: int, taken: Set[UUID]) -> MustHave:
+    """Name match first (one place), then the category reading, up to `count` places.
+
+    Words that are a known category ("музеи", "Chinese food") only match names strongly, so
+    "park" does not pick every "Park Hotel". Places already given to an earlier wish are used
+    again only when nothing else fits, so every wish still gets a place.
+    """
+    reading = resolve([text])
+    name = " ".join(text.split())
+    found: List[Place] = []
+    how = "none"
+    if len(name) >= MIN_NAME_CHARS:
+        params = dict(
+            _area(),
+            q=name,
+            pattern=service.like_pattern(name) if reading.empty else None,
+            limit=MUST_HAVE_FETCH,
+        )
+        rows = await fetch_all(conn, sql.MUST_HAVE_BY_NAME, params)
+        min_sim = NAME_ONLY_MIN_SIM if reading.empty else NAME_STRICT_MIN_SIM
+        named = [place_from_row(r) for r in rows if r["pattern_hit"] or r["sim"] >= min_sim]
+        if named:
+            found, how = named[:1], "name"
+    if not reading.empty:
+        rows = await fetch_all(
+            conn,
+            sql.MUST_HAVE_BY_CATEGORY,
+            dict(_area(), slugs=sorted(reading.slugs), limit=MUST_HAVE_FETCH),
+        )
+        in_category = [place_from_row(r) for r in rows]
+        have = {p.id for p in found}
+        fresh = [p for p in in_category if p.id not in have and p.id not in taken]
+        shared = [p for p in in_category if p.id not in have and p.id in taken]
+        found = (found + fresh + shared)[:count]
+        if found and how == "none":
+            how = "category"
+    return MustHave(text, found, how)
+
+
+async def select_candidates(
+    conn,
+    brief: Mapping[str, Any],
+    memory: Optional[Mapping[str, float]] = None,
+    crowd: Optional[CrowdSource] = None,
+    event_bonus: EventBonus = no_event_bonus,
+) -> Selection:
+    """Must-have places plus scored candidate pools for a brief with dates.
+
+    `memory`: category slug -> penalty 0..1 (Ф12, empty for now). `crowd`: Ф15, unknown for
+    now. `event_bonus`: Ф16, zero for now.
+    """
+    days = trip_days(brief)
+    memory = memory or {}
+    crowd = crowd or UnknownCrowd()
+    selection = Selection(days=days, pool=scoring.pool_sizes(days, brief.get("pace")))
+
+    taken: Set[UUID] = set()
+    count = places_per_must_have(days)
+    for text in brief.get("must_haves") or []:
+        wish = await _resolve_must_have(conn, text, count, taken)
+        selection.must_haves.append(wish)
+        taken.update(p.id for p in wish.places)
+        if not wish.places:
+            log.info("must-have %r has no place", text)
+
+    profile = resolve(brief.get("interests") or [])
+    rows = await fetch_all(conn, sql.POOL, dict(_area(), limit=POOL_QUERY_LIMIT))
+    start, end = brief["start_date"], brief["end_date"]
+    activities: List[scoring.Scored] = []
+    food: List[scoring.Scored] = []
+    for row in rows:
+        place = place_from_row(row)
+        if place.id in taken:
+            continue
+        score = scoring.score_place(
+            place,
+            profile,
+            memory,
+            crowd.level(place.id),
+            brief.get("crowd_tolerance"),
+            event_bonus(place, start, end),
+        )
+        (food if place.is_food else activities).append(scoring.Scored(place, score))
+
+    must_food = sum(1 for p in selection.must_have_places if p.is_food)
+    must_other = len(selection.must_have_places) - must_food
+    pool = selection.pool
+    selection.activities = [
+        Candidate(s.place, s.score)
+        for s in scoring.pick_pool(activities, max(0, pool.activities - must_other))
+    ]
+    selection.food = [
+        Candidate(s.place, s.score) for s in scoring.pick_pool(food, max(0, pool.food - must_food))
+    ]
+    return selection

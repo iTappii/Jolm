@@ -50,13 +50,18 @@ def tokens(row, refresh: str) -> Tokens:
     )
 
 
-async def sign_in(conn, provider: str, subject: str, locale: str) -> Tokens:
-    # Serialize first sign-ins for this identity before creating its user.
+async def lock_identity(conn, provider: str, subject: str) -> None:
+    """Serialize sign-in and account deletion for one identity."""
     await execute(
         conn,
         "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
         (f"identity:{provider}:{subject}",),
     )
+
+
+async def sign_in(conn, provider: str, subject: str, locale: str) -> Tokens:
+    # Serialize first sign-ins for this identity before creating its user.
+    await lock_identity(conn, provider, subject)
     identity = await fetch_one(
         conn,
         """

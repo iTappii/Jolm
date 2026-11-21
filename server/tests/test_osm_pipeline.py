@@ -121,3 +121,57 @@ def test_dedupe_rules_pure():
 
 def test_module_exposes_bbox_override():
     assert import_places.in_bbox(76.9, 43.2) and not import_places.in_bbox(0, 0)
+
+
+def test_merge_moves_trip_rows_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: trip_items / trip_lodging_options reference places without cascade."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop, other = place("Оставить"), place("Удалить"), place("Рядом")
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    trips = [
+        q(
+            sconn,
+            "INSERT INTO trips (user_id, brief, start_date, end_date) "
+            "VALUES (%s, '{}', '2026-12-05', '2026-12-06') RETURNING id",
+            (user,),
+        )[0]["id"]
+        for _ in range(2)
+    ]
+    for trip in trips:
+        for ord_, pid in enumerate((drop, other), start=1):
+            sconn.execute(
+                "INSERT INTO trip_items (trip_id, day, ord, place_id, kind, starts_at, ends_at, "
+                "visit_min) VALUES (%s, '2026-12-05', %s, %s, 'activity', "
+                "'2026-12-05 10:00+06', '2026-12-05 11:00+06', 60)",
+                (trip, ord_, pid),
+            )
+    lodging = (
+        "INSERT INTO trip_lodging_options (trip_id, place_id, rank, price_per_night_kzt, nights, "
+        "total_kzt, recommended) VALUES (%s, %s, %s, 5000, 1, 5000, %s)"
+    )
+    sconn.execute(lodging, (trips[0], drop, 1, True))  # only the dropped place in trip 0
+    sconn.execute(lodging, (trips[1], drop, 1, True))  # both places in trip 1 ...
+    sconn.execute(lodging, (trips[1], keep, 2, False))  # ... the survivor is not recommended
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    rows = q(sconn, "SELECT trip_id, place_id FROM trip_items ORDER BY trip_id, ord")
+    assert len(rows) == 4 and {r["place_id"] for r in rows} == {keep, other}  # none lost
+    options = q(
+        sconn,
+        "SELECT trip_id, place_id, recommended FROM trip_lodging_options ORDER BY trip_id",
+    )
+    assert {(o["trip_id"], o["place_id"], o["recommended"]) for o in options} == {
+        (trips[0], keep, True),
+        (trips[1], keep, True),  # the collision kept one row and the recommendation
+    }

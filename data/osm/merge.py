@@ -2,8 +2,9 @@
 
 Used by the OSM importer (duplicate OSM objects of one venue) and by the curated popular
 import (a manual row that turns out to be an OSM object). The surviving row ("keep") gets:
-  - dependent rows of the dropped row (hours, photos, menu, curated-route items, events), except
-    where the survivor already has its own (hours, menu, same route item);
+  - dependent rows of the dropped row (hours, photos, menu, curated-route items, events, trip
+    items, trip lodging options), except where the survivor already has its own (hours, menu,
+    same route item, same trip's lodging option);
   - fields the survivor lacks (names, descriptions, address, prices ...);
   - fields the dropped row set by hand (manual_override) when the survivor did not;
   - the union of both manual_override lists.
@@ -56,6 +57,16 @@ MOVE_STATEMENTS = (
     "AND NOT EXISTS (SELECT 1 FROM curated_route_items j "
     "WHERE j.route_id = i.route_id AND j.place_id = %(keep)s)",
     "UPDATE events SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    # trips (Ш-36): FKs without ON DELETE CASCADE, so every row must move before the delete
+    "UPDATE trip_items SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    "UPDATE trip_lodging_options SET place_id = %(keep)s WHERE place_id = %(drop)s "
+    "AND NOT EXISTS (SELECT 1 FROM trip_lodging_options j "
+    "WHERE j.trip_id = trip_lodging_options.trip_id AND j.place_id = %(keep)s)",
+    # a trip that lists both places keeps the survivor's row and its recommendation
+    "UPDATE trip_lodging_options k SET recommended = true FROM trip_lodging_options d "
+    "WHERE d.place_id = %(drop)s AND d.recommended AND k.trip_id = d.trip_id "
+    "AND k.place_id = %(keep)s",
+    "DELETE FROM trip_lodging_options WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

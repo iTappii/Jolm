@@ -22,6 +22,28 @@ MESSAGES = {
     "forbidden": {"en": "Access denied", "ru": "Доступ запрещён"},
     "db_unavailable": {"en": "Database unavailable", "ru": "База данных недоступна"},
     "routing_unavailable": {"en": "Directions unavailable", "ru": "Маршруты недоступны"},
+    "rate_limited": {
+        "en": "Too many requests, try again later",
+        "ru": "Слишком много запросов, попробуйте позже",
+    },
+    "llm_unavailable": {"en": "Assistant unavailable", "ru": "Ассистент временно недоступен"},
+    "llm_timeout": {
+        "en": "The assistant took too long to answer",
+        "ru": "Ассистент слишком долго отвечает",
+    },
+    "llm_error": {"en": "The assistant failed to answer", "ru": "Ассистент не смог ответить"},
+    "chat_full": {
+        "en": "This chat is full, start a new one",
+        "ru": "Чат заполнен, начните новый",
+    },
+    "chat_busy": {
+        "en": "The assistant is still answering in this chat, wait for it to finish",
+        "ru": "Ассистент ещё отвечает в этом чате, дождитесь окончания",
+    },
+    "budget_choice_unavailable": {
+        "en": "Nothing to choose: the trip fits the budget or the choice was already made",
+        "ru": "Выбирать нечего: поездка укладывается в бюджет или выбор уже сделан",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

@@ -1,7 +1,7 @@
 """Uniform error format: {"error": {"code": ..., "message": ...}} localized RU/EN."""
 
 import logging
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -23,23 +23,36 @@ _STATUS_CODES = {
 class AppError(Exception):
     """Raise from handlers. `code` must be a key of i18n.MESSAGES (or pass `message`)."""
 
-    def __init__(self, status_code: int, code: str, message: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> None:
         super().__init__(code)
         self.status_code = status_code
         self.code = code
         self.message = message
+        self.headers = headers
 
 
-def error_response(request: Request, status_code: int, code: str, message: Optional[str] = None):
+def error_response(
+    request: Request,
+    status_code: int,
+    code: str,
+    message: Optional[str] = None,
+    headers: Optional[Dict[str, str]] = None,
+):
     locale = pick_locale(request.headers.get("accept-language"))
     body = {"error": {"code": code, "message": message or translate(code, locale)}}
-    return JSONResponse(body, status_code=status_code)
+    return JSONResponse(body, status_code=status_code, headers=headers)
 
 
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(request: Request, exc: AppError):
-        return error_response(request, exc.status_code, exc.code, exc.message)
+        return error_response(request, exc.status_code, exc.code, exc.message, exc.headers)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException):

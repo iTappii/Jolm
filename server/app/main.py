@@ -8,6 +8,9 @@ from app.admin.api import install_admin
 from app.auth.api import router as auth_router
 from app.auth.apple import router as apple_router
 from app.auth.otp_api import router as otp_router
+from app.chat.api import router as chat_router
+from app.chat.deps import make_limiters
+from app.chat.guest import router as guest_chat_router
 from app.config import get_settings
 from app.db import Database
 from app.errors import install_error_handlers
@@ -17,6 +20,7 @@ from app.places.api import router as places_router
 from app.routing import make_router
 from app.routing.api import router as directions_router
 from app.system.api import router as system_router
+from app.trips.api import router as trips_router
 
 log = logging.getLogger("app")
 
@@ -42,12 +46,16 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Jol API", version=__version__, lifespan=lifespan)
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
+    app.state.chat_limiters = make_limiters(settings)
     app.include_router(system_router)
     app.include_router(auth_router)
     app.include_router(otp_router)
     app.include_router(apple_router)
     app.include_router(places_router)
     app.include_router(directions_router)
+    app.include_router(guest_chat_router)
+    app.include_router(chat_router)
+    app.include_router(trips_router)
     install_admin(app)
     return app
 

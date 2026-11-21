@@ -24,12 +24,26 @@ class Settings(BaseSettings):
     worker_max_attempts: int = 5
 
     apple_client_id: str = "kz.jol.app"
+    # Sign in with Apple server credentials, needed to exchange the authorization code and to
+    # revoke the grant on account deletion. CREDENTIAL GAP: not provisioned yet (Apple Developer
+    # team ID, a Sign in with Apple key ID and its .p8 private key); empty means "not configured".
+    apple_team_id: str = ""
+    apple_key_id: str = ""
+    apple_private_key: SecretStr = SecretStr("")
     auth_secret: SecretStr = SecretStr("")
 
     admin_login_max_failures: int = 5
     admin_login_window_min: int = 15
 
-    llm_provider: str = "stub"
+    llm_provider: str = "fake"
+    llm_timeout_sec: float = 60.0
+    llm_max_retries: int = 2
+    # Chat limits (Ш-30/31). Guest counters live in process memory (nothing is written for guests).
+    guest_chat_install_limit: int = 20  # requests per window per X-Install-ID
+    guest_chat_ip_limit: int = 60  # requests per window per client IP (NAT-friendly)
+    guest_chat_window_sec: int = 3600
+    chat_user_limit: int = 60  # messages per window per registered user
+    chat_user_window_sec: int = 3600
     sms_provider: str = ""
     email_provider: str = "stub"
     valhalla_url: Optional[str] = None

@@ -18,6 +18,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 from psycopg import AsyncConnection
 from psycopg.types.json import Jsonb
 
+from app.auth import apple_grants
 from app.config import get_settings
 from app.db import Database, execute, fetch_all, fetch_one
 from app.jobs import sql
@@ -97,6 +98,13 @@ async def enqueue_due_schedules(
 @register("jobs.cleanup")
 async def _cleanup_done_jobs(conn: AsyncConnection, payload: dict) -> None:
     await execute(conn, sql.CLEANUP_DONE, (int(payload.get("keep_days", 14)),))
+
+
+@register("apple.revoke")
+async def _apple_revoke(conn: AsyncConnection, payload: dict) -> None:
+    """Revoke a deleted user's Sign in with Apple grant; failure raises, so the job retries."""
+    token = apple_grants.decrypt_token(payload["token"])
+    await apple_grants.get_apple_grants().revoke(token)
 
 
 # --- processing --------------------------------------------------------------------------
