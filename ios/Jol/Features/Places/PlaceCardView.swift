@@ -140,7 +140,7 @@ struct PlaceCardView: View {
         .padding(.horizontal, JolSpacing.lg)
         .padding(.top, JolSpacing.sm)
         .padding(.bottom, JolSpacing.md)
-        .background(JolColor.surfaceElevated)
+        .background(JolColor.surfaceElevated.ignoresSafeArea())
         .overlay(alignment: .top) { Divider() }
     }
 

@@ -162,7 +162,7 @@ final class DirectionsTests: XCTestCase {
 
     // MARK: - Flow
 
-    func testLocatedUserRequestsFromLocationAndOpensOnRecommendedPage() async throws {
+    func testLocatedUserRequestsFromLocationAndOpensOnTheWalkPage() async throws {
         StubURLProtocol.install { okDirections($0) }
         let model = makeModel(FakeLocator(.located(almaty)))
         model.start(to: place, mapCenter: GeoPoint(lat: 43.2, lon: 76.9))
@@ -170,7 +170,7 @@ final class DirectionsTests: XCTestCase {
         XCTAssertEqual(model.phase, .loaded)
         XCTAssertNil(model.fallback)
         XCTAssertEqual(model.pages.map(\.kind), [.walk, .transit, .taxi])
-        XCTAssertEqual(model.currentPage?.kind, .transit, "opens on the page with the recommended option")
+        XCTAssertEqual(model.currentPage?.kind, .walk, "always opens on walking, not on the recommended page")
         XCTAssertEqual(model.lines.count, 2, "every variant of the page is drawn")
         XCTAssertEqual(model.lines.map(\.selected), [true, false])
         XCTAssertEqual(model.origin, almaty)
@@ -190,11 +190,12 @@ final class DirectionsTests: XCTestCase {
         let model = makeModel(FakeLocator(.located(almaty)))
         model.start(to: place, mapCenter: nil)
         await wait { model.phase == .loaded }
-        XCTAssertEqual(model.currentPage?.kind, .transit)
-        model.showNext()
-        XCTAssertEqual(model.currentPage?.kind, .taxi)
-        model.showNext()
-        XCTAssertEqual(model.currentPage?.kind, .walk, "after the last page comes the first")
+        var visited = [model.currentPage?.kind]
+        for _ in 0..<3 {
+            model.showNext()
+            visited.append(model.currentPage?.kind)
+        }
+        XCTAssertEqual(visited, [.walk, .transit, .taxi, .walk], "starts on walk; after the last page comes the first")
         model.showPrevious()
         XCTAssertEqual(model.currentPage?.kind, .taxi, "and before the first comes the last")
         model.showPage(9)  // out of range → ignored
@@ -303,6 +304,25 @@ final class DirectionsTests: XCTestCase {
         XCTAssertEqual(model.phase, .idle)
         XCTAssertTrue(model.pages.isEmpty)
         XCTAssertFalse(model.isActive)
+    }
+}
+
+extension DirectionsTests {
+    func testWithoutAWalkPageItOpensOnTheNextAvailableOne() async {
+        // No walking option for this pair of points: the first page in carousel order is public transport.
+        StubURLProtocol.install { request in
+            let body = "[{\"mode\":\"taxi\",\"duration_s\":420,\"distance_m\":5000,\"cost_kzt_min\":900,"
+                + "\"cost_kzt_max\":1500,\"geometry\":\"oprmqAotvvqC_|BozD\",\"approximate\":false,"
+                + "\"recommended\":true},{\"mode\":\"bus\",\"duration_s\":900,\"distance_m\":5200,"
+                + "\"cost_kzt_min\":120,\"cost_kzt_max\":120,\"geometry\":\"oprmqAotvvqC_|BozD\","
+                + "\"approximate\":true,\"recommended\":false}]"
+            return (StubURLProtocol.response(request.url!), Data(body.utf8))
+        }
+        let model = makeModel(FakeLocator(.located(almaty)))
+        model.start(to: place, mapCenter: nil)
+        await wait { model.phase == .loaded }
+        XCTAssertEqual(model.pages.map(\.kind), [.transit, .taxi])
+        XCTAssertEqual(model.currentPage?.kind, .transit, "walk missing: next page in order")
     }
 }
 

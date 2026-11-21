@@ -1,10 +1,12 @@
 """Response schemas for the places API."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
+
+from app.events.schemas import EventItem
 
 
 class PlaceSummary(BaseModel):
@@ -66,6 +68,23 @@ class Prices(BaseModel):
     price_per_night_kzt: Optional[int] = None
 
 
+class CrowdLevel(BaseModel):
+    level: float
+    label: Literal["empty", "normal", "busy"]
+    samples: int
+
+
+class CrowdHour(CrowdLevel):
+    hour: int
+
+
+class CrowdProfile(BaseModel):
+    now: Optional[CrowdLevel] = None
+    today: List[CrowdHour]
+    samples: int
+    updated_at: datetime
+
+
 class PlaceDetail(BaseModel):
     id: UUID
     name: str
@@ -90,7 +109,11 @@ class PlaceDetail(BaseModel):
     hours: List[DayHours]
     open_now: Optional[bool] = None  # null when no hours are known
     menu: Optional[Menu] = None
-    crowd: Optional[Any] = None  # filled in Ф15
+    crowd: Optional[CrowdProfile] = None
+    # Ш-48: events at this place in the next 30 days (<= 5), shape of GET /v1/events items
+    events: List[EventItem]
+    # Ш-49: {"available": true, "kinds": ["table", "room", "ticket", "food"]} or null (no partner)
+    booking: Optional[Dict[str, Any]] = None
     data_updated_at: datetime
 
 

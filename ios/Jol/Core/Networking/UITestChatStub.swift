@@ -1,0 +1,211 @@
+#if DEBUG
+import Foundation
+
+/// Stub of the chat, trip and proposal endpoints for UI tests (`-JolStubAPI`). Streams are RECORDED SSE files
+/// (`Resources/Fixtures/chat-*.sse`, written with the server's own `format_event`) replayed event by event with a
+/// short pause, so the UI sees text, graph nodes and places arrive over time.
+///
+/// Scenario switches (by the text of the user's message): "busy" → the first attempt answers 409 `chat_busy`,
+/// "full" → 409 `chat_full`, "boom" → the first attempt streams an `error` event; the retry then succeeds.
+enum ChatStub {
+    static let chatID = "66666666-6666-4666-8666-666666666666"
+    static let oldChatID = "55555555-5555-4555-8555-555555555555"
+    static let tripID = "44444444-4444-4444-8444-444444444444"
+    static let oldTripID = "77777777-7777-4777-8777-777777777777"
+    static let proposalID = "88888888-8888-4888-8888-888888888888"
+    static let chunkDelay: TimeInterval = 0.12
+
+    private static let lock = NSLock()
+    private nonisolated(unsafe) static var created = false
+    private nonisolated(unsafe) static var sent: [String] = []
+    private nonisolated(unsafe) static var tripBuilt = false
+    private nonisolated(unsafe) static var failedOnce: Set<String> = []
+    private nonisolated(unsafe) static var proposalStatus = "pending"
+
+    static func handles(_ path: String) -> Bool {
+        path.hasPrefix("/v1/chat") || path.hasPrefix("/v1/trips") || path.hasPrefix("/v1/proposals")
+    }
+
+    static func fixture(_ name: String) -> String {
+        guard let url = Bundle(for: FixtureURLProtocol.self).url(forResource: name, withExtension: "sse"),
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return "" }
+        return text
+    }
+
+    struct Answer {
+        var status = 200
+        var headers = ["Content-Type": "application/json"]
+        var body = ""
+        /// Event chunks to replay one by one (SSE); empty for a plain body.
+        var chunks: [String] = []
+    }
+
+    static func answer(method: String, path: String, signedIn: Bool, body: [String: Any]) -> Answer {
+        lock.lock(); defer { lock.unlock() }
+        if path == "/v1/chat/guest" { return stream("chat-guest") }
+        guard signedIn else { return error(401, "unauthorized", "Sign in") }
+        switch (method, path) {
+        case ("POST", "/v1/chats"):
+            created = true
+            return Answer(status: 201, body: chatHeader(chatID, title: "null"))
+        case ("GET", "/v1/chats"):
+            return Answer(body: "{\"items\":[\(created ? summary(chatID) + "," : "")\(summary(oldChatID))]}")
+        case ("GET", "/v1/chats/\(oldChatID)"):
+            return Answer(body: oldChatDetail())
+        case ("GET", "/v1/chats/\(chatID)"):
+            return Answer(body: newChatDetail())
+        case ("POST", "/v1/chats/\(chatID)/messages"):
+            return message((body["content"] as? String) ?? "")
+        default:
+            return tripAnswer(method: method, path: path)
+        }
+    }
+
+    private static func tripAnswer(method: String, path: String) -> Answer {
+        switch (method, path) {
+        case ("GET", "/v1/trips"):
+            let items = (tripBuilt ? ["{\"id\":\"\(tripID)\",\"chat_id\":\"\(chatID)\"}"] : [])
+                + ["{\"id\":\"\(oldTripID)\",\"chat_id\":\"\(oldChatID)\"}"]
+            return Answer(body: "{\"items\":[\(items.joined(separator: ","))]}")
+        case ("GET", "/v1/trips/\(tripID)"):
+            return Answer(body: tripJSON(id: tripID, chat: chatID))
+        case ("GET", "/v1/trips/\(oldTripID)"):
+            return Answer(body: tripJSON(id: oldTripID, chat: oldChatID))
+        case ("GET", "/v1/trips/\(oldTripID)/proposals"):
+            return Answer(body: "{\"items\":[{\"id\":\"\(proposalID)\",\"status\":\"\(proposalStatus)\"}]}")
+        case ("POST", "/v1/proposals/\(proposalID)/accept"):
+            proposalStatus = "accepted"
+            return Answer(body: "{\"proposal\":{\"id\":\"\(proposalID)\",\"status\":\"accepted\"}}")
+        case ("POST", "/v1/proposals/\(proposalID)/decline"):
+            proposalStatus = "declined"
+            return Answer(body: "{\"id\":\"\(proposalID)\",\"status\":\"declined\"}")
+        default:
+            return error(404, "not_found", "stub")
+        }
+    }
+
+    // MARK: - Streams
+
+    private static func message(_ text: String) -> Answer {
+        let lowered = text.lowercased()
+        if lowered.contains("full") { return error(409, "chat_full", "This chat is full.") }
+        if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
+        if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
+        sent.append(text)
+        tripBuilt = true
+        return stream("chat-trip")
+    }
+
+    private static func stream(_ name: String) -> Answer {
+        let chunks = fixture(name).components(separatedBy: "\n\n").filter { !$0.isEmpty }.map { $0 + "\n\n" }
+        return Answer(headers: ["Content-Type": "text/event-stream"], chunks: chunks)
+    }
+
+    private static func error(_ status: Int, _ code: String, _ message: String) -> Answer {
+        Answer(status: status, body: "{\"error\":{\"code\":\"\(code)\",\"message\":\"\(message)\"}}")
+    }
+
+    // MARK: - JSON
+
+    private static func chatHeader(_ id: String, title: String) -> String {
+        "{\"id\":\"\(id)\",\"title\":\(title),\"locale\":\"en\",\"created_at\":\"2026-11-21T10:00:00+05:00\","
+            + "\"updated_at\":\"2026-11-21T10:00:00+05:00\"}"
+    }
+
+    private static func summary(_ id: String) -> String {
+        if id == oldChatID {
+            return "{\"id\":\"\(id)\",\"title\":\"Weather change\",\"locale\":\"en\","
+                + "\"updated_at\":\"2026-11-20T10:00:00+05:00\",\"preview\":\"Plan 3 days\"}"
+        }
+        return "{\"id\":\"\(id)\",\"title\":null,\"locale\":\"en\",\"updated_at\":\"2026-11-21T10:00:00+05:00\","
+            + "\"preview\":\"\(sent.first ?? "New chat")\"}"
+    }
+
+    private static let brief = """
+    {"start_date":"2026-12-05","end_date":"2026-12-07","budget_kzt":900000,"has_accommodation":true,\
+    "must_haves":["Fixture Museum"],"interests":[],"pace":null,"crowd_tolerance":null,"missing":[],"complete":true}
+    """
+
+    private static func oldChatDetail() -> String {
+        var messages = """
+        {"id":1,"role":"user","content":"Plan 3 days in Almaty","finish":"stop","proposal_id":null},\
+        {"id":2,"role":"assistant","content":"Done, your route is ready.","finish":"stop","proposal_id":null},\
+        {"id":3,"role":"assistant","content":"Rain is forecast on Dec 6. Move the museum to Dec 7?",\
+        "finish":"stop","proposal_id":"\(proposalID)"}
+        """
+        if proposalStatus == "accepted" {
+            messages += ",{\"id\":4,\"role\":\"assistant\",\"content\":\"Done: the museum is now on Dec 7.\","
+                + "\"finish\":\"stop\",\"proposal_id\":null}"
+        }
+        let nodes = "[{\"ord\":1,\"kind\":\"fact\",\"text\":\"3 days, Dec 5-7\"},"
+            + "{\"ord\":2,\"kind\":\"fact\",\"text\":\"Budget 900 000 tenge\"}]"
+        return String(chatHeader(oldChatID, title: "\"Weather change\"").dropLast())
+            + ",\"messages\":[\(messages)],\"brief\":\(brief),\"graph_nodes\":\(nodes)}"
+    }
+
+    private static func newChatDetail() -> String {
+        var messages: [String] = []
+        for (index, text) in sent.enumerated() {
+            messages.append("{\"id\":\(index * 2 + 1),\"role\":\"user\",\"content\":\"\(text)\",\"finish\":\"stop\","
+                + "\"proposal_id\":null}")
+            messages.append("{\"id\":\(index * 2 + 2),\"role\":\"assistant\",\"content\":\"Your route is ready.\","
+                + "\"finish\":\"stop\",\"proposal_id\":null}")
+        }
+        let nodes = "[{\"ord\":1,\"kind\":\"fact\",\"text\":\"3 days, Dec 5-7\"}]"
+        return String(chatHeader(chatID, title: "null").dropLast())
+            + ",\"messages\":[\(messages.joined(separator: ","))],\"brief\":\(brief),\"graph_nodes\":\(nodes)}"
+    }
+
+    private static func tripJSON(id: String, chat: String) -> String {
+        func place(_ pid: String, _ name: String, _ category: String, _ dLat: Double, _ dLon: Double) -> String {
+            "{\"id\":\"\(pid)\",\"name\":\"\(name)\",\"name_lang\":\"en\",\"category\":\"\(category)\","
+                + "\"category_name\":\"\(category)\",\"lat\":\(43.238949 + dLat),"
+                + "\"lon\":\(76.889709 + dLon),\"photo\":null}"
+        }
+        func item(_ order: Int, _ place: String, _ time: String) -> String {
+            "{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa0\(order)\",\"ord\":\(order),\"kind\":\"activity\","
+                + "\"meal\":null,\"place\":\(place),\"starts_at\":\"2026-12-05T\(time):00+05:00\",\"visit_min\":60}"
+        }
+        let museum = place(UITestSupport.centerPlaceID, "Fixture Museum", "museum", 0, 0)
+        let cafe = place(UITestSupport.secondPlaceID, "Fixture Cafe", "coffee", 0.01, 0.012)
+        let days = """
+        [{"date":"2026-12-05","items":[\(item(1, museum, "09:30")),\(item(2, cafe, "12:00"))],"legs":[]},\
+        {"date":"2026-12-06","items":[\(item(3, cafe, "10:00"))],"legs":[]},\
+        {"date":"2026-12-07","items":[],"legs":[]}]
+        """
+        return "{\"id\":\"\(id)\",\"chat_id\":\"\(chat)\",\"version\":1,\"status\":\"active\","
+            + "\"start_date\":\"2026-12-05\",\"end_date\":\"2026-12-07\",\"budget_kzt\":900000,"
+            + "\"total_cost_kzt\":120000,\"days\":\(days)}"
+    }
+}
+
+extension FixtureURLProtocol {
+    /// Answers a chat / trip / proposal request; an event stream is replayed chunk by chunk.
+    func startChat(path: String) {
+        let signedIn = request.value(forHTTPHeaderField: "Authorization") != nil
+        let answer = ChatStub.answer(
+            method: request.httpMethod ?? "GET", path: path, signedIn: signedIn, body: requestBody()
+        )
+        let response = HTTPURLResponse(
+            url: request.url ?? URL(fileURLWithPath: "/"), statusCode: answer.status, httpVersion: "HTTP/1.1",
+            headerFields: answer.headers
+        )!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        if answer.chunks.isEmpty {
+            client?.urlProtocol(self, didLoad: Data(answer.body.utf8))
+            client?.urlProtocolDidFinishLoading(self)
+            return
+        }
+        DispatchQueue.global().async { [self] in
+            for chunk in answer.chunks {
+                // The plan takes a while to build: the graph stays unconverged long enough for a test to see it.
+                let planPause: TimeInterval = chunk.hasPrefix("event: route_ready") ? 4 : 0
+                Thread.sleep(forTimeInterval: ChatStub.chunkDelay + planPause)
+                if stopped { return }
+                client?.urlProtocol(self, didLoad: Data(chunk.utf8))
+            }
+            client?.urlProtocolDidFinishLoading(self)
+        }
+    }
+}
+#endif

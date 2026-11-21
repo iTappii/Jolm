@@ -56,6 +56,9 @@ MOVE_STATEMENTS = (
     "UPDATE curated_route_items i SET place_id = %(keep)s WHERE place_id = %(drop)s "
     "AND NOT EXISTS (SELECT 1 FROM curated_route_items j "
     "WHERE j.route_id = i.route_id AND j.place_id = %(keep)s)",
+    # events (Ш-48): an event moved onto a public place loses its ad flag (SSOT §12)
+    "UPDATE events SET is_promoted = false WHERE place_id = %(drop)s "
+    "AND EXISTS (SELECT 1 FROM places WHERE id = %(keep)s AND is_public)",
     "UPDATE events SET place_id = %(keep)s WHERE place_id = %(drop)s",
     # trips (Ш-36): FKs without ON DELETE CASCADE, so every row must move before the delete
     "UPDATE trip_items SET place_id = %(keep)s WHERE place_id = %(drop)s",
@@ -79,6 +82,21 @@ MOVE_STATEMENTS = (
     "DELETE FROM user_favorites WHERE place_id = %(drop)s",
     # user submissions (Ш-44): FK without ON DELETE CASCADE; no unique constraint to collide with
     "UPDATE submissions SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    # crowd reports (Ш-47): the rows move, the derived profile of the dropped place is rebuilt by
+    # the `crowd.aggregate` job, so its rows are just dropped
+    "UPDATE place_crowd_reports SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    "DELETE FROM place_crowd_profile WHERE place_id = %(drop)s",
+    # bookings skeleton (Ш-49): bookings move; a partner that serves both places keeps one link
+    # (kinds of the dropped link are added to the survivor's)
+    "UPDATE bookings SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    "UPDATE partner_places k SET kinds = ARRAY(SELECT DISTINCT unnest(k.kinds || d.kinds)), "
+    "external_ref = coalesce(k.external_ref, d.external_ref) "
+    "FROM partner_places d WHERE d.place_id = %(drop)s AND k.place_id = %(keep)s "
+    "AND k.partner_id = d.partner_id",
+    "UPDATE partner_places SET place_id = %(keep)s WHERE place_id = %(drop)s "
+    "AND NOT EXISTS (SELECT 1 FROM partner_places j "
+    "WHERE j.partner_id = partner_places.partner_id AND j.place_id = %(keep)s)",
+    "DELETE FROM partner_places WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

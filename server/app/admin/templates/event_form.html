@@ -26,8 +26,16 @@
     <div id="place-picker-results"></div>
     {% if errors.get('place_id') %}<span class="err">{{ errors['place_id'] }}</span>{% endif %}
   </div>
+  <p class="hint">Нужно место или координаты. Координаты, если заданы, важнее места на карте.</p>
+  <div class="grid two">
+    {{ field("lat", "Широта (если нет места)", f, errors) }}
+    {{ field("lon", "Долгота", f, errors) }}
+    {{ field("description_ru", "Описание RU", f, errors) }}
+    {{ field("description_en", "Описание EN", f, errors) }}
+  </div>
   {# OPEN(SSOT §16.9): how promo is labelled to tourists is not decided; for now "Реклама / Ad" #}
   {{ checkbox("is_promoted", "Продвигаемое мероприятие (метка «Реклама»)", f) }}
+  {% if errors.get('is_promoted') %}<span class="err">{{ errors['is_promoted'] }}</span>{% endif %}
   {{ field("sponsor", "Спонсор / организатор", f, errors) }}
   <button type="submit">Сохранить</button>
 </form>

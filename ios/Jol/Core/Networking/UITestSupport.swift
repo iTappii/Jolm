@@ -143,11 +143,18 @@ final class StubLocationProvider: LocationProviding {
 }
 
 final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
+    /// Set by `stopLoading`: a replayed event stream stops when the client cancels.
+    nonisolated(unsafe) var stopped = false
+
     override static func canInit(with request: URLRequest) -> Bool { true }
     override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
         let path = request.url?.path ?? ""
+        if ChatStub.handles(path) { startChat(path: path) } else { startPlain(path: path) }
+    }
+
+    private func startPlain(path: String) {
         var status = 200
         var headers = ["Content-Type": "application/json"]
         var body: String?
@@ -186,7 +193,7 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
         client?.urlProtocolDidFinishLoading(self)
     }
 
-    private func requestBody() -> [String: Any] {
+    func requestBody() -> [String: Any] {
         var data = request.httpBody
         if data == nil, let stream = request.httpBodyStream {
             stream.open()
@@ -218,6 +225,9 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
             if (payload["code"] as? String) == "123456" {
                 return (200, "{\"access_token\":\"stub-access\",\"refresh_token\":\"stub-refresh\"}")
             }
+            if (payload["code"] as? String) == "111111" {
+                return (401, "{\"error\":{\"code\":\"otp_expired\",\"message\":\"Code expired\"}}")
+            }
             return (401, "{\"error\":{\"code\":\"otp_invalid\",\"message\":\"Invalid or expired code\"}}")
         case "/v1/me":
             return (200, "{\"id\":\"00000000-0000-4000-8000-000000000001\",\"email\":\"tourist@example.com\"}")
@@ -226,6 +236,6 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
         }
     }
 
-    override func stopLoading() {}
+    override func stopLoading() { stopped = true }
 }
 #endif

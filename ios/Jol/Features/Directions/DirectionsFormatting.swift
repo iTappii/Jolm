@@ -9,7 +9,8 @@ enum DirectionsFormatting {
         case .scooter: "scooter"
         case .bus: "bus.fill"
         case .metro: "tram.fill"
-        case .taxi: "car.side.fill"
+        // Hailing a ride, not a second car: the own-car chip uses `car.fill`, so the two never look alike.
+        case .taxi: "figure.wave"
         case .car: "car.fill"
         }
     }

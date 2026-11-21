@@ -137,7 +137,12 @@ final class APIClient: Sendable {
     private func makeRequest(_ endpoint: Endpoint, accept: String, bearer: String?) throws -> URLRequest {
         let base = try baseURL.get()
         var components = URLComponents(url: base.appending(path: endpoint.path), resolvingAgainstBaseURL: false)
-        if !endpoint.query.isEmpty { components?.queryItems = endpoint.query }
+        if !endpoint.query.isEmpty {
+            components?.queryItems = endpoint.query
+            // Form-style query parsers on the API decode a literal "+" as a space (e.g. a timestamp's UTC offset).
+            let encoded = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            components?.percentEncodedQuery = encoded
+        }
         guard let url = components?.url else { throw APIError.invalidBaseURL }
         var request = URLRequest(url: url, timeoutInterval: endpoint.timeout)
         request.httpMethod = endpoint.method.rawValue

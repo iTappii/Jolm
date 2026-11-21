@@ -64,7 +64,7 @@ async def test_tool_call_searches_places_and_the_answer_continues(chat_env, conn
     assert llm.calls[1].tools and llm.calls[1].tools[0].name == "search_places"
     # the guest prompt (no trip tools), in the requested language
     assert "Today is" not in llm.calls[0].system and "Сегодня" in llm.calls[0].system
-    assert [t.name for t in llm.calls[0].tools] == ["search_places"]
+    assert [t.name for t in llm.calls[0].tools] == ["search_places", "search_events"]
 
 
 async def test_nothing_found_is_not_pinned(chat_env):

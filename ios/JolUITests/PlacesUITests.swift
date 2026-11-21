@@ -50,6 +50,10 @@ final class PlacesUITests: XCTestCase {
         XCTAssertTrue(element(app, "place-gallery").exists)
         XCTAssertTrue(element(app, "place-address").waitForExistence(timeout: 5), "address under the name")
         XCTAssertTrue(element(app, "place-favorite").isHittable, "pinned buttons stay visible")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "place-card"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
 
         // Drag the sheet up → everything fits.
         element(app, "place-card").swipeUp()

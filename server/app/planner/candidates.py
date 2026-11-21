@@ -53,6 +53,9 @@ class Selection:
     must_haves: List[MustHave] = field(default_factory=list)
     activities: List[Candidate] = field(default_factory=list)
     food: List[Candidate] = field(default_factory=list)
+    # Ш-48: attendable events of the trip dates (rows of `events.service.EVENTS`); filled by
+    # `build_plan`, empty when `select_candidates` is called alone
+    events: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
     def must_have_unmet(self) -> List[str]:
@@ -140,8 +143,8 @@ async def select_candidates(
 
     `memory`: category slug -> penalty 0..1 (Ш-41, `memory.affinity`; none for a guest);
     `favorites`: the person's favourite places/categories for a small bonus (same source;
-    only its favourite fields are read here). `crowd`: Ф15, unknown for
-    now. `event_bonus`: Ф16, zero for now.
+    only its favourite fields are read here). `crowd`: Ф15 (`ProfileCrowd`), unknown by
+    default. `event_bonus`: Ф16 (`EventIndex.bonus`), zero by default.
     """
     days = trip_days(brief)
     memory = memory or {}

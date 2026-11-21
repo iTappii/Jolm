@@ -1,0 +1,6 @@
+event: text_delta
+data: {"text": "Let me think"}
+
+event: error
+data: {"code": "llm_error", "message": "The assistant is unavailable. Please try again."}
+

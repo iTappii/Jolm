@@ -217,7 +217,8 @@ private struct ProblemText: View {
         case .rateLimited:
             rateLimitedText
         case .deliveryUnavailable: Text("Couldn't send the code right now. Try again in a minute.")
-        case .wrongCode: Text("Wrong or expired code. Check it or request a new one.")
+        case .wrongCode: Text("Wrong code. Check it and try again.")
+        case .codeExpired: Text("Code expired. Request a new one.")
         case .network: Text("No connection. Check the internet and try again.")
         case .generic: Text("Something went wrong. Try again.")
         }

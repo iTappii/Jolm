@@ -77,6 +77,12 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
     messages = [Message(role=m.role, content=m.content) for m in payload.messages]
 
     async def handle_tool(call: ToolCall) -> ToolOutcome:
+        if call.name == tools.SEARCH_EVENTS:
+            try:
+                event_args = parse_tool_args(call, tools.SearchEventsArgs)
+            except ToolArgsError as exc:
+                return ToolOutcome({"error": str(exc)}, ok=False, error=str(exc))
+            return ToolOutcome(await tools.search_events(db, event_args, locale))
         if call.name != tools.SEARCH_PLACES:
             return ToolOutcome({"error": "unknown tool %r" % call.name}, ok=False, error="unknown")
         try:
@@ -92,7 +98,7 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
         turn = run_turn(
             llm,
             messages,
-            [tools.SEARCH_PLACES_SPEC],
+            [tools.SEARCH_PLACES_SPEC, tools.SEARCH_EVENTS_SPEC],
             system,
             handle_tool,
             record,

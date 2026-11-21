@@ -16,6 +16,10 @@ struct MapView: UIViewRepresentable {
     var directionOrigin: GeoPoint?
     var directionVersion = 0
     var directionFitVersion = 0
+    /// Places the chat talks about (Ш-32): drawn above the pins with a pop-in animation; `chatPlacesVersion`
+    /// changes whenever the list does.
+    var chatPlaces: [MapPlace] = []
+    var chatPlacesVersion = 0
     /// Height of what covers the bottom of the map (card, route bar): the camera keeps the target above it.
     var bottomInset: CGFloat = 0
     var onRegionChange: (GeoBounds) -> Void = { _ in }
@@ -68,6 +72,10 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         static let directionsLine = "jol-directions-line"
         static let directionsAlternative = "jol-directions-alt"
         static let directionsOrigin = "jol-directions-origin-dot"
+        static let chatSource = "jol-chat"
+        static let chatHalo = "jol-chat-halo"
+        static let chatDot = "jol-chat-dot"
+        static let chatLabel = "jol-chat-label"
     }
 
     var parent: MapView?
@@ -80,6 +88,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     private var appliedInset: CGFloat = 0
     private var appliedDirectionVersion = -1
     private var appliedFitVersion = -1
+    private var appliedChatVersion = -1
 
     func attach(to map: MLNMapView) {
         self.map = map
@@ -110,6 +119,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedRouteID = nil
         appliedDirectionVersion = -1
         appliedFitVersion = -1
+        appliedChatVersion = -1
         apply(to: mapView)
         reportRegion(mapView)
     }
@@ -132,12 +142,13 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         // The route line is reused as is; the places source is replaced by a clustered one (cluster options
         // cannot be changed on an existing source), so the style's own places layers go away.
         // Everything is removed first because didFinishLoading may fire again for the same style object.
-        for id in [Layer.directionsOrigin, Layer.directionsLine, Layer.directionsAlternative, Layer.directionsCasing,
+        for id in [Layer.chatLabel, Layer.chatDot, Layer.chatHalo,
+                   Layer.directionsOrigin, Layer.directionsLine, Layer.directionsAlternative, Layer.directionsCasing,
                    Layer.routeStopNumber, Layer.routeStop, Layer.routeLine, Layer.pin, Layer.selection,
                    Layer.clusterCount, Layer.cluster, "jol-places-circle", "jol-places-label"] {
             if let layer = style.layer(withIdentifier: id) { style.removeLayer(layer) }
         }
-        for id in [Layer.directionsOriginSource, Layer.directionsSource,
+        for id in [Layer.chatSource, Layer.directionsOriginSource, Layer.directionsSource,
                    Layer.routeStopsSource, Layer.placesSource, "jol-places"] {
             if let source = style.source(withIdentifier: id) { style.removeSource(source) }
         }
@@ -185,6 +196,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
 
         installRouteLayers(in: style)
         installDirectionsLayers(in: style, belowPins: pins)
+        installChatLayers(in: style)
     }
 
     // MARK: - Applying SwiftUI state
@@ -220,6 +232,11 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
                 UIEdgeInsets(top: 0, left: 0, bottom: parent.bottomInset, right: 0),
                 animated: true, completionHandler: nil
             )
+        }
+
+        if appliedChatVersion != parent.chatPlacesVersion {
+            appliedChatVersion = parent.chatPlacesVersion
+            applyChatPlaces(parent.chatPlaces, in: style, map: map)
         }
 
         if appliedDirectionVersion != parent.directionVersion || appliedFitVersion != parent.directionFitVersion {
@@ -269,7 +286,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         guard let map, gesture.state == .ended else { return }
         let point = gesture.location(in: map)
         let hitBox = CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44)
-        let layers: Set<String> = [Layer.pin, Layer.cluster, Layer.routeStop]
+        let layers: Set<String> = [Layer.pin, Layer.cluster, Layer.routeStop, Layer.chatDot]
         let features = map.visibleFeatures(in: hitBox, styleLayerIdentifiers: layers)
         let nearest = features.min { distance($0, point, map) < distance($1, point, map) }
 

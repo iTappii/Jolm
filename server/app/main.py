@@ -9,14 +9,17 @@ from app.admin.api import install_admin
 from app.auth.api import router as auth_router
 from app.auth.apple import router as apple_router
 from app.auth.otp_api import router as otp_router
+from app.bookings.api import router as bookings_router
 from app.chat.api import router as chat_router
 from app.chat.deps import make_limiters
 from app.chat.guest import router as guest_chat_router
 from app.chat.ratelimit import SlidingWindowLimiter
 from app.config import get_settings
+from app.crowd.api import router as crowd_router
 from app.db import Database
 from app.devices.api import router as devices_router
 from app.errors import install_error_handlers
+from app.events.api import router as events_router
 from app.favorites.api import router as favorites_router
 from app.geocode.api import LIMIT_PER_MINUTE as GEOCODE_LIMIT
 from app.geocode.api import router as geocode_router
@@ -78,6 +81,9 @@ def create_app() -> FastAPI:
     app.include_router(devices_router)
     app.include_router(favorites_router)
     app.include_router(submissions_router)
+    app.include_router(crowd_router)
+    app.include_router(events_router)
+    app.include_router(bookings_router)
     app.include_router(dev_uploads_router)
     if settings.storage_provider == "local" and settings.app_env in ("dev", "test"):
         local = make_storage(settings)

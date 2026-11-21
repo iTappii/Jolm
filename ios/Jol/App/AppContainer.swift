@@ -15,6 +15,7 @@ final class AppContainer {
     @ObservationIgnored let directions: DirectionsModel
     @ObservationIgnored let gate: AccountGate
     @ObservationIgnored let favorites: FavoritesModel
+    @ObservationIgnored let chat: ChatModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -27,7 +28,8 @@ final class AppContainer {
         let installID = InstallID.current(defaults: defaults)
         // UserDefaults is thread-safe; it just isn't annotated Sendable.
         nonisolated(unsafe) let languageDefaults = defaults
-        self.language = LanguageSettings(defaults: defaults)
+        let languageSettings = LanguageSettings(defaults: defaults)
+        self.language = languageSettings
         self.auth = auth
         self.installID = installID
         self.tokens = tokens
@@ -42,6 +44,7 @@ final class AppContainer {
         self.places = PlacesModel(api: self.api)
         self.gate = AccountGate(auth: auth)
         self.favorites = FavoritesModel(api: self.api)
+        self.chat = ChatModel(api: self.api, language: { languageSettings.code })
         self.directions = DirectionsModel(api: self.api, locator: locator ?? CoreLocationProvider())
     }
 

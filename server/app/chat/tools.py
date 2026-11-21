@@ -1,18 +1,24 @@
 """Model tools shared by guest and registered chat: specs, args, place search."""
 
+from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
 from app.chat.brief import BriefUpdate
 from app.db import fetch_all
+from app.events import service as events_service
+from app.live import clock
 from app.places import service, sql
+from app.planner.area import ALMATY_BBOX
+from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
 
 SEARCH_PLACES = "search_places"
 UPDATE_TRIP_BRIEF = "update_trip_brief"
 ADD_GRAPH_NODE = "add_graph_node"
 BUILD_TRIP = "build_trip"
+SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
 MAX_NODE_CHARS = 80
@@ -25,6 +31,16 @@ class SearchPlacesArgs(BaseModel):
     show_on_map: bool = Field(
         False, description="Registered chat only: pin the results on the user's map as chosen"
     )
+
+
+class SearchEventsArgs(BaseModel):
+    from_date: Optional[date] = Field(
+        None, description="First day, YYYY-MM-DD; default: the trip's first day, else today"
+    )
+    to_date: Optional[date] = Field(
+        None, description="Last day, YYYY-MM-DD; default: the trip's last day, else 14 days on"
+    )
+    limit: int = Field(8, ge=1, le=MAX_SEARCH_LIMIT)
 
 
 class AddGraphNodeArgs(BaseModel):
@@ -42,6 +58,13 @@ SEARCH_PLACES_SPEC = ToolSpec.from_model(
     "Search the places database of Almaty by name part and/or category. Use it to answer "
     "questions about real places; never invent places, prices or hours.",
     SearchPlacesArgs,
+)
+SEARCH_EVENTS_SPEC = ToolSpec.from_model(
+    SEARCH_EVENTS,
+    "List events (concerts, festivals, exhibitions) in Almaty on given days. Offer them only when "
+    "they fit what the person likes. An event with is_ad true is an advertisement: say so when "
+    "you mention it using its ad_label.",
+    SearchEventsArgs,
 )
 UPDATE_TRIP_BRIEF_SPEC = ToolSpec.from_model(
     UPDATE_TRIP_BRIEF,
@@ -102,3 +125,47 @@ async def search_places(
     if not found:
         return {"places": [], "note": "nothing found"}, []
     return {"places": found}, pins
+
+
+def event_for_model(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Compact event for the model; `is_ad` must be passed on to the person."""
+    return {
+        "id": item["id"],
+        "title": item["title"],
+        "category": item["category"],
+        "starts_at": item["starts_at"],
+        "ends_at": item["ends_at"],
+        "price_kzt": item["price_kzt"],
+        "place": item["place"]["name"] if item["place"] else None,
+        "lat": item["lat"],
+        "lon": item["lon"],
+        "organizer": item["organizer"],
+        "is_ad": item["is_ad"],
+        "ad_label": item["ad_label"],
+    }
+
+
+async def search_events(
+    db,
+    args: SearchEventsArgs,
+    locale: str,
+    default_from: Optional[date] = None,
+    default_to: Optional[date] = None,
+    trip_pace: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Events in a window, for the model. The window defaults to the trip's dates (registered
+    chat) or to the next two weeks. Read-only, so the guest chat uses it too."""
+    start = args.from_date or default_from or clock.local_today()
+    try:
+        end = events_service.window_end(start, args.to_date or default_to)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    async with db.transaction() as conn:
+        if default_from:
+            rows = await trip_events(conn, start, end, trip_pace, limit=args.limit)
+        else:
+            rows = await events_service.load_events(conn, start, end, ALMATY_BBOX, limit=args.limit)
+    items = [events_service.event_json(r, locale) for r in rows]
+    if not items:
+        return {"events": [], "note": "no events on those days"}
+    return {"events": [event_for_model(i) for i in items]}

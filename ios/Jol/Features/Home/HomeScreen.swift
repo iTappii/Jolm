@@ -10,7 +10,7 @@ struct HomeScreen: View {
     @State private var profileOpen = false
     @State private var routesOpen = false
     @State private var favoritesOpen = false
-    @State private var savedNote = false
+    @State private var tripOpen = false
     @State private var cardDetent = PlaceCardSheet.cardDetent
     @State private var screenHeight: CGFloat = 874
 
@@ -18,6 +18,7 @@ struct HomeScreen: View {
         ZStack {
             MapScreen(
                 places: container.places,
+                chat: container.chat,
                 directions: container.directions,
                 bottomInset: mapBottomInset
             )
@@ -31,11 +32,18 @@ struct HomeScreen: View {
                 isOpen: $sidebarOpen,
                 onNewChat: {
                     draft = ""
-                    savedNote = false
+                    container.chat.newChat()
                     chatExpanded = true
                 },
                 onOpenRoutes: { routesOpen = true },
-                onOpenFavorites: { container.gate.requireAccount { favoritesOpen = true } }
+                onOpenFavorites: { container.gate.requireAccount { favoritesOpen = true } },
+                chats: container.auth.isSignedIn ? container.chat.recent : nil,
+                onOpenChat: { id in
+                    draft = ""
+                    container.chat.open(id)
+                    chatExpanded = true
+                },
+                onRetryChats: { container.chat.loadRecent() }
             )
         }
         .background(
@@ -59,7 +67,19 @@ struct HomeScreen: View {
             FavoritesSheet(model: container.favorites) { container.places.select($0) }
         }
         .task(id: container.auth.isSignedIn) {
-            if container.auth.isSignedIn { await container.favorites.load() } else { container.favorites.clear() }
+            if container.auth.isSignedIn {
+                await container.favorites.load()
+            } else {
+                container.favorites.clear()
+                container.chat.clearRecent()
+                container.chat.reset() // a saved chat belongs to the account that is gone
+            }
+        }
+        .onChange(of: sidebarOpen) { _, open in
+            if open, container.auth.isSignedIn { container.chat.loadRecent() }
+        }
+        .sheet(isPresented: $tripOpen) {
+            TripDaysSheet(model: container.chat)
         }
         .sheet(isPresented: $routesOpen) {
             CuratedRoutesSheet(model: container.places)
@@ -82,11 +102,36 @@ struct HomeScreen: View {
         }
     }
 
-    /// A personal trip needs an account (SSOT §3.2): a guest is asked to sign in first, the draft stays in place.
-    /// The real chat (Ш-32) will start from the closure.
+    /// A personal trip needs an account (SSOT §3.2). A signed-in user writes to a saved chat. A guest talks to the
+    /// simple guest chat, unless the message asks for a personal trip: then the sign-in sheet comes first, the draft
+    /// stays in the field, and after signing in the same text goes into a new saved chat.
     private func sendDraft() {
-        guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        container.gate.requireAccount { savedNote = true }
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !container.chat.isStreaming else { return }
+        if container.auth.isSignedIn {
+            submit(text, signedIn: true)
+        } else if ChatModel.wantsPersonalTrip(text) {
+            container.gate.requireAccount { submit(text, signedIn: true) }
+        } else {
+            submit(text, signedIn: false)
+        }
+    }
+
+    private func submit(_ text: String, signedIn: Bool) {
+        if draft.trimmingCharacters(in: .whitespacesAndNewlines) == text { draft = "" }
+        container.chat.send(text, signedIn: signedIn)
+    }
+
+    /// The guest chat's "sign in to build a personal route": the last question moves into a saved chat.
+    private func guestSignIn() {
+        container.gate.requireAccount {
+            if let text = container.chat.lastUserText() { submit(text, signedIn: true) }
+        }
+    }
+
+    private var showsGuestBanner: Bool {
+        let chat = container.chat
+        return chat.isGuestTranscript && !chat.isStreaming && chat.state.messages.last?.role == .assistant
     }
 
     private var gatePresented: Binding<Bool> {
@@ -97,8 +142,19 @@ struct HomeScreen: View {
         )
     }
 
+    /// Share of the screen the chat card takes once a conversation is on.
+    private static let conversationFraction: CGFloat = 0.56
+
+    private var chatIsActive: Bool {
+        let chat = container.chat
+        return !chat.state.isEmpty || chat.isOpening || chat.openFailed
+    }
+
     private var mapBottomInset: CGFloat {
-        if container.places.selected == nil { return 0 }
+        if container.places.selected == nil {
+            // The live map keeps its pins above the open conversation.
+            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.08) : 0
+        }
         let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
         return screenHeight * fraction
     }
@@ -114,10 +170,27 @@ struct HomeScreen: View {
         VStack(spacing: JolSpacing.sm) {
             if chatExpanded {
                 Spacer(minLength: 0)
-                ChatPanel(draft: $draft, savedNote: savedNote, onCollapse: { chatExpanded = false }, onSend: sendDraft)
-                    .padding(.horizontal, JolSpacing.lg)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                Spacer(minLength: 0)
+                ChatPanel(
+                    model: container.chat,
+                    draft: $draft,
+                    conversationHeight: screenHeight * Self.conversationFraction,
+                    showsGuestBanner: showsGuestBanner,
+                    onCollapse: { chatExpanded = false },
+                    onSend: sendDraft,
+                    onRetry: { container.chat.retry() },
+                    onNewChat: {
+                        draft = ""
+                        container.chat.newChat()
+                    },
+                    onOpenRoute: {
+                        chatExpanded = false
+                        tripOpen = true
+                    },
+                    onGuestSignIn: guestSignIn
+                )
+                .padding(.horizontal, JolSpacing.lg)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                if !chatIsActive { Spacer(minLength: 0) }
             } else {
                 Spacer(minLength: 0)
             }
@@ -172,7 +245,7 @@ struct HomeScreen: View {
             .accessibilityLabel(Text("Profile"))
             .accessibilityIdentifier("open-profile-menu")
             if !chatExpanded {
-                CollapsedChatBar(draft: draft) { chatExpanded = true }
+                CollapsedChatBar(draft: draft, isTyping: container.chat.isStreaming) { chatExpanded = true }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

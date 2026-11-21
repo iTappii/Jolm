@@ -13,6 +13,9 @@ struct JolApp: App {
 
     private static func makeContainer() -> AppContainer {
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-JolLiveGuest") {
+            return AppContainer(tokens: EphemeralTokenStore(nil))
+        }
         // UI tests: a pre-signed-in session that never touches the Keychain.
         if ProcessInfo.processInfo.arguments.contains("-JolFakeSignedIn") {
             let session = SessionTokens(accessToken: "ui-test-access", refreshToken: "ui-test-refresh")

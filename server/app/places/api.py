@@ -1,14 +1,19 @@
 """Places, categories and curated routes (read-only, public). Prefix /v1."""
 
+from datetime import timedelta
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import JSONResponse
 
+from app.bookings import service as bookings_service
+from app.crowd import service as crowd_service
 from app.db import fetch_all, fetch_one
 from app.errors import AppError
+from app.events import service as events_service
 from app.i18n import pick_locale
+from app.live import clock
 from app.places import schemas, service, sql
 from app.providers.storage import media_url
 
@@ -16,6 +21,8 @@ router = APIRouter(prefix="/v1")
 
 DEFAULT_LIMIT = 200
 MAX_LIMIT = 1000
+CARD_EVENTS_DAYS = 30  # events at the place shown on its card: the next month
+CARD_EVENTS_LIMIT = 5
 
 
 def _locale(request: Request) -> str:
@@ -108,6 +115,14 @@ async def get_place(request: Request, place_id: UUID):
         hours_rows = await fetch_all(conn, sql.PLACE_HOURS, (place_id,))
         photos = await fetch_all(conn, sql.PLACE_PHOTOS, (place_id,))
         menu = await fetch_one(conn, sql.PLACE_MENU, (place_id,))
+        now = clock.now()
+        crowd = await crowd_service.place_block(conn, place_id, now)  # Ш-47: None = too little data
+        today = clock.local_today(now)
+        event_rows = await events_service.load_events(
+            conn, today, today + timedelta(days=CARD_EVENTS_DAYS), limit=CARD_EVENTS_LIMIT,
+            place_id=place_id,
+        )  # fmt: skip
+        booking = await bookings_service.card_block(conn, place_id)  # Ш-49: None = no partner
 
     name, lang = service.pick_text(row, "name", locale)
     description, _ = service.pick_text(row, "description", locale)
@@ -149,7 +164,9 @@ async def get_place(request: Request, place_id: UUID):
         "hours": service.group_hours(hours),
         "open_now": service.is_open_now(hours),
         "menu": menu,
-        "crowd": None,
+        "crowd": crowd,
+        "events": [events_service.event_json(r, locale) for r in event_rows],
+        "booking": booking,
         "data_updated_at": row["data_updated_at"],
     }
 

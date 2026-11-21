@@ -148,7 +148,7 @@ INSERT INTO place_photos (place_id, storage_key, source, status) VALUES (%s, %s,
 PLACE_PHOTO_DELETE = "DELETE FROM place_photos WHERE id = %s AND place_id = %s"
 
 PLACE_EXISTS = "SELECT 1 AS ok FROM places WHERE id = %s"
-PLACE_PUBLIC_FLAG = "SELECT is_public FROM places WHERE id = %s"
+PLACE_PUBLIC_FLAG = "SELECT is_public FROM places WHERE id = %s FOR SHARE"
 
 # params: pattern, limit. Light search for pickers (routes / events).
 PLACE_PICKER = r"""
@@ -261,16 +261,20 @@ LIMIT 200
 """
 
 EVENT_GET = """
-SELECT e.id, e.place_id, e.title_ru, e.title_en, e.price_kzt, e.category_id, e.is_promoted,
-       e.sponsor, e.starts_at AT TIME ZONE 'Asia/Almaty' AS starts_local,
+SELECT e.id, e.place_id, e.title_ru, e.title_en, e.description_ru, e.description_en, e.price_kzt,
+       e.category_id, e.is_promoted, e.sponsor,
+       ST_Y(e.geom::geometry) AS lat, ST_X(e.geom::geometry) AS lon,
+       e.starts_at AT TIME ZONE 'Asia/Almaty' AS starts_local,
        e.ends_at AT TIME ZONE 'Asia/Almaty' AS ends_local
 FROM events e WHERE e.id = %s
 """
 
 EVENT_INSERT = """
-INSERT INTO events (place_id, title_ru, title_en, starts_at, ends_at, price_kzt, category_id,
-                    is_promoted, sponsor)
-VALUES (%(place_id)s, %(title_ru)s, %(title_en)s,
+INSERT INTO events (place_id, title_ru, title_en, description_ru, description_en, geom,
+                    starts_at, ends_at, price_kzt, category_id, is_promoted, sponsor)
+VALUES (%(place_id)s, %(title_ru)s, %(title_en)s, %(description_ru)s, %(description_en)s,
+        CASE WHEN %(lat)s::float8 IS NULL THEN NULL
+             ELSE ST_SetSRID(ST_MakePoint(%(lon)s::float8, %(lat)s::float8), 4326)::geography END,
         %(starts_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
         %(ends_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
         %(price_kzt)s, %(category_id)s, %(is_promoted)s, %(sponsor)s)
@@ -279,6 +283,10 @@ RETURNING id
 
 EVENT_UPDATE = """
 UPDATE events SET place_id = %(place_id)s, title_ru = %(title_ru)s, title_en = %(title_en)s,
+    description_ru = %(description_ru)s, description_en = %(description_en)s,
+    geom = CASE WHEN %(lat)s::float8 IS NULL THEN NULL
+                ELSE ST_SetSRID(ST_MakePoint(%(lon)s::float8, %(lat)s::float8), 4326)::geography
+           END,
     starts_at = %(starts_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
     ends_at = %(ends_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
     price_kzt = %(price_kzt)s, category_id = %(category_id)s,

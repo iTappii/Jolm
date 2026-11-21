@@ -36,9 +36,19 @@ final class DirectionsUITests: XCTestCase {
         let app = launch()
         openDirections(app)
 
-        // Opens on the page with the recommended option: public transport (bus + metro).
-        XCTAssertTrue(element(app, "directions-page-transit").waitForExistence(timeout: 10), app.debugDescription)
+        // Always opens on walking (not on the recommended page); the origin is the user's location.
+        XCTAssertTrue(element(app, "directions-page-walk").waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertEqual(element(app, "directions-origin").label, "From: your location")
+        XCTAssertTrue(element(app, "direction-variant-walk-2").exists, "several variants per page")
+        XCTAssertTrue(element(app, "direction-variant-walk-1").label.contains("Free"))
+        XCTAssertTrue(element(app, "direction-variant-walk-1").isSelected, "the first variant is selected")
+        element(app, "direction-variant-walk-2").tap()
+        XCTAssertTrue(element(app, "direction-variant-walk-2").isSelected)
+
+        // Swipe left: walk → transit → taxi → walk (loops around).
+        let carousel = element(app, "directions-carousel")
+        carousel.swipeLeft()
+        XCTAssertTrue(element(app, "directions-page-transit").waitForExistence(timeout: 5), app.debugDescription)
         let bus = element(app, "direction-variant-transit-1")
         let metro = element(app, "direction-variant-transit-2")
         XCTAssertTrue(bus.exists)
@@ -47,6 +57,7 @@ final class DirectionsUITests: XCTestCase {
         XCTAssertTrue(bus.label.contains("Arrive 14:35"), bus.label)
         XCTAssertTrue(bus.label.contains("92"))
         XCTAssertTrue(bus.label.contains("≈ 120"), "price")
+        XCTAssertTrue(bus.label.contains("Recommended"), "the badge stays on the recommended variant: \(bus.label)")
         XCTAssertTrue(metro.label.contains("Fairly busy"), "congestion shows only when the server sends it")
         XCTAssertFalse(bus.label.contains("traffic"), "no invented congestion")
         XCTAssertTrue(bus.isSelected, "the optimal variant is selected first")
@@ -54,27 +65,20 @@ final class DirectionsUITests: XCTestCase {
         XCTAssertTrue(metro.isSelected)
         XCTAssertFalse(bus.isSelected)
 
-        // Swipe left: transit → taxi → walk (loops around) → transit.
-        let carousel = element(app, "directions-carousel")
-        carousel.swipeLeft()
+        element(app, "directions-carousel").swipeLeft()
         XCTAssertTrue(element(app, "directions-page-taxi").waitForExistence(timeout: 5), app.debugDescription)
         XCTAssertTrue(element(app, "direction-variant-taxi-1").label.contains("7–11 min"))
         XCTAssertFalse(element(app, "directions-chip-scooter").exists, "modes the server did not return are skipped")
         element(app, "directions-carousel").swipeLeft()
         XCTAssertTrue(element(app, "directions-page-walk").waitForExistence(timeout: 5), "after the last: first")
-        XCTAssertTrue(element(app, "direction-variant-walk-2").exists, "several variants per page")
-        XCTAssertTrue(element(app, "direction-variant-walk-1").label.contains("Free"))
-        element(app, "direction-variant-walk-2").tap()
-        XCTAssertTrue(element(app, "direction-variant-walk-2").isSelected)
-        element(app, "directions-carousel").swipeLeft()
-        XCTAssertTrue(element(app, "directions-page-transit").waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "direction-variant-transit-2").isSelected, "the choice is kept per page")
+        XCTAssertTrue(element(app, "direction-variant-walk-2").isSelected, "the choice is kept per page")
 
-        // And back the other way: transit → walk → taxi (wraps backwards).
-        element(app, "directions-carousel").swipeRight()
-        XCTAssertTrue(element(app, "directions-page-walk").waitForExistence(timeout: 5))
+        // And back the other way: walk → taxi (wraps backwards) → transit.
         element(app, "directions-carousel").swipeRight()
         XCTAssertTrue(element(app, "directions-page-taxi").waitForExistence(timeout: 5))
+        element(app, "directions-carousel").swipeRight()
+        XCTAssertTrue(element(app, "directions-page-transit").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "direction-variant-transit-2").isSelected)
 
         // Chips jump to a page; the pinned buttons are still there.
         element(app, "directions-chip-walk").tap()
@@ -108,8 +112,12 @@ final class DirectionsUITests: XCTestCase {
     func testRussianStrings() {
         let app = launch(language: "ru")
         openDirections(app)
-        XCTAssertTrue(element(app, "direction-variant-transit-1").waitForExistence(timeout: 10))
+        XCTAssertTrue(element(app, "directions-page-walk").waitForExistence(timeout: 10), "opens on walking")
         XCTAssertEqual(element(app, "directions-origin").label, "Откуда: ваше местоположение")
+        XCTAssertTrue(element(app, "direction-variant-walk-1").label.contains("Бесплатно"),
+                      element(app, "direction-variant-walk-1").label)
+        element(app, "directions-carousel").swipeLeft()
+        XCTAssertTrue(element(app, "direction-variant-transit-1").waitForExistence(timeout: 5))
         XCTAssertTrue(element(app, "direction-variant-transit-1").label.contains("Будете в 14:35"),
                       element(app, "direction-variant-transit-1").label)
         XCTAssertTrue(element(app, "direction-variant-transit-1").label.contains("Автобус"))

@@ -100,6 +100,7 @@ SCHEDULES: List[Schedule] = [
     Schedule("mountain.scan", interval_sec=900),  # Ш-40: mountain mornings (SSOT §7.2)
     Schedule("memory.scan", interval_sec=3600),  # Ш-41: idle chats -> memory notes
     Schedule("retention.cleanup", interval_sec=3600),  # Ш-44 review: stale upload slots, tokens
+    Schedule("crowd.aggregate", interval_sec=3600),  # Ш-47: crowd reports -> place_crowd_profile
 ]
 
 
@@ -289,6 +290,7 @@ async def _main() -> None:
 
 # Live-plan (Ш-40) and memory (Ш-41) handlers register themselves on import; these must stay
 # the last imports.
+import app.crowd.jobs  # noqa: E402,F401
 import app.live.jobs  # noqa: E402,F401
 import app.memory.jobs  # noqa: E402,F401
 

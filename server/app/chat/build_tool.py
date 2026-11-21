@@ -28,14 +28,16 @@ stop has an `item_id` that the edit tools (`chat/edit_tools.py`, Ш-38) take.
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List
 from uuid import UUID
 
 from app import worker
 from app.chat import edit_tools, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
+from app.chat.tools import MAX_SEARCH_LIMIT, event_for_model
 from app.db import fetch_one
+from app.events import service as events_service
 from app.live import clock
 from app.planner.build import (
     budget_json,
@@ -59,8 +61,16 @@ EXPLAIN = (
     "Prices are rough estimates per person. If budget.status is 'over', say so plainly and "
     "describe the two variants (remove the least valuable places / cheaper alternatives); the "
     "person chooses in the app. If must_have_unmet is not empty, say honestly which wishes "
-    "could not be included and why. Do not promise bookings."
+    "could not be included and why. Do not promise bookings. If "
+    "events is not empty, you may mention one or two that fit the person; an event with is_ad "
+    "true is an advertisement and you must include its ad_label."
 )
+
+
+def _model_events(plan: Any, locale: str) -> List[Dict[str, Any]]:
+    """Events of the trip dates that the day hours allow (Ш-48), for the model to offer."""
+    rows = plan.selection.events[:MAX_SEARCH_LIMIT]
+    return [event_for_model(events_service.event_json(r, locale)) for r in rows]
 
 
 def _model_budget(public: Dict[str, Any]) -> Dict[str, Any]:
@@ -144,6 +154,7 @@ async def build_trip(
         "version": version,
         "days": days,
         "budget": _model_budget(budget),
+        "events": _model_events(plan, locale),
         "warnings": [w["code"] for w in warnings],
         "must_have_unmet": unmet,
         "instructions": EXPLAIN,

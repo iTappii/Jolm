@@ -98,7 +98,13 @@ def test_like_pattern_escapes_wildcards():
 
 
 def test_event_validation():
-    form = {"title_ru": "Концерт", "starts_at": "2026-12-01T19:00", "ends_at": "2026-12-01T21:00"}
+    form = {
+        "title_ru": "Концерт",
+        "starts_at": "2026-12-01T19:00",
+        "ends_at": "2026-12-01T21:00",
+        "lat": "43.25",
+        "lon": "76.95",
+    }
     values, errors = service.validate_event(form)
     assert errors == {} and values["is_promoted"] is False
     _, errors = service.validate_event(dict(form, ends_at="2026-12-01T18:00"))

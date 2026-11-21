@@ -23,8 +23,9 @@ def test_unknown_locale_falls_back_to_english_and_unknown_prompt_fails():
 
 
 def test_versions_are_listed_and_latest_is_loaded():
-    assert prompts.versions(prompts.GUEST, "en") == [1]
+    assert prompts.versions(prompts.GUEST, "en") == [1, 2]
     assert prompts.load_prompt(prompts.GUEST, "en", version=1).version == 1
+    assert prompts.load_prompt(prompts.GUEST, "en").version == 2
 
 
 def test_render_fills_today():
@@ -45,9 +46,9 @@ def test_trip_brief_asks_dates_then_budget_then_lodging():
             assert tool in text
 
 
-def test_guest_prompt_has_no_memory_and_only_search_tool():
+def test_guest_prompt_exposes_place_and_event_search():
     for locale in ("en", "ru"):
         text = prompts.load_prompt(prompts.GUEST, locale).text
-        assert "search_places" in text
+        assert all(word in text for word in ("search_places", "search_events", "ad_label"))
         for tool in ("update_trip_brief", "build_trip", "add_graph_node"):
             assert tool not in text

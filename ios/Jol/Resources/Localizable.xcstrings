@@ -1,6 +1,58 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%lld days" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld day"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld days"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld день"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дня"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дней"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld дня"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld places" : {
       "localizations" : {
         "ru" : {
@@ -37,6 +89,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "О приложении"
+          }
+        }
+      }
+    },
+    "Accept" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Принять"
+          }
+        }
+      }
+    },
+    "Accepted" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Принято"
           }
         }
       }
@@ -181,6 +253,16 @@
         }
       }
     },
+    "Code expired. Request a new one." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Код устарел, запросите новый."
+          }
+        }
+      }
+    },
     "Collapse chat" : {
       "localizations" : {
         "ru" : {
@@ -221,6 +303,16 @@
         }
       }
     },
+    "Couldn't apply this change. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось применить изменение. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
     "Couldn't build the directions." : {
       "localizations" : {
         "ru" : {
@@ -237,6 +329,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось определить местоположение, поэтому маршрут строится от центра карты."
+          }
+        }
+      }
+    },
+    "Couldn't load chats." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить чаты."
           }
         }
       }
@@ -271,12 +373,32 @@
         }
       }
     },
+    "Couldn't load the route." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить маршрут."
+          }
+        }
+      }
+    },
     "Couldn't open the route" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось открыть маршрут"
+          }
+        }
+      }
+    },
+    "Couldn't open this chat." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось открыть этот чат."
           }
         }
       }
@@ -317,6 +439,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Очень людно"
+          }
+        }
+      }
+    },
+    "Decline" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отклонить"
+          }
+        }
+      }
+    },
+    "Declined" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отклонено"
           }
         }
       }
@@ -501,6 +643,16 @@
         }
       }
     },
+    "Free day" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свободный день"
+          }
+        }
+      }
+    },
     "Friday" : {
       "localizations" : {
         "ru" : {
@@ -551,6 +703,16 @@
         }
       }
     },
+    "Has a place to stay" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Жильё есть"
+          }
+        }
+      }
+    },
     "Heavy traffic" : {
       "localizations" : {
         "ru" : {
@@ -577,6 +739,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "В избранном"
+          }
+        }
+      }
+    },
+    "Jol is still answering. Try again in a moment." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jol ещё отвечает. Попробуйте через минуту."
+          }
+        }
+      }
+    },
+    "Jol is typing" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jol печатает"
           }
         }
       }
@@ -641,6 +823,16 @@
         }
       }
     },
+    "Message" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сообщение"
+          }
+        }
+      }
+    },
     "Method" : {
       "localizations" : {
         "ru" : {
@@ -701,6 +893,16 @@
         }
       }
     },
+    "Needs a place to stay" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нужно жильё"
+          }
+        }
+      }
+    },
     "New chat" : {
       "localizations" : {
         "ru" : {
@@ -741,12 +943,32 @@
         }
       }
     },
+    "No connection. Check the network and try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет связи. Проверьте сеть и попробуйте ещё раз."
+          }
+        }
+      }
+    },
     "No favorites yet" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "В избранном пока пусто"
+          }
+        }
+      }
+    },
+    "No longer relevant" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Уже неактуально"
           }
         }
       }
@@ -811,6 +1033,16 @@
         }
       }
     },
+    "Open full map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть полную карту"
+          }
+        }
+      }
+    },
     "Open in navigator" : {
       "localizations" : {
         "ru" : {
@@ -847,6 +1079,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Оптимальный"
+          }
+        }
+      }
+    },
+    "Over budget" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не укладывается в бюджет"
           }
         }
       }
@@ -1011,6 +1253,16 @@
         }
       }
     },
+    "Route ready" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Маршрут готов"
+          }
+        }
+      }
+    },
     "Saturday" : {
       "localizations" : {
         "ru" : {
@@ -1111,6 +1363,16 @@
         }
       }
     },
+    "Sign in to build a personal route" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите, чтобы составить личный маршрут"
+          }
+        }
+      }
+    },
     "Sign in to build a personal trip plan and keep your chats." : {
       "localizations" : {
         "ru" : {
@@ -1171,6 +1433,16 @@
         }
       }
     },
+    "Something went wrong." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Что-то пошло не так."
+          }
+        }
+      }
+    },
     "Something went wrong. Try again." : {
       "localizations" : {
         "ru" : {
@@ -1221,22 +1493,22 @@
         }
       }
     },
-    "The chat is coming soon. Your message is saved." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Чат скоро появится. Ваше сообщение сохранено."
-          }
-        }
-      }
-    },
     "The help center is being prepared." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Справочный центр в разработке."
+          }
+        }
+      }
+    },
+    "This chat is full. Start a new chat to continue." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот чат заполнен. Начните новый, чтобы продолжить."
           }
         }
       }
@@ -1271,12 +1543,42 @@
         }
       }
     },
+    "Too many messages. Try again in %lld s." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Слишком много сообщений. Попробуйте через %lld с."
+          }
+        }
+      }
+    },
+    "Too many messages. Try again later." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Слишком много сообщений. Попробуйте позже."
+          }
+        }
+      }
+    },
     "Trip" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Поездка"
+          }
+        }
+      }
+    },
+    "Try again" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторить"
           }
         }
       }
@@ -1351,12 +1653,12 @@
         }
       }
     },
-    "Wrong or expired code. Check it or request a new one." : {
+    "Wrong code. Check it and try again." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Неверный или просроченный код. Проверьте его или запросите новый."
+            "value" : "Неверный код. Проверьте его и попробуйте ещё раз."
           }
         }
       }
@@ -1377,6 +1679,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ваш аккаунт и все данные будут удалены навсегда. Это действие нельзя отменить."
+          }
+        }
+      }
+    },
+    "Your route" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ваш маршрут"
           }
         }
       }

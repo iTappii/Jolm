@@ -218,6 +218,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
             tools.UPDATE_TRIP_BRIEF: _update_trip_brief,
             tools.ADD_GRAPH_NODE: _add_graph_node,
             tools.SEARCH_PLACES: _search_places,
+            tools.SEARCH_EVENTS: _search_events,
             tools.BUILD_TRIP: lambda *a: _build_trip(*a, router, weather),
             edit_tools.GET_TRIP_PLAN: edit_tools.get_trip_plan,
             edit_tools.REMOVE_TRIP_ITEM: lambda *a: edit_tools.remove_trip_item(*a, router),
@@ -265,6 +266,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
                 tools.UPDATE_TRIP_BRIEF_SPEC,
                 tools.ADD_GRAPH_NODE_SPEC,
                 tools.SEARCH_PLACES_SPEC,
+                tools.SEARCH_EVENTS_SPEC,
                 tools.BUILD_TRIP_SPEC,
                 *edit_tools.EDIT_SPECS,
             ],
@@ -367,6 +369,17 @@ async def _search_places(db, chat_id: UUID, locale: str, call: ToolCall) -> Tool
     if pins and args.show_on_map:
         events.append(("map_places", {"reason": "chosen", "places": pins}))
     return ToolOutcome(result, events)
+
+
+async def _search_events(db, chat_id: UUID, locale: str, call: ToolCall) -> ToolOutcome:
+    """Events of the trip dates (or the window the model asks for); no SSE event."""
+    args = parse_tool_args(call, tools.SearchEventsArgs)
+    async with db.transaction() as conn:
+        brief = await store.get_brief(conn, chat_id)
+    result = await tools.search_events(
+        db, args, locale, brief.get("start_date"), brief.get("end_date"), brief.get("pace")
+    )
+    return ToolOutcome(result)
 
 
 async def _build_trip(

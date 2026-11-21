@@ -88,6 +88,22 @@ MESSAGES = {
         "en": "You have already reviewed this place",
         "ru": "Вы уже оставили отзыв об этом месте",
     },
+    "too_far_from_place": {
+        "en": "You need to be at the place to do this",
+        "ru": "Для этого нужно находиться рядом с местом",
+    },
+    "booking_unavailable": {
+        "en": "The partner cannot take this booking",
+        "ru": "Партнёр не может принять эту бронь",
+    },
+    "booking_not_supported": {
+        "en": "This place does not take bookings of this kind",
+        "ru": "Это место не принимает брони такого вида",
+    },
+    "booking_partner_unavailable": {
+        "en": "The booking partner is temporarily unavailable",
+        "ru": "Сервис бронирования партнёра временно недоступен",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

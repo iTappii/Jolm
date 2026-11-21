@@ -524,7 +524,13 @@ async def test_event_create_edit_delete(client, conn):
 
     await client.post(
         f"/admin/events/{ev['id']}",
-        data={"title_ru": "Концерт 2", "starts_at": "2026-12-02T19:00", "csrf_token": csrf},
+        data={
+            "title_ru": "Концерт 2",
+            "starts_at": "2026-12-02T19:00",
+            "lat": "43.25",
+            "lon": "76.95",
+            "csrf_token": csrf,
+        },
     )
     row = await fetch_one(conn, "SELECT title_ru, is_promoted, ends_at, place_id FROM events")
     assert row["title_ru"] == "Концерт 2" and not row["is_promoted"] and row["place_id"] is None

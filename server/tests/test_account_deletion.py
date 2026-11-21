@@ -115,6 +115,33 @@ async def test_delete_cascades_personal_data_and_kills_tokens(client, conn, deli
     assert (await client.get("/v1/me", headers=auth(other))).status_code == 200
 
 
+async def test_delete_removes_only_the_owners_bookings(client, conn, delivery):
+    first = await otp_sign_in(client, delivery, ADDRESS)
+    second = await otp_sign_in(client, delivery, {**ADDRESS, "destination": "stays@example.com"})
+    place = await fetch_one(
+        conn,
+        "INSERT INTO places(name_ru, geom) VALUES ('Кафе', ST_GeogFromText('POINT(76.9 43.2)'))"
+        " RETURNING id",
+    )
+    partner = await fetch_one(conn, "INSERT INTO partners(name) VALUES ('Cafe') RETURNING id")
+    await conn.execute(
+        "INSERT INTO partner_places(partner_id, place_id, kinds) VALUES (%s, %s, ARRAY['food'])",
+        (partner["id"], place["id"]),
+    )
+    for tokens in (first, second):
+        booking = await client.post(
+            "/v1/bookings",
+            headers=auth(tokens),
+            json={"place_id": str(place["id"]), "kind": "food"},
+        )
+        assert booking.status_code == 201
+    assert (await client.delete("/v1/me", headers=auth(first))).status_code == 204
+    assert await count(conn, "bookings") == 1
+    remaining = (await client.get("/v1/bookings", headers=auth(second))).json()["items"]
+    assert [item["id"] for item in remaining] == [booking.json()["id"]]
+    assert await count(conn, "partner_places") == 1
+
+
 async def test_delete_removes_chats_briefs_messages_and_graph(client, conn, delivery):
     tokens = await otp_sign_in(client, delivery, ADDRESS)
     other = await otp_sign_in(client, delivery, {**ADDRESS, "destination": "stays@example.com"})

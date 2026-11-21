@@ -307,3 +307,79 @@ def test_merge_moves_submissions_to_the_survivor(sconn):
     assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
     rows = q(sconn, "SELECT place_id FROM submissions")
     assert [r["place_id"] for r in rows] == [keep] * 3
+
+
+def test_merge_preserves_bookings_and_combines_partner_links(sconn):
+    from merge import merge_place
+
+    places = q(
+        sconn,
+        "INSERT INTO places (name_ru, geom) SELECT name, ST_GeogFromText('POINT(76.9 43.2)')"
+        " FROM unnest(ARRAY['keep', 'drop']) AS name RETURNING id, name_ru",
+    )
+    ids = {row["name_ru"]: row["id"] for row in places}
+    keep, drop = ids["keep"], ids["drop"]
+    partner = q(sconn, "INSERT INTO partners(name) VALUES ('Cafe') RETURNING id")[0]["id"]
+    second = q(sconn, "INSERT INTO partners(name) VALUES ('Hotel') RETURNING id")[0]["id"]
+    for pid, place, kind, ref in (
+        (partner, keep, "table", None),
+        (partner, drop, "food", "cafe"),
+        (second, drop, "room", "hotel"),
+    ):
+        sconn.execute(
+            "INSERT INTO partner_places(partner_id, place_id, kinds, external_ref)"
+            " VALUES (%s, %s, %s, %s)",
+            (pid, place, [kind], ref),
+        )
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    booking = q(
+        sconn,
+        "INSERT INTO bookings (user_id, place_id, partner_id, kind, status, payload) "
+        "VALUES (%s, %s, %s, 'food', 'confirmed', '{}') RETURNING id",
+        (user, drop, partner),
+    )[0]["id"]
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT place_id FROM bookings WHERE id = %s", (booking,)) == [
+        {"place_id": keep}
+    ]
+    links = q(sconn, "SELECT * FROM partner_places WHERE place_id = %s", (keep,))
+    assert {r["external_ref"]: sorted(r["kinds"]) for r in links} == {
+        "cafe": ["food", "table"],
+        "hotel": ["room"],
+    }
+    assert not q(sconn, "SELECT id FROM places WHERE id = %s", (drop,))
+
+
+def test_merge_preserves_crowd_reports_and_removes_obsolete_profile(sconn):
+    from merge import merge_place
+
+    keep, drop = [
+        r["id"]
+        for r in q(
+            sconn,
+            """
+            INSERT INTO places (name_en, geom)
+            SELECT name, ST_GeogFromText('POINT(76.9 43.2)') FROM (VALUES ('A'), ('B')) p(name)
+            RETURNING id
+            """,
+        )
+    ]
+    uid = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    for pid in (keep, drop):
+        sconn.execute(
+            "INSERT INTO place_crowd_reports (user_id, place_id, kind, level, distance_m) "
+            "VALUES (%s, %s, 'crowd', 1, 5)",
+            (uid, pid),
+        )
+        sconn.execute(
+            "INSERT INTO place_crowd_profile (place_id, weekday, hour, level, samples) "
+            "VALUES (%s, 1, 10, 0.5, 1)",
+            (pid,),
+        )
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT place_id FROM place_crowd_reports") == [{"place_id": keep}] * 2
+    assert q(sconn, "SELECT place_id FROM place_crowd_profile") == [{"place_id": keep}]

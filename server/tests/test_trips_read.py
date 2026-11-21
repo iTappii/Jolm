@@ -90,7 +90,7 @@ async def test_get_trip_returns_everything_the_full_map_needs(chat_env, conn):
     assert set(trip) == {
         "id", "chat_id", "version", "status", "start_date", "end_date", "budget_kzt",
         "total_cost_kzt", "budget_choice", "weather_checked_at", "created_at", "updated_at",
-        "days", "budget", "warnings", "must_have_unmet",
+        "days", "budget", "warnings", "must_have_unmet", "events",
     }  # fmt: skip
     assert trip["id"] == ready["trip_id"] and trip["version"] == 1
     assert trip["total_cost_kzt"] == ready["budget"]["total_kzt"]

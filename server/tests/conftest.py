@@ -42,6 +42,8 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "bookings",  # Ш-49: bookings hang off users and places
+    "place_crowd_reports",  # Ш-47: check-ins and crowd reports hang off users
     "bonus_ledger",  # Ш-46: the bonus ledger hangs off users and submissions
     "submissions",  # Ш-44: user content hangs off users and places
     "uploads",

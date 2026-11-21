@@ -124,6 +124,21 @@ final class SignInTests: XCTestCase {
         XCTAssertEqual(model.step, .destination)
     }
 
+    func testExpiredCodeIsDistinctFromWrongCode() async {
+        StubURLProtocol.install { request in
+            if request.url?.path == "/v1/auth/otp/verify" { return apiError(401, code: "otp_expired")(request) }
+            return (StubURLProtocol.response(request.url!, status: 204), Data())
+        }
+        let fixture = makeFixture()
+        fixture.model.input = "a@b.kz"
+        await fixture.model.sendCode()
+        fixture.model.code = "123456"
+        let signedIn = await fixture.model.verify()
+        XCTAssertFalse(signedIn)
+        XCTAssertEqual(fixture.model.problem, .codeExpired)
+        XCTAssertEqual(fixture.model.code, "")
+    }
+
     func testWrongCodeKeepsGuestAndClearsField() async throws {
         StubURLProtocol.install { request in
             if request.url?.path == "/v1/auth/otp/verify" { return apiError(401, code: "otp_invalid")(request) }

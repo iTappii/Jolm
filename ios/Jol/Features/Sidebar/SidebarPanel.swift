@@ -7,6 +7,10 @@ struct SidebarPanel: View {
     let onNewChat: () -> Void
     var onOpenRoutes: () -> Void = {}
     var onOpenFavorites: () -> Void = {}
+    /// Saved chats of a signed-in user (nil: nothing to list, e.g. a guest).
+    var chats: ChatModel.Load<[ChatSummary]>?
+    var onOpenChat: (UUID) -> Void = { _ in }
+    var onRetryChats: () -> Void = {}
     private let width: CGFloat = 300
 
     var body: some View {
@@ -24,6 +28,58 @@ struct SidebarPanel: View {
             }
         }
         .animation(.snappy(duration: 0.3), value: isOpen)
+    }
+
+    @ViewBuilder private var recentChats: some View {
+        switch chats {
+        case .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .accessibilityIdentifier("sidebar-chats-loading")
+        case .failed:
+            VStack(alignment: .leading, spacing: JolSpacing.sm) {
+                Text("Couldn't load chats.")
+                    .font(JolFont.callout)
+                    .foregroundStyle(JolColor.textSecondary)
+                Button("Try again", action: onRetryChats)
+                    .accessibilityIdentifier("sidebar-chats-retry")
+            }
+        case .loaded(let items) where !items.isEmpty:
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: JolSpacing.xs) {
+                    ForEach(items) { item in
+                        Button {
+                            onOpenChat(item.id)
+                            isOpen = false
+                        } label: {
+                            Group {
+                                if let title = item.displayTitle {
+                                    Text(verbatim: title)
+                                } else {
+                                    Text("New chat")
+                                }
+                            }
+                            .font(JolFont.body)
+                            .foregroundStyle(JolColor.textPrimary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, JolSpacing.sm)
+                            .padding(.horizontal, JolSpacing.md)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("sidebar-chat-row")
+                    }
+                }
+            }
+            .accessibilityIdentifier("sidebar-chats")
+        default:
+            Text("No chats yet")
+                .font(JolFont.callout)
+                .foregroundStyle(JolColor.textSecondary)
+                .accessibilityIdentifier("sidebar-empty")
+        }
     }
 
     private var panel: some View {
@@ -86,10 +142,7 @@ struct SidebarPanel: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("sidebar-favorites")
-            Text("No chats yet")
-                .font(JolFont.callout)
-                .foregroundStyle(JolColor.textSecondary)
-                .accessibilityIdentifier("sidebar-empty")
+            recentChats
             Spacer()
         }
         .padding(JolSpacing.lg)

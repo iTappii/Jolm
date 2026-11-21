@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 from uuid import UUID
 
+from app.crowd.service import ProfileCrowd
 from app.db import fetch_all
 from app.memory.affinity import NO_MEMORY, load_memory
 from app.planner import budget as bud
@@ -20,6 +21,7 @@ from app.planner import hours as hrs
 from app.planner import sql
 from app.planner.area import ALMATY_BBOX
 from app.planner.candidates import Selection, select_candidates
+from app.planner.events import load_event_index
 from app.planner.layout import TripLayout, plan_days
 from app.planner.model import Place
 from app.planner.travel import DirectionsLegs, RouterMatrix
@@ -91,7 +93,13 @@ async def build_plan(
     area = {"west": west, "south": south, "east": east, "north": north}
     async with db.transaction() as conn:
         memory = await load_memory(conn, user_id) if user_id else NO_MEMORY
-        selection = await select_candidates(conn, brief, memory=memory.penalties, favorites=memory)
+        crowd = await ProfileCrowd.load(conn)  # Ш-47: own crowd data; unknown below its threshold
+        events = await load_event_index(conn, brief)  # Ш-48: events of the trip dates
+        selection = await select_candidates(
+            conn, brief, memory=memory.penalties, favorites=memory, crowd=crowd,
+            event_bonus=events.bonus,
+        )  # fmt: skip
+        selection.events = events.items
         must = selection.must_have_places
         acts = [c.place for c in selection.activities]
         food = [c.place for c in selection.food]

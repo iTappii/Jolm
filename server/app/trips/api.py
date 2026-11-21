@@ -39,6 +39,7 @@ from app.errors import AppError
 from app.i18n import pick_locale
 from app.live import clock
 from app.live import proposals as live_proposals
+from app.planner.events import trip_events
 from app.providers.weather import city_forecast
 from app.routing import FakeRouter
 from app.trips import edit, read, store
@@ -97,7 +98,10 @@ async def get_trip(trip_id: UUID, request: Request):
         for kind in (trip["budget"] or {}).get("variants") or {}:
             variants[kind] = await store.variant_items(conn, trip_id, kind)
         lodging = await store.lodging_options(conn, trip_id)
-    return read.trip_json(trip, items, legs, variants, lodging, locale)
+        events = await trip_events(
+            conn, trip["start_date"], trip["end_date"], (trip["brief"] or {}).get("pace")
+        )
+    return read.trip_json(trip, items, legs, variants, lodging, locale, events)
 
 
 def etag_matches(header: Optional[str], etag: str) -> bool:

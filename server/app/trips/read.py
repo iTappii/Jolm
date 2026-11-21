@@ -8,6 +8,7 @@ en: en, ru, kk).
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from app.events.service import event_json
 from app.places import service
 from app.providers.storage import media_url
 from app.routing.service import ALMATY_TZ
@@ -190,6 +191,7 @@ def trip_json(
     variant_rows: Dict[str, List[Dict[str, Any]]],
     lodging: List[Dict[str, Any]],
     locale: str,
+    events: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     return {
         "id": str(trip["id"]),
@@ -208,6 +210,9 @@ def trip_json(
         "budget": budget_json(trip, items, variant_rows, lodging, locale),
         "warnings": trip["warnings"],
         "must_have_unmet": trip["must_have_unmet"],
+        # Ш-48: events of the trip dates that the day hours allow (shape of GET /v1/events items,
+        # `is_ad` / `ad_label` included); computed on read, not part of the stored plan
+        "events": [event_json(r, locale) for r in events or []],
     }
 
 

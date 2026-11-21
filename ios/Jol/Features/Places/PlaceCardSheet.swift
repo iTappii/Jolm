@@ -18,6 +18,8 @@ struct PlaceCardSheet: View {
             .presentationDetents([base, .large], selection: $detent)
             .presentationBackgroundInteraction(.enabled(upThrough: base))
             .presentationDragIndicator(.visible)
+            // Solid: with the default translucent sheet material the orange map clusters shine through the card.
+            .presentationBackground(JolColor.surfaceElevated)
             .presentationCornerRadius(JolRadius.xl)
     }
 }

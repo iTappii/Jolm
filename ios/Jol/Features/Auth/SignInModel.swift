@@ -45,6 +45,8 @@ final class SignInModel {
         case rateLimited(retryAfter: Int?)
         case deliveryUnavailable
         case wrongCode
+        /// 401 `otp_expired`: no active code (expired, used, too many attempts, never requested).
+        case codeExpired
         case network
         case generic
     }
@@ -57,7 +59,7 @@ final class SignInModel {
     var input = ""
     var code = "" {
         didSet {
-            if !code.isEmpty, code != oldValue, problem == .wrongCode { problem = nil }
+            if !code.isEmpty, code != oldValue, problem == .wrongCode || problem == .codeExpired { problem = nil }
         }
     }
 
@@ -117,7 +119,7 @@ final class SignInModel {
             return true
         } catch {
             problem = Self.problem(for: error, wrongCodeStatuses: [401, 422])
-            if problem == .wrongCode { code = "" }
+            if problem == .wrongCode || problem == .codeExpired { code = "" }
             return false
         }
     }
@@ -185,6 +187,7 @@ final class SignInModel {
         case .rateLimited(let retry, _):
             return .rateLimited(retryAfter: retry.map { Int($0.rounded(.up)) })
         case .server(let status, let code, _):
+            if code == "otp_expired" { return .codeExpired }
             if code == "otp_invalid" || wrongCodeStatuses.contains(status) { return .wrongCode }
             if code == "otp_invalid_destination" || status == 422 { return .invalidDestination }
             if status == 503 { return .deliveryUnavailable }

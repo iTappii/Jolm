@@ -198,8 +198,9 @@ final class DirectionsModel {
             let payload: DirectionsPayload = try await api.send(endpoint)
             guard !Task.isCancelled, self.target?.id == target.id, origin == point else { return }
             pages = TransportPage.pages(from: payload.options)
-            // Open on the page with the server's recommendation (else the first page).
-            pageIndex = pages.firstIndex { $0.variants.contains { $0.recommended } } ?? 0
+            // Always open on the first page of the carousel: walking, or — when there is no walk page for this pair of
+            // points — the next one in carousel order (SSOT §6.1). The recommendation is only a badge.
+            pageIndex = 0
             variantIndex = [:]
             answeredAt = Date()
             lineVersion += 1

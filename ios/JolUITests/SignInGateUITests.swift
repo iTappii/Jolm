@@ -30,7 +30,7 @@ final class SignInGateUITests: XCTestCase {
         field.typeText(text)
     }
 
-    func testGuestSendingFirstMessageIsAskedToSignInAndDraftSurvives() {
+    func testGuestAskingForAPersonalTripIsAskedToSignInAndDraftSurvives() {
         let app = launch()
         typeDraft(app, "Three days in Almaty")
         element(app, "chat-send").tap()
@@ -39,7 +39,7 @@ final class SignInGateUITests: XCTestCase {
         XCTAssertTrue(element(app, "sign-in-reason").exists)
         XCTAssertTrue(element(app, "sign-in-apple-disabled").exists, "Apple is off in this build, with an explanation")
         XCTAssertFalse(element(app, "apple-sign-in").exists)
-        XCTAssertFalse(element(app, "chat-saved-note").exists, "the flow does not continue before sign-in")
+        XCTAssertFalse(element(app, "chat-message-user").exists, "the flow does not continue before sign-in")
 
         // Step 1: e-mail.
         XCTAssertFalse(element(app, "sign-in-send").isEnabled, "empty address")
@@ -53,33 +53,40 @@ final class SignInGateUITests: XCTestCase {
         XCTAssertTrue(element(app, "sign-in-resend").label.contains("Resend in"), element(app, "sign-in-resend").label)
         element(app, "sign-in-code").typeText("000000")
         XCTAssertTrue(element(app, "sign-in-error").waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "sign-in-error").label.contains("Wrong or expired code"))
+        XCTAssertTrue(element(app, "sign-in-error").label.contains("Wrong code"))
+
+        element(app, "sign-in-code").typeText("111111")
+        XCTAssertTrue(element(app, "sign-in-error").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "sign-in-error").label.contains("Code expired"), element(app, "sign-in-error").label)
 
         // The right code signs in, closes the sheet and continues the flow with the draft intact.
         element(app, "sign-in-code").typeText("123456")
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"),
                                              object: element(app, "account-gate"))
         XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 10), .completed, app.debugDescription)
-        XCTAssertTrue(element(app, "chat-saved-note").waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertEqual(element(app, "chat-input").value as? String, "Three days in Almaty")
+        // The flow continues: the draft became the first message of a saved chat and the field is empty again.
+        let message = element(app, "chat-message-user")
+        XCTAssertTrue(message.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(message.label, "Three days in Almaty")
+        XCTAssertNotEqual(element(app, "chat-input").value as? String, "Three days in Almaty")
     }
 
     func testCancellingTheGateKeepsDraftAndDoesNotContinue() {
         let app = launch()
-        typeDraft(app, "Weekend")
+        typeDraft(app, "Plan a weekend")
         element(app, "chat-send").tap()
         XCTAssertTrue(element(app, "gate-cancel").waitForExistence(timeout: 5))
         element(app, "gate-cancel").tap()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"),
                                              object: element(app, "account-gate"))
         XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 5), .completed)
-        XCTAssertFalse(element(app, "chat-saved-note").exists)
-        XCTAssertEqual(element(app, "chat-input").value as? String, "Weekend")
+        XCTAssertFalse(element(app, "chat-message-user").exists)
+        XCTAssertEqual(element(app, "chat-input").value as? String, "Plan a weekend")
     }
 
     func testRateLimitedAddressShowsCountdownMessage() {
         let app = launch()
-        typeDraft(app, "Hi")
+        typeDraft(app, "Plan a trip")
         element(app, "chat-send").tap()
         enter(app, "sign-in-destination", "ratelimit@example.com")
         element(app, "sign-in-send").tap()

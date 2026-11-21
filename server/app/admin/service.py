@@ -12,6 +12,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from app.db import execute, fetch_all, fetch_one
+from app.planner.area import ALMATY_BBOX
 
 from . import sql
 
@@ -430,6 +431,10 @@ def validate_event(form: Mapping[str, str]) -> Tuple[Dict[str, Any], Errors]:
     values["sponsor"], err = clean_text(form.get("sponsor"), 200)
     if err:
         errors["sponsor"] = err
+    for field in ("description_ru", "description_en"):
+        values[field], err = clean_text(form.get(field), 2000)
+        if err:
+            errors[field] = err
 
     starts = parse_local_dt(form.get("starts_at"))
     if starts is None:
@@ -451,15 +456,38 @@ def validate_event(form: Mapping[str, str]) -> Tuple[Dict[str, Any], Errors]:
         values[field] = parse_uuid(raw) if raw else None
         if raw and values[field] is None:
             errors[field] = "Неверный идентификатор"
+    values["lat"], values["lon"] = _parse_event_point(form, errors)
+    if not values["place_id"] and values["lat"] is None and not ({"place_id", "lat"} & set(errors)):
+        errors["place_id"] = "Укажите место или координаты"
     # OPEN(SSOT §16.9): promoted events get the "Реклама / Ad" label; labelling rules not final
     values["is_promoted"] = parse_bool(form.get("is_promoted"))
     return values, errors
 
 
+def _parse_event_point(form: Mapping[str, str], errors: Errors):
+    """Own coordinates of an event: both or none, inside the Almaty area."""
+    raw_lat, raw_lon = (form.get("lat") or "").strip(), (form.get("lon") or "").strip()
+    if not raw_lat and not raw_lon:
+        return None, None
+    try:
+        lat, lon = float(raw_lat.replace(",", ".")), float(raw_lon.replace(",", "."))
+    except ValueError:
+        errors["lat"] = "Нужны числа: широта и долгота"
+        return None, None
+    west, south, east, north = ALMATY_BBOX
+    if not (south <= lat <= north and west <= lon <= east):
+        errors["lat"] = "Точка вне Алматы"
+        return None, None
+    return lat, lon
+
+
 async def check_event_refs(conn, values: Mapping[str, Any], errors: Errors) -> None:
     if values.get("place_id") and "place_id" not in errors:
-        if not await fetch_one(conn, sql.PLACE_EXISTS, (values["place_id"],)):
+        place = await fetch_one(conn, sql.PLACE_PUBLIC_FLAG, (values["place_id"],))
+        if place is None:
             errors["place_id"] = "Место не найдено"
+        elif values.get("is_promoted") and place["is_public"]:
+            errors["is_promoted"] = "У достопримечательностей и госмест рекламы быть не может"
     if values.get("category_id") and "category_id" not in errors:
         if not await fetch_one(conn, sql.CATEGORY_EXISTS, (values["category_id"],)):
             errors["category_id"] = "Категория не найдена"
