@@ -4,6 +4,7 @@ import XCTest
 /// Ш-32: `ChatModel` against a scripted API (`StubURLProtocol`): which endpoint a guest / a signed-in user talks to,
 /// retries after `chat_busy` and stream errors, reopening a saved chat and deciding a proposal.
 @MainActor
+// swiftlint:disable:next type_body_length
 final class ChatModelTests: XCTestCase {
     private let base = URL(string: "https://api.example.test")!
     private let chatID = ChatStub.chatID
