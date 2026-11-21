@@ -72,6 +72,11 @@ MOVE_STATEMENTS = (
     # weather change proposals (Ш-40): both place columns, FK without ON DELETE CASCADE
     "UPDATE trip_change_proposals SET place_id = %(keep)s WHERE place_id = %(drop)s",
     "UPDATE trip_change_proposals SET target_place_id = %(keep)s WHERE target_place_id = %(drop)s",
+    # favourites (Ш-23b): FK without ON DELETE CASCADE; a user who saved both keeps one row
+    "UPDATE user_favorites SET place_id = %(keep)s WHERE place_id = %(drop)s "
+    "AND NOT EXISTS (SELECT 1 FROM user_favorites j "
+    "WHERE j.user_id = user_favorites.user_id AND j.place_id = %(keep)s)",
+    "DELETE FROM user_favorites WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

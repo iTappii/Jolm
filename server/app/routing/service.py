@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from zoneinfo import ZoneInfo
 
@@ -10,7 +10,7 @@ from app.routing.base import NoRoute, Point, RouteResult, RoutingProvider, Routi
 from app.routing.costs import Tariff, calculate_cost, recommend
 from app.routing.fake import FakeRouter, encode_polyline6, haversine_m
 from app.routing.geometry import decode_polyline6
-from app.routing.schemas import DirectionOption, DirectionStep, Mode
+from app.routing.schemas import DirectionOption, DirectionStep, Mode, group_of
 from app.routing.transit import TransitNetwork, TransitOption, find_transit_options
 
 log = logging.getLogger("app.routing")
@@ -18,6 +18,12 @@ log = logging.getLogger("app.routing")
 # Five kilometres limits the standalone walk to about an hour at city walking pace.
 MAX_WALK_M = 5000
 ALMATY_TZ = ZoneInfo("Asia/Almaty")
+# Ш-22a: up to this many path variants per transport group (variant 0 = the optimal one).
+MAX_VARIANTS = 3
+# A variant slower than this multiple of its group's best is not a reasonable alternative.
+ALT_MAX_RATIO = 1.6
+# Variants closer than this to a kept one (both duration and distance) are the same path.
+NEAR_IDENTICAL = 0.03
 
 
 def _traffic_max(depart_at: datetime) -> float:
@@ -114,6 +120,64 @@ def _transit_option(result: TransitOption, tariffs: Dict[str, Tariff]) -> Option
     )
 
 
+def _rank(option: DirectionOption) -> float:
+    """The "reasonable" metric that orders variants inside a group: time plus 1 second per tenge
+    of the upper cost (the same trade-off `recommend` uses), so variant 0 is what it would pick."""
+    return option.duration_s + option.cost_kzt_max
+
+
+def _near(a: float, b: float) -> bool:
+    return abs(a - b) <= NEAR_IDENTICAL * max(a, b, 1.0)
+
+
+def _distinct_routes(results: List[RouteResult]) -> List[RouteResult]:
+    """Drop alternatives that repeat a kept route (same shape, or the same time and length)
+    or are far slower than the best one."""
+    best = min(r.duration_s for r in results)
+    kept: List[RouteResult] = []
+    for r in results:
+        if r.duration_s > best * ALT_MAX_RATIO:
+            continue
+        if any(
+            r.geometry == k.geometry
+            or (_near(r.duration_s, k.duration_s) and _near(r.distance_m, k.distance_m))
+            for k in kept
+        ):
+            continue
+        kept.append(r)
+    return kept
+
+
+def _transit_key(option: DirectionOption) -> tuple:
+    """Distinct itinerary = the sequence of lines ridden (kind + ref)."""
+    return tuple((s.kind, s.route_ref) for s in option.steps or [] if s.type == "ride")
+
+
+def _finish_group(options: List[DirectionOption], limit: int, per_mode: bool = False):
+    """Order a group's options by `_rank`, drop duplicates, cap at `limit` and number them."""
+    ordered = sorted(options, key=_rank)
+    kept: List[DirectionOption] = []
+    for o in ordered:
+        if any(
+            o.geometry == k.geometry
+            or (o.mode == k.mode and _transit_key(o) and _transit_key(o) == _transit_key(k))
+            for k in kept
+        ):
+            continue
+        if per_mode and any(k.mode == o.mode for k in kept):
+            continue
+        kept.append(o)
+    kept = kept[:limit] if not per_mode else kept
+    return [o.model_copy(update={"variant": i}) for i, o in enumerate(kept)]
+
+
+async def _routes(router, origin, destination, mode: str, variants: int) -> List[RouteResult]:
+    if variants <= 1 or not hasattr(router, "routes"):
+        return [await router.route(origin, destination, mode)]
+    # one spare, so a duplicate the dedupe drops does not cost a variant
+    return await router.routes(origin, destination, mode, variants)
+
+
 async def get_directions(
     router: RoutingProvider,
     network: Optional[TransitNetwork],
@@ -123,7 +187,11 @@ async def get_directions(
     depart_at: datetime,
     *,
     data_unavailable: bool = False,
+    variants: int = MAX_VARIANTS,
 ) -> List[DirectionOption]:
+    """Flat list of options; several per group (walk/transit/taxi/scooter/car) when `variants`
+    > 1, ordered by group and then by variant. `variants=1` is the planner's mode: one route per
+    road mode and the best itinerary per public-transit mode (bus, metro)."""
     road_modes = {}
     if haversine_m(origin, destination) <= MAX_WALK_M:
         road_modes["walk"] = ("walk",)
@@ -133,14 +201,20 @@ async def get_directions(
     if motor_modes:
         road_modes["car"] = motor_modes
 
-    jobs = {mode: router.route(origin, destination, mode) for mode in road_modes}
+    jobs = {mode: _routes(router, origin, destination, mode, variants) for mode in road_modes}
     if network is not None and ("bus" in tariffs or "metro" in tariffs):
         jobs["transit"] = find_transit_options(
-            network, router, origin, destination, depart_at, drop_slower_than_walking=False
+            network,
+            router,
+            origin,
+            destination,
+            depart_at,
+            max_options=4 if variants <= 1 else max(4, variants * 2),
+            drop_slower_than_walking=False,
         )
     results = await asyncio.gather(*jobs.values(), return_exceptions=True)
 
-    options: List[DirectionOption] = []
+    groups: Dict[str, List[DirectionOption]] = {}
     walk_s = None
     offline = isinstance(router, FakeRouter)
     traffic_max = _traffic_max(depart_at)
@@ -158,21 +232,36 @@ async def get_directions(
                 if walk_s is None or transit.duration_s < walk_s:
                     option = _transit_option(transit, tariffs)
                     if option is not None:
-                        options.append(option)
+                        groups.setdefault("transit", []).append(option)
             continue
         if mode == "walk":
-            if result.distance_m > MAX_WALK_M:
+            result = [r for r in result if r.distance_m <= MAX_WALK_M]
+            if not result:
                 continue
-            walk_s = result.duration_s
-        for public_mode in road_modes[mode]:
-            tariff = None if public_mode == "walk" else tariffs[public_mode]
-            options.append(_road_option(result, public_mode, tariff, offline, traffic_max))
+            walk_s = result[0].duration_s
+        for r in _distinct_routes(list(result)):
+            for public_mode in road_modes[mode]:
+                tariff = None if public_mode == "walk" else tariffs[public_mode]
+                groups.setdefault(group_of(public_mode), []).append(
+                    _road_option(r, public_mode, tariff, offline, traffic_max)
+                )
 
+    options: List[DirectionOption] = []
+    for group in ("walk", "scooter", "taxi", "car", "transit"):
+        if group in groups:
+            per_mode = group == "transit" and variants <= 1
+            options.extend(_finish_group(groups[group], variants, per_mode=per_mode))
     if not options and data_unavailable:
         raise RoutingUnavailable("directions unavailable")
-    index = recommend(
-        [option.model_dump(include={"mode", "duration_s", "cost_kzt_max"}) for option in options]
-    )
+    base = depart_at if depart_at.tzinfo else depart_at.replace(tzinfo=ALMATY_TZ)
+    for option in options:
+        option.arrive_at = (
+            (base + timedelta(seconds=option.duration_s))
+            .astimezone(ALMATY_TZ)
+            .isoformat(timespec="seconds")
+        )
+    best = [o for o in options if o.variant == 0 or variants <= 1]
+    index = recommend([o.model_dump(include={"mode", "duration_s", "cost_kzt_max"}) for o in best])
     if index is not None:
-        options[index].recommended = True
+        best[index].recommended = True
     return options

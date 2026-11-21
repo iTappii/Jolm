@@ -133,7 +133,13 @@ class DirectionsLegs:
         if key not in self._cache:
             try:
                 self._cache[key] = await get_directions(
-                    self.router, self.network, self.tariffs, origin, destination, depart_at
+                    self.router,
+                    self.network,
+                    self.tariffs,
+                    origin,
+                    destination,
+                    depart_at,
+                    variants=1,  # trips keep one option per mode (Ш-22a variants are for the UI)
                 )
             except RoutingUnavailable:
                 self._cache[key] = []

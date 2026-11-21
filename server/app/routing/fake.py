@@ -1,7 +1,7 @@
 """Deterministic offline router for tests/dev: haversine x detour factor / mode speed."""
 
 import math
-from typing import Dict, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from app.routing.base import (
     MatrixResult,
@@ -45,7 +45,11 @@ def encode_polyline6(points: Sequence[Point]) -> str:
 
 
 class FakeRouter:
-    def __init__(self, unreachable_over_m: Optional[Dict[str, float]] = None) -> None:
+    def __init__(
+        self, unreachable_over_m: Optional[Dict[str, float]] = None, alternates: int = 0
+    ) -> None:
+        # `alternates`: how many synthetic detour variants `routes` adds (0 = none, like before).
+        self.alternates = alternates
         self.max_m = dict(MAX_DISTANCE_M)
         if unreachable_over_m:
             self.max_m.update(unreachable_over_m)
@@ -68,6 +72,29 @@ class FakeRouter:
             distance_m=round(dist, 1),
             geometry=encode_polyline6([from_point, to_point]),
         )
+
+    async def routes(
+        self, from_point: Point, to_point: Point, mode: str, alternates: int = 0
+    ) -> List[RouteResult]:
+        main = await self.route(from_point, to_point, mode)
+        out = [main]
+        for k in range(1, min(alternates, self.alternates) + 1):
+            # a detour through a midpoint pushed sideways; each variant bends further out
+            mid = ((from_point[0] + to_point[0]) / 2, (from_point[1] + to_point[1]) / 2)
+            bend = (0.0, 0.010, 0.014, 0.017)[min(k, 3)]
+            via = (mid[0] + bend * (1 if k % 2 else -1), mid[1] + bend)
+            dist = (haversine_m(from_point, via) + haversine_m(via, to_point)) * DETOUR[mode]
+            if dist > self.max_m[mode]:
+                break
+            out.append(
+                RouteResult(
+                    mode=mode,
+                    duration_s=round(dist / (SPEEDS_KMH[mode] / 3.6), 1),
+                    distance_m=round(dist, 1),
+                    geometry=encode_polyline6([from_point, via, to_point]),
+                )
+            )
+        return out
 
     async def matrix(
         self, sources: Sequence[Point], targets: Sequence[Point], mode: str

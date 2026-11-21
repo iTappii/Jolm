@@ -183,6 +183,24 @@ class ValhallaRouter:
         except (KeyError, ValueError, TypeError, AttributeError) as exc:
             raise RoutingUnavailable("invalid Valhalla route response") from exc
 
+    async def routes(
+        self, from_point: Point, to_point: Point, mode: str, alternates: int = 0
+    ) -> List[RouteResult]:
+        """The main route plus the engine's alternates (Valhalla may return fewer than asked)."""
+        body = _costing_body(mode)
+        body["locations"] = [_loc(from_point), _loc(to_point)]
+        body["directions_options"] = {"units": "kilometers", "language": "en-US"}
+        if alternates > 0:
+            body["alternates"] = alternates
+        data = await self._post("/route", body)
+        try:
+            out = [parse_route(mode, data)]
+            for alt in data.get("alternates") or []:
+                out.append(parse_route(mode, alt))
+        except (KeyError, ValueError, TypeError, AttributeError) as exc:
+            raise RoutingUnavailable("invalid Valhalla route response") from exc
+        return out
+
     async def _matrix_chunk(
         self, ss: Sequence[Point], tt: Sequence[Point], mode: str
     ) -> MatrixResult:

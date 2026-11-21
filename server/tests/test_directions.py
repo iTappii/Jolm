@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -290,3 +290,135 @@ async def test_directions_lifespan_closes_provider(monkeypatch):
         provider.aclose.assert_not_awaited()
     provider.aclose.assert_awaited_once()
     db.close.assert_awaited_once()
+
+
+# --- Ш-22a: path variants per group, arrive_at, congestion -------------------------------------
+
+FAR = {"lat": 43.28, "lon": 77.0}
+
+
+async def test_directions_variant_fields_and_one_recommended(directions_api):
+    app, client, _ = directions_api
+    app.state.routing_provider = FakeRouter(alternates=3)
+    response = await client.post("/v1/directions", json={**PAYLOAD, "to": FAR})
+    assert response.status_code == 200, response.text
+    options = response.json()
+    assert sum(o["recommended"] for o in options) == 1
+    assert all(o["congestion"] is None and "congestion" in o for o in options)
+    assert all(o["group"] == o["mode"] for o in options)
+    for group in {"scooter", "taxi", "car"}:
+        mine = [o for o in options if o["group"] == group]
+        assert [o["variant"] for o in mine] == [0, 1, 2]
+        # variant 0 is the best by duration + upper cost; the rest follow in that order
+        ranks = [o["duration_s"] + o["cost_kzt_max"] for o in mine]
+        assert ranks == sorted(ranks)
+    # taxi and car share the auto routes but are separate groups with their own costs
+    taxi = [o["geometry"] for o in options if o["group"] == "taxi"]
+    car = [o["geometry"] for o in options if o["group"] == "car"]
+    assert taxi == car
+    assert [o for o in options if o["recommended"]][0]["variant"] == 0
+    assert options[0]["variant"] == 0  # old consumers reading the first option still get variant 0
+
+
+async def test_directions_no_alternates_without_engine_alternates(directions_api):
+    _, client, _ = directions_api
+    response = await client.post("/v1/directions", json=PAYLOAD)
+    assert {o["variant"] for o in response.json()} == {0}
+
+
+async def test_directions_arrive_at_is_almaty_depart_plus_duration(directions_api):
+    _, client, _ = directions_api
+    response = await client.post("/v1/directions", json=PAYLOAD)  # 20:30Z = 01:30 +05:00
+    walk = next(o for o in response.json() if o["mode"] == "walk")
+    arrive = datetime.fromisoformat(walk["arrive_at"])
+    assert arrive.utcoffset() == timedelta(hours=5)
+    depart = datetime(2026, 11, 20, 20, 30, tzinfo=timezone.utc)
+    assert abs(arrive - (depart + timedelta(seconds=walk["duration_s"]))) < timedelta(seconds=1)
+    assert walk["arrive_at"].startswith("2026-11-21T01:")
+
+
+def _alt(duration, distance, mid):
+    return {
+        "trip": {
+            "summary": {"time": duration, "length": distance},
+            "legs": [{"shape": encode_polyline6([ORIGIN, mid, TARGET]), "maneuvers": []}],
+        }
+    }
+
+
+async def test_directions_valhalla_alternates_dedupe_and_cap(directions_api):
+    app, client, _ = directions_api
+    seen = []
+    data = _alt(600, 1.0, (43.2501, 76.951))
+    data["alternates"] = [
+        _alt(610, 1.01, (43.2502, 76.952)),  # same time and length: the same path
+        _alt(700, 1.2, (43.2510, 76.952)),
+        _alt(780, 1.3, (43.2520, 76.953)),
+        _alt(2000, 4.0, (43.2530, 76.954)),  # far slower: not a reasonable alternative
+    ]
+
+    def handler(request):
+        import json
+
+        seen.append(json.loads(request.content))
+        return Response(200, json=data)
+
+    async with AsyncClient(transport=MockTransport(handler), base_url="http://routing") as engine:
+        app.state.routing_provider = ValhallaRouter("http://routing", client=engine)
+        response = await client.post("/v1/directions", json=PAYLOAD)
+    assert all(body["alternates"] == 3 for body in seen)
+    scooters = [o for o in response.json() if o["group"] == "scooter"]
+    assert [(o["variant"], o["duration_s"]) for o in scooters] == [(0, 600), (1, 700), (2, 780)]
+
+
+def _transit_leg(a, b, ref, kind):
+    return TransitLeg(
+        "ride", 200, 2000, a, b, geometry=encode_polyline6([a, b]), route_ref=ref, kind=kind
+    )
+
+
+async def test_directions_transit_group_variants_and_dedupe(directions_api, monkeypatch):
+    app, client, tariffs = directions_api
+    tariffs.return_value = {
+        "metro": Tariff("metro", Decimal(120), Decimal(0), Decimal(0)),
+        "bus": Tariff("bus", Decimal(100), Decimal(0), Decimal(0)),
+    }
+    end = (43.25, 77.05)
+
+    def opt(mode, kind, ref, duration, via):
+        leg = _transit_leg(ORIGIN, via, ref, kind)
+        return TransitOption(mode, kind, duration, 0, [leg, _transit_leg(via, end, ref, kind)])
+
+    found = [
+        opt("bus", "bus", "12", 900, (43.26, 77.0)),
+        opt("metro", "metro", "M", 700, (43.25, 77.0)),
+        opt("bus", "bus", "12", 905, (43.261, 77.001)),  # same line again: a duplicate
+        opt("bus", "bus", "40", 1000, (43.27, 77.0)),
+        opt("bus", "trolleybus", "9", 1100, (43.28, 77.0)),  # beyond the cap of three
+    ]
+    mock = AsyncMock(return_value=found)
+    monkeypatch.setattr(service, "find_transit_options", mock)
+    far_walk = {"lat": 43.25, "lon": 77.05}
+    response = await client.post("/v1/directions", json={**PAYLOAD, "to": far_walk})
+    transit = [o for o in response.json() if o["group"] == "transit"]
+    assert [(o["mode"], o["variant"], o["duration_s"]) for o in transit] == [
+        ("metro", 0, 700),
+        ("bus", 1, 900),
+        ("bus", 2, 1000),
+    ]
+    assert [o["steps"][0]["route_ref"] for o in transit] == ["M", "12", "40"]
+    assert mock.await_args.kwargs["max_options"] >= 6
+    assert sum(o["recommended"] for o in response.json()) == 1
+
+
+async def test_planner_legs_ask_for_one_variant_per_mode(monkeypatch):
+    from app.planner.travel import DirectionsLegs
+
+    router = FakeRouter(alternates=2)
+    legs = DirectionsLegs(router, None, TARIFFS.copy())
+    options = await legs.options(
+        ORIGIN, (43.28, 77.0), datetime(2026, 11, 21, 12, tzinfo=timezone.utc)
+    )
+    assert sorted(o.mode for o in options) == ["car", "scooter", "taxi"]
+    assert {o.variant for o in options} == {0}
+    assert all(o.arrive_at for o in options)

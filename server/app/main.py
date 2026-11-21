@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.db import Database
 from app.devices.api import router as devices_router
 from app.errors import install_error_handlers
+from app.favorites.api import router as favorites_router
 from app.logging_setup import setup_logging
 from app.middleware import RequestIdMiddleware
 from app.places.api import router as places_router
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(chat_router)
     app.include_router(trips_router)
     app.include_router(devices_router)
+    app.include_router(favorites_router)
     install_admin(app)
     return app
 

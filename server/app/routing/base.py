@@ -60,6 +60,11 @@ class RoutingProvider(Protocol):
     async def route(self, from_point: Point, to_point: Point, mode: str) -> RouteResult:
         """Raises NoRoute / RoutingUnavailable."""
 
+    async def routes(
+        self, from_point: Point, to_point: Point, mode: str, alternates: int = 0
+    ) -> List[RouteResult]:
+        """The best route first, then up to `alternates` distinct alternatives (Ш-22a)."""
+
     async def matrix(
         self, sources: Sequence[Point], targets: Sequence[Point], mode: str
     ) -> MatrixResult:

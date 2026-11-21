@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 from psycopg import OperationalError
 from pydantic import ValidationError
 
@@ -20,7 +21,7 @@ log = logging.getLogger("app.routing")
 router = APIRouter(prefix="/v1")
 
 
-@router.post("/directions", response_model=List[DirectionOption], response_model_exclude_none=True)
+@router.post("/directions", response_model=List[DirectionOption])
 async def directions(payload: DirectionsRequest, request: Request):
     db = request.app.state.db
     destination = payload.to
@@ -58,7 +59,7 @@ async def directions(payload: DirectionsRequest, request: Request):
         data_unavailable = True
 
     try:
-        return await get_directions(
+        options = await get_directions(
             request.app.state.routing_provider,
             network,
             tariffs,
@@ -69,3 +70,9 @@ async def directions(payload: DirectionsRequest, request: Request):
         )
     except RoutingUnavailable:
         raise AppError(503, "routing_unavailable") from None
+    body = []
+    for option in options:
+        item = option.model_dump(mode="json", exclude_none=True)
+        item["congestion"] = None  # OPEN(SSOT §16.14): always present, always null for now
+        body.append(item)
+    return JSONResponse(body)

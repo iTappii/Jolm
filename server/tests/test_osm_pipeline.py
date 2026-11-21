@@ -243,3 +243,39 @@ def test_merge_moves_trip_change_proposals_to_the_survivor(sconn):
     rows = q(sconn, "SELECT place_id, target_place_id FROM trip_change_proposals ORDER BY kind")
     assert rows[0]["place_id"] == keep  # move_day
     assert rows[1]["place_id"] == other and rows[1]["target_place_id"] == keep  # replace
+
+
+def test_merge_moves_user_favorites_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: user_favorites (Ш-23b) has no cascade; a duplicate favourite is dropped."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop = place("Оставить"), place("Удалить")
+    only_drop, both, only_keep = (
+        q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"] for _ in range(3)
+    )
+    for user, pid in (
+        (only_drop, drop),
+        (both, drop),
+        (both, keep),
+        (only_keep, keep),
+    ):
+        sconn.execute("INSERT INTO user_favorites (user_id, place_id) VALUES (%s, %s)", (user, pid))
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    rows = q(sconn, "SELECT user_id, place_id FROM user_favorites")
+    assert {(r["user_id"], r["place_id"]) for r in rows} == {
+        (only_drop, keep),
+        (both, keep),
+        (only_keep, keep),
+    }
+    assert len(rows) == 3

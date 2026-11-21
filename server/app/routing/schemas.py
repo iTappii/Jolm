@@ -6,6 +6,12 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 from app.routing.base import Point
 
 Mode = Literal["walk", "scooter", "bus", "metro", "taxi", "car"]
+Group = Literal["walk", "transit", "taxi", "scooter", "car"]
+
+
+def group_of(mode: str) -> str:
+    """The client's tab for a mode: bus and metro are both "transit", the rest are their own."""
+    return "transit" if mode in ("bus", "metro") else mode
 
 
 class AlmatyPoint(BaseModel):
@@ -69,3 +75,15 @@ class DirectionOption(BaseModel):
     steps: Optional[List[DirectionStep]] = None
     approximate: bool
     recommended: bool = False
+    # Ш-22a: several path variants per transport group (the client shows them as alternatives).
+    group: Optional[Group] = None  # filled from `mode` when not given
+    variant: int = 0  # 0 = the optimal variant of its group, then 1, 2 (see service._rank)
+    arrive_at: Optional[str] = None  # ISO datetime with offset, Asia/Almaty
+    # OPEN(SSOT §16.14): no traffic/crowding source yet; the API always sends null.
+    congestion: Optional[float] = None
+
+    @model_validator(mode="after")
+    def _default_group(self):
+        if self.group is None:
+            self.group = group_of(self.mode)  # type: ignore[assignment]
+        return self

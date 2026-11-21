@@ -85,11 +85,19 @@ async def test_delete_cascades_personal_data_and_kills_tokens(client, conn, deli
         "VALUES (%s, 'k', 'user', %s)",
         (place["id"], user["id"]),
     )
+    other_user = (await client.get("/v1/me", headers=auth(other))).json()
+    for owner in (user["id"], other_user["id"]):  # Ш-23b: favourites are personal data
+        await conn.execute(
+            "INSERT INTO user_favorites(user_id, place_id) VALUES (%s, %s)", (owner, place["id"])
+        )
     await client.post("/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
 
     response = await client.delete("/v1/me", headers=auth(tokens))
     assert response.status_code == 204
     assert response.headers["cache-control"] == "no-store"
+    assert await fetch_all(conn, "SELECT user_id FROM user_favorites") == [
+        {"user_id": __import__("uuid").UUID(other_user["id"])}
+    ]
 
     assert await fetch_all(conn, "SELECT subject FROM auth_identities") == [
         {"subject": "stays@example.com"}
