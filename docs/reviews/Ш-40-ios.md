@@ -24,3 +24,13 @@
 ## Пробелы серверного API
 
 - Ответ `push_enabled` клиент не показывает и не использует. Нет способа «отвязать» устройство без запроса от этого же `install_id` (нужен для выхода с другого устройства) — не требовалось.
+
+## Перепроверка (2026-11-21, независимо от автора)
+
+- **Контракт.** `POST /v1/devices` есть в `server/app/devices/api.py`: тело `{install_id: uuid, apns_token: hex 32–200 | null, language: ru|en}` (`DeviceRegistration` шлёт ровно эти три ключа, `apns_token` всегда, `null` пока токена нет), ответ `{install_id, user_linked, push_enabled}`; `Authorization` необязателен — гость пишет строку без привязки к пользователю, поэтому повторный вызов на выходе из аккаунта корректно отвязывает устройство. Просроченный access-токен даёт 401, который `APIClient` лечит refresh-ом и повтором.
+- **Когда вызывается.** `RootView`: `.task(id: isSignedIn)` (запуск, вход, выход), смена языка, возврат в активное состояние при `needsRetry`; запросы идут цепочкой, порядок сохраняется. Системный вопрос про уведомления — один раз после первой поездки, не при запуске.
+- **DoD** («пуш приходит на устройство, ручная проверка») **не проверен и не может быть** без платного Apple Developer Program и ключа APNs (в плане шаг остаётся `[~]`); проверена только регистрация (юнит и заглушка).
+- Нашёл ли ошибки: **нет**.
+
+Команды и результат: `cd ios && xcodegen generate`, затем `xcodebuild -project ios/Jol.xcodeproj -scheme Jol -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath ios/build test -skip-testing:JolUITests/AppleSignInUITests`.
+**TEST SUCCEEDED**: JolTests 177 тестов, 0 ошибок; JolUITests 53 теста, 0 ошибок, 1 пропущен (`ChatUITests.testGuestReceivesAnAnswerFromTheLocalAPI` — нужен живой API, пропуск штатный). `cd ios && swiftlint` — 0 нарушений.

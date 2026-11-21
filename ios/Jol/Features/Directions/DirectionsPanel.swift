@@ -15,7 +15,7 @@ struct DirectionsPanel: View {
             originRow
             notice
             content
-            NavigatorButton(place: place, mode: selectedMode)
+            NavigatorButton(place: place, mode: { selectedMode })
                 .padding(.top, JolSpacing.xs)
         }
         .accessibilityElement(children: .contain)

@@ -30,3 +30,17 @@
 
 - В ответе `/offline` нет `photo_url` (пока `MEDIA_BASE_URL` пуст), нет мероприятий дат поездки и бюджетной разбивки; без них скачанная копия беднее онлайн-плана.
 - ETag не меняется при правке данных места (часы, адрес) без новой версии поездки — копия такие правки не подхватит (уже отмечено в ревью сервера).
+
+## Перепроверка (2026-11-21, независимо от автора)
+
+Что проверено по коду, а не по ревью:
+
+- **Контракт сервера.** `GET /v1/trips/{trip_id}/offline` есть в `server/app/trips/api.py` (строка ~117), ответ собирает `read.offline_json`: ключи верхнего уровня (`trip_id, version, locale, timezone, start_date, end_date, budget_kzt, total_cost_kzt, days, places`), дней (`date, items, legs`), остановок (`id, ord, kind, meal, place_id, starts_at, ends_at, visit_min, must_have, est_cost_kzt`), переходов (`id, from_item_id, to_item_id, depart_at, travel_s, estimated, mode, cost_kzt, distance_m, geometry`) и мест (`name, name_lang, names, category, category_name, lat, lon, address, hours, photo_url`) совпадают с `OfflineTrip`/`OfflineDay`/`OfflineItem`/`OfflineLeg`/`OfflinePlace` один в один, включая `CodingKeys`.
+- **ETag.** Сервер отдаёт `"v<версия>-<язык>"` и `304` по `If-None-Match`; язык берётся из `Accept-Language`, который `APIClient` шлёт всегда, поэтому смена языка приложения даёт другой ETag и свежую копию. `sendConditional` ставит заголовок и обходит локальный кэш URLSession.
+- **DoD «в авиарежиме открывается скачанный маршрут со всеми временами».** Ветка `TripMapModel.open` → `openSavedCopy` срабатывает только на `APIError.network` (любой `URLError`, кроме отмены, нормализуется в `.network`), собирает `TripOverview` из копии с `HH:mm–HH:mm`, линиями переходов и без правок (правки отключены в режиме копии). Выход из аккаунта стирает копии (`HomeScreen`).
+- Нашёл ли ошибки: **нет**. Расхождений с DoD и серверным API нет.
+
+Команды и результат: `cd ios && xcodegen generate`, затем `xcodebuild -project ios/Jol.xcodeproj -scheme Jol -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath ios/build test -skip-testing:JolUITests/AppleSignInUITests`.
+**TEST SUCCEEDED**: JolTests 177 тестов, 0 ошибок; JolUITests 53 теста, 0 ошибок, 1 пропущен (`ChatUITests.testGuestReceivesAnAnswerFromTheLocalAPI` — нужен живой API, пропуск штатный). `cd ios && swiftlint` — 0 нарушений.
+
+Замечания (не ошибки): настоящий авиарежим на устройстве по-прежнему не проверен (в UI-тесте сбой имитирует заглушка); стирание копий на выходе срабатывает и при каждом запуске гостя (безвредно, файлов нет).

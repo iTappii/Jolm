@@ -24,3 +24,13 @@
 
 - В истории нет названия места или текста отправки, только тип (`submission_type`) и дата: «Меню» без указания, какое заведение.
 - Нет статуса «на проверке» для отправок пользователя, поэтому нельзя показать «бонус придёт после модерации».
+
+## Перепроверка (2026-11-21, независимо от автора)
+
+- **Контракт.** `GET /v1/me/bonuses?limit&cursor` есть в `server/app/submissions/api.py` (`limit` 1…100, `cursor` ≤ 200 символов, `Cache-Control: no-store`, 401 без токена); `bonuses.summary` отдаёт `balance, tenge_per_bonus, items[id, amount, kind, submission_id, submission_type, created_at], next_cursor`. `BonusPage`/`BonusEntry` читают ровно эти ключи (лишние — `kind`, `submission_id` — не нужны и игнорируются); `created_at` приходит ISO-строкой с зоной и разбирается `DirectionOption.parseDate`.
+- **Курсор.** Клиент шлёт `limit=20` и `cursor` из `next_cursor` как есть, не конструирует его; повторы по `id` отбрасываются, `next_cursor = null` — конец. Гость в меню строки «Бонусы» не видит, запросов не шлёт (`guard auth.isSignedIn`).
+- **DoD** («баланс и история в профиле») выполнен; траты бонусов не делаются сознательно (SSOT §16.8).
+- Нашёл ли ошибки: **нет**.
+
+Команды и результат: `cd ios && xcodegen generate`, затем `xcodebuild -project ios/Jol.xcodeproj -scheme Jol -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath ios/build test -skip-testing:JolUITests/AppleSignInUITests`.
+**TEST SUCCEEDED**: JolTests 177 тестов, 0 ошибок; JolUITests 53 теста, 0 ошибок, 1 пропущен (`ChatUITests.testGuestReceivesAnAnswerFromTheLocalAPI` — нужен живой API, пропуск штатный). `cd ios && swiftlint` — 0 нарушений.

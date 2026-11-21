@@ -33,3 +33,13 @@
 ## Пробелы серверного API
 
 - Нет способа узнать, какие события сервер отверг (`rejected` — только число): неизвестное имя от более новой версии приложения исчезнет молча.
+
+## Перепроверка (2026-11-21, независимо от автора)
+
+- **Контракт.** `POST /v1/analytics/events` есть в `server/app/analytics/api.py`: `X-Install-ID` обязателен (UUID), bearer необязателен и при протухании игнорируется; тело `{sent_at, events[1..50]: {id: uuid, name, ts, place_id?, props}}`, `extra="forbid"` на событии — `AnalyticsBatch.encode` пишет только `id, name, ts, place_id, props`, даты с зоной (`Z`). Клиентские имена `app_install, app_launch, directions_start` и свойства (`app_version, locale`; `mode` из `walk|scooter|bus|metro|taxi|car`) совпадают с `CLIENT_EVENTS`/`PROPS` в `events.py`. Лимит 429 с `Retry-After` обрабатывается, прочие 4xx выбрасывают пачку, 5xx/сеть — откат.
+- **Очередь.** Идентификатор события создаётся один раз, повтор пачки сервер сведёт в `duplicates`; события старше 7 дней сервер отверг бы — клиент их выбрасывает сам.
+- **Незафиксированная правка в рабочем дереве** (`NavigatorButton.mode` стал замыканием, `DirectionsPanel` передаёт `{ selectedMode }`): она корректна — режим читается в момент нажатия, панель не подписывается на состояние карусели ради одной кнопки; собирается, тесты зелёные. Закоммичена отдельным коммитом.
+- Нашёл ли ошибки: **нет**. Замечание к Ш-23c (исправлено там): для нажатия «Открыть в навигаторе» на адресной точке `place_id` в событие не кладётся — у адреса его нет.
+
+Команды и результат: `cd ios && xcodegen generate`, затем `xcodebuild -project ios/Jol.xcodeproj -scheme Jol -destination 'platform=iOS Simulator,name=iPhone 18 Pro' -derivedDataPath ios/build test -skip-testing:JolUITests/AppleSignInUITests`.
+**TEST SUCCEEDED**: JolTests 177 тестов, 0 ошибок; JolUITests 53 теста, 0 ошибок, 1 пропущен (`ChatUITests.testGuestReceivesAnAnswerFromTheLocalAPI` — нужен живой API, пропуск штатный). `cd ios && swiftlint` — 0 нарушений.

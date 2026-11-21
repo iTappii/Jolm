@@ -3,8 +3,9 @@ import SwiftUI
 /// "Open in navigator": Apple Maps always, 2GIS when installed (a menu if there are two). Links only (SSOT §13).
 struct NavigatorButton: View {
     let place: PlaceSummary
-    /// The way the person chose in the directions carousel, when there is one (analytics, Ш-50).
-    var mode: TransportMode?
+    /// The way the person chose in the directions carousel, when there is one (analytics, Ш-50). A closure read at
+    /// the tap: the surrounding panel must not observe the carousel's state just for this.
+    var mode: () -> TransportMode? = { nil }
     @Environment(\.openURL) private var openURL
     @Environment(AppContainer.self) private var container
     @State private var navigators: [Navigator.App] = [.appleMaps]
@@ -33,7 +34,7 @@ struct NavigatorButton: View {
     }
 
     private func open(_ app: Navigator.App) {
-        container.analytics.trackDirectionsStart(placeID: place.id, mode: mode)
+        container.analytics.trackDirectionsStart(placeID: place.id, mode: mode())
         if let url = Navigator.url(for: app, name: place.name, coordinate: place.coordinate) { openURL(url) }
     }
 }
