@@ -52,7 +52,7 @@ final class HomeScreenUITests: XCTestCase {
         XCTAssertTrue(element(app, "sidebar-panel").waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Recent chats"].exists)
         XCTAssertTrue(app.buttons["sidebar-new-chat"].exists)
-        XCTAssertTrue(element(app, "sidebar-empty").exists)
+        XCTAssertTrue(element(app, "sidebar-guest-hint").exists, "a guest chat has no history")
 
         element(app, "sidebar-scrim").coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         XCTAssertTrue(waitForDisappearance(element(app, "sidebar-panel")))
@@ -85,8 +85,10 @@ final class HomeScreenUITests: XCTestCase {
             app.buttons[row].tap()
             XCTAssertTrue(element(app, screen).waitForExistence(timeout: 5), "\(row) opens")
             if screen == "about-screen" {
-                XCTAssertTrue(app.staticTexts["© OpenStreetMap contributors"].exists)
                 XCTAssertTrue(element(app, "about-version").exists)
+                for identifier in ["about-osm", "about-open-meteo", "about-privacy"] {
+                    XCTAssertTrue(element(app, identifier).exists, "\(identifier) is on the About screen")
+                }
             }
             app.navigationBars.buttons.firstMatch.tap()
         }

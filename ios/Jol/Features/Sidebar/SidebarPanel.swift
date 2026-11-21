@@ -117,6 +117,12 @@ struct SidebarPanel: View {
                 }
             }
             .accessibilityIdentifier("sidebar-chats")
+        case nil:
+            // A guest chat has no memory and no history (SSOT §3.1): say so instead of "no chats yet".
+            Text("Sign in to keep your chats and trips.")
+                .font(JolFont.callout)
+                .foregroundStyle(JolColor.textSecondary)
+                .accessibilityIdentifier("sidebar-guest-hint")
         default:
             Text("No chats yet")
                 .font(JolFont.callout)

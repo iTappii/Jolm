@@ -2826,6 +2826,36 @@
           }
         }
       }
+    },
+    "Sign in to keep your chats and trips." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите, чтобы сохранять чаты и поездки."
+          }
+        }
+      }
+    },
+    "Weather" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Погода"
+          }
+        }
+      }
+    },
+    "Privacy policy" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Политика конфиденциальности"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
