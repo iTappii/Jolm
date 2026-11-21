@@ -13,6 +13,7 @@ struct JolApp: App {
 
     private static func makeContainer() -> AppContainer {
         #if DEBUG
+        if UITestExtraStub.resetsOffline { OfflineTripStore().removeAll() }
         if ProcessInfo.processInfo.arguments.contains("-JolLiveGuest") {
             return AppContainer(tokens: EphemeralTokenStore(nil))
         }

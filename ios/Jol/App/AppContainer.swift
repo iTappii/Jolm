@@ -20,13 +20,15 @@ final class AppContainer {
     @ObservationIgnored let events: EventsModel
     @ObservationIgnored let crowd: CrowdModel
     @ObservationIgnored let bookings: BookingModel
+    @ObservationIgnored let offline: OfflineTripsModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
         defaults: UserDefaults = .standard,
         baseURL: Result<URL, APIError> = AppConfig.apiBaseURL,
         session: URLSession = .shared,
-        locator: (any LocationProviding)? = nil
+        locator: (any LocationProviding)? = nil,
+        offlineStore: OfflineTripStore = OfflineTripStore()
     ) {
         let auth = AuthState(tokens: tokens)
         let installID = InstallID.current(defaults: defaults)
@@ -51,7 +53,8 @@ final class AppContainer {
         self.chat = ChatModel(api: self.api, language: { languageSettings.code })
         let locator = locator ?? CoreLocationProvider()
         self.directions = DirectionsModel(api: self.api, locator: locator)
-        self.tripMap = TripMapModel(api: self.api)
+        self.offline = OfflineTripsModel(api: self.api, store: offlineStore)
+        self.tripMap = TripMapModel(api: self.api, offline: self.offline)
         self.events = EventsModel(api: self.api)
         self.crowd = CrowdModel(api: self.api, locator: locator)
         self.bookings = BookingModel(api: self.api)

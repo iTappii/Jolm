@@ -56,16 +56,18 @@ struct TripDayListView: View {
             .foregroundStyle(JolColor.textPrimary)
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("trip-stop-\(number)")
-            Button { model.remove(item) } label: {
-                Image(systemName: "minus.circle")
-                    .font(.title3)
-                    .foregroundStyle(JolColor.textTertiary)
-                    .frame(width: 36, height: 36)
+            if !model.isSavedCopy {
+                Button { model.remove(item) } label: {
+                    Image(systemName: "minus.circle")
+                        .font(.title3)
+                        .foregroundStyle(JolColor.textTertiary)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isWorking)
+                .accessibilityLabel(Text("Remove from the route"))
+                .accessibilityIdentifier("trip-stop-remove-\(number)")
             }
-            .buttonStyle(.plain)
-            .disabled(model.isWorking)
-            .accessibilityLabel(Text("Remove from the route"))
-            .accessibilityIdentifier("trip-stop-remove-\(number)")
         }
         .padding(.vertical, JolSpacing.xs)
     }
@@ -104,7 +106,9 @@ struct TripDayListView: View {
                         .accessibilityLabel(Text("Arrives late"))
                 }
                 Spacer()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(JolColor.textTertiary)
+                if !model.isSavedCopy {
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(JolColor.textTertiary)
+                }
             }
             .font(JolFont.caption)
             .foregroundStyle(JolColor.textSecondary)

@@ -66,14 +66,20 @@ final class TripMapModel {
     private(set) var lateBy: [UUID: Int] = [:]
     /// Saved trips for the side panel.
     private(set) var summaries: ChatModel.Load<[TripSummary]> = .idle
+    /// The plan on screen comes from the copy saved on the device (no connection): read-only (Ш-42).
+    private(set) var isSavedCopy = false
+    /// Cards of the places of the saved copy (address, hours), by place id.
+    private(set) var savedPlaces: [UUID: OfflinePlace] = [:]
 
     @ObservationIgnored private let service: TripService
     @ObservationIgnored private let eventsService: EventsService
+    @ObservationIgnored private let offline: OfflineTripsModel?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var listTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
 
-    init(api: APIClient) {
+    init(api: APIClient, offline: OfflineTripsModel? = nil) {
+        self.offline = offline
         self.service = TripService(api: api)
         self.eventsService = EventsService(api: api)
     }
@@ -90,6 +96,8 @@ final class TripMapModel {
         isOpen = true
         if trip?.id != tripID {
             trip = nil
+            isSavedCopy = false
+            savedPlaces = [:]
             events = []
             lateBy = [:]
             dayIndex = 0
@@ -130,14 +138,32 @@ final class TripMapModel {
                 guard generation == self.generation, !Task.isCancelled else { return }
                 apply(loaded, initial: initial)
                 await loadEvents(for: loaded, generation: generation)
+                await offline?.syncIfSaved(tripID: tripID)
             } catch {
                 guard generation == self.generation, !Task.isCancelled else { return }
+                if openSavedCopy(tripID, after: error, initial: initial) { return }
                 if trip == nil { phase = .failed } else { problem = Self.problem(for: error) }
             }
         }
     }
 
+    /// No connection: the copy downloaded earlier (SSOT §7.4) opens in its place, read-only.
+    private func openSavedCopy(_ tripID: UUID, after error: Error, initial: Bool) -> Bool {
+        guard case APIError.network = error, trip == nil || initial,
+              let saved = offline?.saved(tripID), let overview = saved.trip.overview() else { return false }
+        apply(overview, initial: initial)
+        isSavedCopy = true
+        savedPlaces = Dictionary(uniqueKeysWithValues: saved.trip.places.compactMap { key, place in
+            UUID(uuidString: key).map { ($0, place) }
+        })
+        events = []
+        problem = nil
+        return true
+    }
+
     private func apply(_ loaded: TripOverview, initial: Bool) {
+        isSavedCopy = false
+        savedPlaces = [:]
         trip = loaded
         phase = .loaded
         if initial || !days.indices.contains(dayIndex) {
@@ -201,7 +227,7 @@ final class TripMapModel {
     }
 
     func selectLeg(_ id: UUID) {
-        guard leg(id: id) != nil else { return }
+        guard leg(id: id) != nil, !isSavedCopy else { return }
         selectedLegID = id
     }
 
@@ -217,7 +243,7 @@ extension TripMapModel {
 
     /// Chooses how to travel a leg; the answer says how late the next stop gets (`late_by_s`).
     func chooseMode(leg: TripLeg, mode: TransportMode) {
-        guard let tripID, !isWorking, leg.chosenMode != mode else { return }
+        guard let tripID, !isWorking, !isSavedCopy, leg.chosenMode != mode else { return }
         run { [self] in
             let change = try await service.setMode(tripID: tripID, legID: leg.id, mode: mode)
             replace(leg: change.leg)
@@ -242,7 +268,7 @@ extension TripMapModel {
 
     /// Makes one of the two variants (or the plan as it is, `keep`) the plan.
     func choose(budget choice: String) {
-        guard let tripID, !isWorking else { return }
+        guard let tripID, !isWorking, !isSavedCopy else { return }
         run { [self] in
             _ = try await service.chooseBudget(tripID: tripID, choice: choice)
             lateBy = [:]
@@ -254,7 +280,7 @@ extension TripMapModel {
 
     /// Removes a stop. A must-have is not removed without `force`: the server answers 409 and the person confirms.
     func remove(_ item: TripDayItem, force: Bool = false) {
-        guard let tripID, !isWorking else { return }
+        guard let tripID, !isWorking, !isSavedCopy else { return }
         pendingRemoval = nil
         run { [self] in
             do {
@@ -307,6 +333,7 @@ extension TripMapModel {
         guard trip?.id == loaded.id, isOpen else { return }
         apply(loaded, initial: false)
         events = (try? await eventsService.events(from: loaded.startDate, to: loaded.endDate)) ?? events
+        await offline?.syncIfSaved(tripID: tripID)
     }
 
     nonisolated static func problem(for error: Error) -> Problem {
@@ -333,7 +360,12 @@ extension TripMapModel {
                 summaries = .loaded(items)
             } catch {
                 guard !Task.isCancelled else { return }
-                summaries = .failed
+                // No connection: the trips downloaded to the device are still there.
+                if case APIError.network = error, let saved = offline?.summaries(), !saved.isEmpty {
+                    summaries = .loaded(saved)
+                } else {
+                    summaries = .failed
+                }
             }
         }
     }

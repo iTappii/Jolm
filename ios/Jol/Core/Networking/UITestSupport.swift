@@ -180,6 +180,18 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         let path = request.url?.path ?? ""
+        if UITestExtraStub.isOffline {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+            return
+        }
+        if let extra = UITestExtraStub.answer(
+            method: request.httpMethod ?? "GET", path: path,
+            ifNoneMatch: request.value(forHTTPHeaderField: "If-None-Match"),
+            signedIn: request.value(forHTTPHeaderField: "Authorization") != nil
+        ) {
+            finish(with: extra)
+            return
+        }
         if ChatStub.handles(path) { startChat(path: path) } else { startPlain(path: path) }
     }
 

@@ -47,6 +47,33 @@ final class APIClient: Sendable {
         _ = try await sendRaw(endpoint)
     }
 
+    /// Conditional GET (`ETag` / `If-None-Match`): `304` -> `.notModified`, `2xx` -> the decoded body and its `ETag`.
+    func sendConditional<T: Decodable & Sendable>(
+        _ endpoint: Endpoint, etag: String?, as type: T.Type = T.self
+    ) async throws -> ConditionalResult<T> {
+        var endpoint = endpoint
+        if let etag, !etag.isEmpty { endpoint.headers["If-None-Match"] = etag }
+        do {
+            let (data, http) = try await withAuth(endpoint, accept: "application/json") { request in
+                let (data, response) = try await self.session.data(for: request)
+                guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+                guard (200..<300).contains(http.statusCode) || http.statusCode == 304 else {
+                    throw APIErrorBody.decode(response: http, data: data)
+                }
+                return (data, http)
+            }
+            if http.statusCode == 304 { return .notModified }
+            do {
+                let value = try JSONDecoder().decode(T.self, from: data)
+                return .fresh(value, etag: http.value(forHTTPHeaderField: "ETag"))
+            } catch {
+                throw APIError.invalidResponse
+            }
+        } catch {
+            throw Self.normalize(error)
+        }
+    }
+
     /// Opens a `text/event-stream` endpoint. The request (including the 401 → refresh → retry)
     /// is made when iteration starts; cancelling the iteration cancels the request.
     func stream(_ endpoint: Endpoint) -> AsyncThrowingStream<SSEEvent, Error> {
@@ -151,6 +178,8 @@ final class APIClient: Sendable {
         request.setValue(installID, forHTTPHeaderField: "X-Install-ID")
         for (name, value) in endpoint.headers { request.setValue(value, forHTTPHeaderField: name) }
         if let bearer { request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
+        // A conditional request must reach the server: the local URL cache would answer it with its own copy.
+        if endpoint.headers["If-None-Match"] != nil { request.cachePolicy = .reloadIgnoringLocalCacheData }
         if let body = endpoint.body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = body
@@ -163,6 +192,12 @@ final class APIClient: Sendable {
         if let urlError = error as? URLError, urlError.code != .cancelled { return APIError.network(urlError) }
         return error
     }
+}
+
+/// Answer of `APIClient.sendConditional`.
+enum ConditionalResult<Value: Sendable>: Sendable {
+    case notModified
+    case fresh(Value, etag: String?)
 }
 
 private struct RefreshBody: Encodable {
