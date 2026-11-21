@@ -53,7 +53,7 @@ async def chat_messages(conn, chat_id: UUID) -> List[dict]:
     return await fetch_all(
         conn,
         """
-        SELECT id, role, content, finish, created_at FROM chat_messages
+        SELECT id, role, content, finish, created_at, proposal_id FROM chat_messages
         WHERE chat_id = %s AND content <> '' ORDER BY id
         """,
         (chat_id,),

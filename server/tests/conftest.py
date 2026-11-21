@@ -41,6 +41,9 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "push_notifications",  # Ш-40: the push outbox, trip day notices and proposals hang off users
+    "trip_day_notices",
+    "trip_change_proposals",
     "user_place_signals",  # memory signals of trip edits (Ш-38) hang off users
     "trip_lodging_options",  # trips hang off users and chats (Ш-36)
     "trip_legs",

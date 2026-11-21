@@ -34,12 +34,16 @@ from app.chat import edit_tools, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
 from app.db import fetch_one
+from app.live import clock
 from app.planner.build import (
     budget_json,
     build_plan,
     must_have_unmet_json,
+    trip_dates,
     warnings_json,
 )
+from app.planner.weather import UnknownForecast
+from app.providers.weather import city_forecast
 from app.routing import FakeRouter
 from app.trips import store as trips_store
 
@@ -89,7 +93,9 @@ def _model_budget(public: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-async def build_trip(db, chat_id: UUID, locale: str, router: Any) -> ToolOutcome:
+async def build_trip(
+    db, chat_id: UUID, locale: str, router: Any, weather: Any = None
+) -> ToolOutcome:
     async with db.transaction() as conn:
         brief = await store.get_brief(conn, chat_id)
         owner = await fetch_one(conn, "SELECT user_id FROM chats WHERE id = %s", (chat_id,))
@@ -98,10 +104,14 @@ async def build_trip(db, chat_id: UUID, locale: str, router: Any) -> ToolOutcome
         error = "the brief is incomplete; still missing: %s" % ", ".join(missing)
         return ToolOutcome({"ok": False, "error": error, "missing": missing}, ok=False, error=error)
 
-    plan = await build_plan(db, brief, router or FakeRouter())
+    forecast = None
+    if weather is not None:  # Ш-40: the real forecast shapes the plan; failure = plan without it
+        forecast = await city_forecast(weather, trip_dates(brief))
+    plan = await build_plan(db, brief, router or FakeRouter(), forecast)
+    checked = None if forecast is None or isinstance(forecast, UnknownForecast) else clock.now()
     async with db.transaction() as conn:
         trip_id, version, _created = await trips_store.save_plan(
-            conn, owner["user_id"], chat_id, plan, locale
+            conn, owner["user_id"], chat_id, plan, locale, weather_checked_at=checked
         )
         trip = await trips_store.get_trip_row(conn, owner["user_id"], trip_id)
         days = await edit_tools.plan_days(conn, trip, locale)  # with the item ids (Ш-38)

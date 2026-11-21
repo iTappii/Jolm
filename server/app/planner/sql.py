@@ -98,3 +98,27 @@ LEFT JOIN place_categories pc ON pc.id = c.parent_id
 WHERE p.id = ANY(%(ids)s::uuid[])
 """
 )
+
+# Indoor activity places near a point (Ш-40 weather replacements). params: lat, lon, radius_m,
+# taken (uuid[], places already in the trip), limit. Active, not accommodation, not food, not
+# outdoor, not a mountain; `setting = 'indoor'` first, then the nearest, then the most popular.
+INDOOR_NEAR = (
+    "SELECT"
+    + _COLS
+    + _FROM_WHERE.replace(
+        "AND p.geom && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s, 4326)::geography",
+        "AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography,"
+        " %(radius_m)s)",
+    )
+    + """
+  AND coalesce(c.outdoor, false) = false
+  AND coalesce(p.setting, '') <> 'outdoor'
+  AND NOT p.is_mountain
+  AND coalesce(c.slug, '') <> 'food' AND coalesce(pc.slug, '') <> 'food'
+  AND p.id <> ALL(%(taken)s::uuid[])
+ORDER BY (p.setting = 'indoor') DESC NULLS LAST,
+         ST_Distance(p.geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography),
+         p.popularity DESC, p.id
+LIMIT %(limit)s
+"""
+)

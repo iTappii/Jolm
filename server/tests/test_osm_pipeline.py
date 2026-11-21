@@ -203,3 +203,43 @@ def test_merge_moves_user_place_signals_to_the_survivor(sconn):
     assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
     rows = q(sconn, "SELECT place_id FROM user_place_signals")
     assert len(rows) == 3 and {r["place_id"] for r in rows} == {keep}  # none lost
+
+
+def test_merge_moves_trip_change_proposals_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: trip_change_proposals (Ш-40) has two place columns, no cascade."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop, other = place("Оставить"), place("Удалить"), place("Другое")
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    trip = q(
+        sconn,
+        "INSERT INTO trips (user_id, brief, start_date, end_date) "
+        "VALUES (%s, '{}', '2026-12-01', '2026-12-03') RETURNING id",
+        (user,),
+    )[0]["id"]
+    sconn.execute(  # the dropped place is the stop...
+        "INSERT INTO trip_change_proposals (user_id, trip_id, reason, kind, trip_version, day, "
+        "to_day, place_id) "
+        "VALUES (%s, %s, 'weather', 'move_day', 1, '2026-12-01', '2026-12-02', %s)",
+        (user, trip, drop),
+    )
+    sconn.execute(  # ...and, in another proposal, the replacement
+        "INSERT INTO trip_change_proposals (user_id, trip_id, reason, kind, status, trip_version, "
+        "day, place_id, target_place_id) "
+        "VALUES (%s, %s, 'weather', 'replace', 'declined', 1, '2026-12-02', %s, %s)",
+        (user, trip, other, drop),
+    )
+
+    merge_place(sconn, keep, drop)
+
+    rows = q(sconn, "SELECT place_id, target_place_id FROM trip_change_proposals ORDER BY kind")
+    assert rows[0]["place_id"] == keep  # move_day
+    assert rows[1]["place_id"] == other and rows[1]["target_place_id"] == keep  # replace

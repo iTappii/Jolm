@@ -52,6 +52,18 @@ MESSAGES = {
         "en": "No suitable replacement fits that day",
         "ru": "Подходящей замены на этот день не нашлось",
     },
+    "proposal_decided": {
+        "en": "This proposal has already been answered",
+        "ru": "На это предложение уже ответили",
+    },
+    "proposal_stale": {
+        "en": "The plan changed since this proposal was made",
+        "ru": "План изменился после этого предложения",
+    },
+    "proposal_not_applicable": {
+        "en": "The change no longer fits the plan",
+        "ru": "Это изменение больше не вписывается в план",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

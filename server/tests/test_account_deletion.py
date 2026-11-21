@@ -292,8 +292,11 @@ async def test_apple_delete_enqueues_revoke_and_allows_reregistration(
 
     assert await worker.process_batch(TransactionalDatabase(conn)) >= 1
     assert grants.revoked == ["apple-refresh-1"]
-    done = await fetch_one(conn, "SELECT done_at, error FROM jobs WHERE kind = 'apple.revoke'")
+    done = await fetch_one(
+        conn, "SELECT done_at, error, payload FROM jobs WHERE kind = 'apple.revoke'"
+    )
     assert done["done_at"] is not None and done["error"] is None
+    assert done["payload"] == {}  # the encrypted Apple token is wiped when the job ends
 
     again = await apple_login(client, rsa_key)
     assert again.status_code == 200

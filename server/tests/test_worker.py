@@ -113,3 +113,117 @@ async def test_schedule_enqueues_once_per_slot_even_when_called_twice(db):
         rows = await fetch_all(c, "SELECT dedupe_key FROM jobs ORDER BY run_at")
     assert (a, b, nxt) == (1, 0, 1)
     assert len(rows) == 2
+
+
+# --- leasing (review Ш-01-03-06 №2-4) ------------------------------------------------------
+async def one(db):
+    async with db.transaction() as c:
+        return await fetch_one(c, "SELECT * FROM jobs")
+
+
+async def test_claim_counts_the_attempt_and_holds_a_lease(db):
+    seen = []
+
+    @worker.register("test.lease")
+    async def handle(conn, payload):
+        seen.append(1)
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.lease", {"secret": "x"})
+        await execute(c, "UPDATE jobs SET locked_at = now()")  # a worker holds it right now
+    assert await worker.process_batch(db) == 0 and seen == []  # leased: not taken
+    async with db.transaction() as c:
+        await execute(c, "UPDATE jobs SET locked_at = now() - interval '10 minutes'")
+    assert await worker.process_batch(db) == 1 and seen == [1]  # lease expired: taken again
+    job = await one(db)
+    assert job["attempts"] == 1 and job["done_at"] is not None and job["locked_at"] is None
+
+
+async def test_a_job_that_kills_its_worker_ends_dead_instead_of_looping(db):
+    ran = []
+
+    @worker.register("test.crash")
+    async def handle(conn, payload):
+        ran.append(1)
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.crash", {"token": "secret"})
+        # the worker was killed during its 5th attempt, five minutes ago
+        await execute(c, "UPDATE jobs SET attempts = 5, locked_at = now() - interval '10 minutes'")
+    assert await worker.process_batch(db, max_attempts=5) == 0 and ran == []
+    job = await one(db)
+    assert job["done_at"] is not None and "lease expired" in job["error"]
+    assert job["payload"] == {}
+
+
+async def test_payload_is_wiped_when_a_job_ends_but_kept_for_a_retry(db):
+    @worker.register("test.secret")
+    async def handle(conn, payload):
+        if payload.get("fail"):
+            raise RuntimeError("no")
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.secret", {"token": "s3cret", "fail": True})
+    assert await worker.process_batch(db, max_attempts=2) == 1
+    job = await one(db)
+    assert job["payload"]["token"] == "s3cret" and job["done_at"] is None  # retry needs it
+    async with db.transaction() as c:
+        await execute(c, "UPDATE jobs SET run_at = now()")
+    assert await worker.process_batch(db, max_attempts=2) == 1
+    job = await one(db)
+    assert job["done_at"] is not None and job["payload"] == {}  # dead: wiped
+
+    async with db.transaction() as c:
+        await execute(c, "TRUNCATE jobs")
+        await worker.enqueue(c, "test.secret", {"token": "s3cret"})
+    await worker.process_batch(db)
+    job = await one(db)
+    assert job["done_at"] is not None and job["error"] is None and job["payload"] == {}
+
+
+async def test_a_db_handler_loses_its_writes_when_the_lease_was_taken_over(db):
+    @worker.register("test.slow")
+    async def handle(conn, payload):
+        await worker.enqueue(conn, "test.side_effect")
+        async with db.transaction() as other:  # another worker's claim after the lease expired
+            await execute(
+                other, "UPDATE jobs SET locked_at = clock_timestamp() WHERE kind = 'test.slow'"
+            )
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.slow")
+    assert await worker.process_batch(db) == 1
+    async with db.transaction() as c:
+        kinds = [r["kind"] for r in await fetch_all(c, "SELECT kind FROM jobs")]
+        slow = await fetch_one(c, "SELECT done_at FROM jobs WHERE kind = 'test.slow'")
+    assert kinds == ["test.slow"]  # the side effect was rolled back
+    assert slow["done_at"] is None  # not marked done by a worker that no longer owns it
+
+
+async def test_an_external_handler_runs_without_a_transaction_held_on_its_job(db):
+    @worker.register("test.external", external=True)
+    async def handle(database, payload):
+        async def touch():
+            async with database.transaction() as c:  # would block if the worker held the row
+                await execute(c, "UPDATE jobs SET error = 'seen' WHERE kind = 'test.external'")
+
+        await asyncio.wait_for(touch(), timeout=5)
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.external", {"token": "t"})
+    assert await worker.process_batch(db) == 1
+    job = await one(db)
+    assert job["done_at"] is not None and job["error"] is None and job["payload"] == {}
+
+
+async def test_an_external_handler_failure_is_retried_with_its_payload(db):
+    @worker.register("test.external_fail", external=True)
+    async def handle(database, payload):
+        raise RuntimeError("push gateway down")
+
+    async with db.transaction() as c:
+        await worker.enqueue(c, "test.external_fail", {"n": 1})
+    assert await worker.process_batch(db) == 1
+    job = await one(db)
+    assert job["attempts"] == 1 and job["done_at"] is None and job["payload"] == {"n": 1}
+    assert "gateway" in job["error"]

@@ -89,22 +89,32 @@ async def write_layout(conn, trip_id: UUID, variant: str, layout: TripLayout) ->
 
 
 async def save_plan(
-    conn, user_id: UUID, chat_id: UUID, plan: BuiltPlan, locale: str
+    conn,
+    user_id: UUID,
+    chat_id: UUID,
+    plan: BuiltPlan,
+    locale: str,
+    weather_checked_at: Optional[Any] = None,
 ) -> Tuple[UUID, int, bool]:
-    """Write the plan; returns (trip_id, version, created). Replaces an earlier plan of the chat."""
+    """Write the plan; returns (trip_id, version, created). Replaces an earlier plan of the chat.
+
+    `weather_checked_at`: when the plan was built with a real forecast (Ш-40), that moment; None
+    (no forecast) leaves the trip due for the re-check job at once.
+    """
     brief = plan.brief
     row = await fetch_one(
         conn,
         """
         INSERT INTO trips (user_id, chat_id, brief, start_date, end_date, budget_kzt,
-                           must_have_unmet, warnings, budget, total_cost_kzt)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                           must_have_unmet, warnings, budget, total_cost_kzt, weather_checked_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (chat_id) DO UPDATE SET
             version = trips.version + 1, brief = EXCLUDED.brief,
             start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
             budget_kzt = EXCLUDED.budget_kzt, must_have_unmet = EXCLUDED.must_have_unmet,
             warnings = EXCLUDED.warnings, budget = EXCLUDED.budget,
             total_cost_kzt = EXCLUDED.total_cost_kzt, budget_choice = NULL,
+            weather_checked_at = EXCLUDED.weather_checked_at,
             status = 'active', updated_at = now()
         RETURNING id, version, (xmax = 0) AS created
         """,
@@ -112,7 +122,7 @@ async def save_plan(
             user_id, chat_id, Jsonb(brief_json(dict(brief))), brief["start_date"],
             brief["end_date"], plan.budget_kzt, Jsonb(must_have_unmet_json(plan, locale)),
             Jsonb(warnings_json(plan)), Jsonb(budget_json(plan, locale, with_places=False)),
-            plan.costs.total,
+            plan.costs.total, weather_checked_at,
         ),
     )  # fmt: skip
     trip_id = row["id"]

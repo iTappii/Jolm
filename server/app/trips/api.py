@@ -5,6 +5,9 @@
     POST /trips/{id}/legs/{leg_id}/mode  {"mode"}    -> chosen transport of a leg     (Ш-37)
     POST /trips/{id}/items/{item_id}/remove {"force"?}  -> edit result                (Ш-38)
     POST /trips/{id}/items/{item_id}/replace {...}      -> edit result                (Ш-38)
+    GET  /trips/{id}/proposals                       -> {"items": [proposal]}         (Ш-40)
+    POST /proposals/{id}/accept                      -> edit result + "proposal"      (Ш-40)
+    POST /proposals/{id}/decline                     -> {"id", "status": "declined"}  (Ш-40)
     POST /trips/{id}/budget-choice   {"choice": "drop_places" | "cheaper" | "keep"}   (Ш-35)
         -> {"trip_id", "version", "budget": {...}}
 
@@ -20,7 +23,7 @@ plan fits the budget or a choice was already made; 404 for a missing or foreign 
 `budget` is the stored block (no place ids): `status`, `total_kzt`, `breakdown`, `choice`, ...
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Literal, Optional
 from uuid import UUID
 
@@ -31,6 +34,9 @@ from app.auth import sessions
 from app.auth.api import bearer_token
 from app.errors import AppError
 from app.i18n import pick_locale
+from app.live import clock
+from app.live import proposals as live_proposals
+from app.providers.weather import city_forecast
 from app.routing import FakeRouter
 from app.trips import edit, read, store
 
@@ -144,3 +150,46 @@ async def budget_choice(trip_id: UUID, payload: BudgetChoice, request: Request):
         new_budget = await store.apply_budget_choice(conn, trip, payload.choice)
         version = trip["version"] + 1
     return {"trip_id": str(trip_id), "version": version, "budget": new_budget}
+
+
+@router.get("/trips/{trip_id}/proposals")
+async def trip_proposals(trip_id: UUID, request: Request):
+    """Change proposals of the weather re-check (Ш-40), newest first. A pending proposal made
+    for an older plan version is shown as `expired`. Docs: docs/reviews/Ш-40.md."""
+    access = bearer_token(request)
+    locale = _locale(request)
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        trip = await store.get_trip_row(conn, user["id"], trip_id)
+        if trip is None:
+            raise AppError(404, "not_found")
+        return await live_proposals.list_json(conn, trip, locale)
+
+
+@router.post("/proposals/{proposal_id}/accept")
+async def accept_proposal(proposal_id: UUID, request: Request):
+    """Apply a proposal (409 `proposal_decided`, `proposal_stale`, `proposal_not_applicable`)."""
+    access = bearer_token(request)
+    locale = _locale(request)
+    db = request.app.state.db
+    provider = getattr(request.app.state, "weather_provider", None)
+    forecast = None
+    if provider is not None:  # outside the transaction: the provider has its own
+        today = clock.local_today()
+        forecast = await city_forecast(provider, [today + timedelta(days=i) for i in range(16)])
+    async with db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        result = await live_proposals.accept(
+            conn, _router(request), user["id"], proposal_id, locale, forecast
+        )
+    if result is None:  # the expiry was committed above; now tell the client
+        raise AppError(409, "proposal_stale")
+    return result
+
+
+@router.post("/proposals/{proposal_id}/decline")
+async def decline_proposal(proposal_id: UUID, request: Request):
+    access = bearer_token(request)
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        return await live_proposals.decline(conn, user["id"], proposal_id)

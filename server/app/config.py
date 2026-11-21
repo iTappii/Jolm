@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     worker_batch_size: int = 5
     worker_poll_interval_sec: float = 2.0
     worker_max_attempts: int = 5
+    worker_lease_sec: int = 300  # a claimed job not finished within this is taken by another worker
 
     apple_client_id: str = "kz.jol.app"
     # Sign in with Apple server credentials, needed to exchange the authorization code and to
@@ -30,6 +31,14 @@ class Settings(BaseSettings):
     apple_team_id: str = ""
     apple_key_id: str = ""
     apple_private_key: SecretStr = SecretStr("")
+    # Push (Ш-40). "log" sends nothing (dev, tests); "apns" needs the key below.
+    # CREDENTIAL GAP: no paid Apple Developer account yet, so no team id / push key id / .p8 key.
+    push_provider: str = "log"
+    apns_team_id: str = ""
+    apns_key_id: str = ""
+    apns_private_key: SecretStr = SecretStr("")  # contents of the .p8 file ("\n" escapes allowed)
+    apns_topic: str = ""  # the app's bundle id; empty = apple_client_id
+    apns_sandbox: bool = True  # development builds use the sandbox host
     auth_secret: SecretStr = SecretStr("")
 
     admin_login_max_failures: int = 5

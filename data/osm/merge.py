@@ -69,6 +69,9 @@ MOVE_STATEMENTS = (
     "DELETE FROM trip_lodging_options WHERE place_id = %(drop)s",
     # memory signals of trip edits (Ш-38): FK without ON DELETE CASCADE
     "UPDATE user_place_signals SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    # weather change proposals (Ш-40): both place columns, FK without ON DELETE CASCADE
+    "UPDATE trip_change_proposals SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    "UPDATE trip_change_proposals SET target_place_id = %(keep)s WHERE target_place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

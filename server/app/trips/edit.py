@@ -188,13 +188,25 @@ async def _preferences(conn, trip_id: UUID, day: date, items: List[dict]) -> Dic
 
 
 async def _retime(
-    conn, router: Any, trip: Dict[str, Any], day: date, items: List[dict], stops: List[KeptStop]
+    conn,
+    router: Any,
+    trip: Dict[str, Any],
+    day: date,
+    items: List[dict],
+    stops: List[KeptStop],
+    forecast: Any = None,
 ) -> RetimedDay:
     prefs = await _preferences(conn, trip["id"], day, items)
     hours = await hrs.load_hours(conn, [s.place.id for s in stops])
     travel, legs = await leg_tools(conn, router, trip["start_date"])
     return await retime_day(
-        day, (trip["brief"] or {}).get("pace"), stops, hours, travel, PreferredLegs(legs, prefs)
+        day,
+        (trip["brief"] or {}).get("pace"),
+        stops,
+        hours,
+        travel,
+        PreferredLegs(legs, prefs),
+        forecast,
     )
 
 
@@ -356,6 +368,32 @@ async def _candidates(
     return [p for p in found if p.id not in taken]
 
 
+async def first_fit_replacement(
+    conn,
+    router: Any,
+    trip: Dict[str, Any],
+    items: List[dict],
+    target: dict,
+    rows: List[dict],
+    places: Dict[UUID, Place],
+    candidates: List[Place],
+    forecast: Any = None,
+) -> Optional[Tuple[Place, RetimedDay]]:
+    """The first candidate that takes the target's place in its day without pushing a stop out
+    (at most MAX_REPLACEMENT_TRIES are tried); read-only. None when nothing fits."""
+    for cand in candidates[:MAX_REPLACEMENT_TRIES]:
+        stops = [
+            KeptStop(cand, target["kind"], target["meal"], False)
+            if r["id"] == target["id"]
+            else _kept(r, places[r["place_id"]])
+            for r in rows
+        ]
+        result = await _retime(conn, router, trip, target["day"], items, stops, forecast)
+        if not result.unplaced and any(s.place.id == cand.id for s in result.plan.stops):
+            return cand, result
+    return None
+
+
 async def replace_item(
     conn,
     router: Any,
@@ -367,6 +405,8 @@ async def replace_item(
     category: Optional[str] = None,
     query: Optional[str] = None,
     force: bool = False,
+    forecast: Any = None,
+    record_signal: bool = True,
 ) -> Dict[str, Any]:
     """Replace a stop with another place (by id, category slug or name) in the same position of
     the same day. The first candidate that fits the day without pushing anything out is used;
@@ -386,18 +426,9 @@ async def replace_item(
         p for p in await _candidates(conn, target, taken, place_id, category, query)
         if _usable(p, meal)
     ]  # fmt: skip
-    chosen: Optional[Tuple[Place, RetimedDay]] = None
-    for cand in candidates[:MAX_REPLACEMENT_TRIES]:
-        stops = [
-            KeptStop(cand, target["kind"], target["meal"], False)
-            if r["id"] == item_id
-            else _kept(r, places[r["place_id"]])
-            for r in rows
-        ]
-        result = await _retime(conn, router, trip, day, items, stops)
-        if not result.unplaced and any(s.place.id == cand.id for s in result.plan.stops):
-            chosen = (cand, result)
-            break
+    chosen = await first_fit_replacement(
+        conn, router, trip, items, target, rows, places, candidates, forecast
+    )
     if chosen is None:
         raise AppError(409, "no_replacement")
     new_place, result = chosen
@@ -411,7 +442,8 @@ async def replace_item(
     dropped = _apply_retime(result, day, warnings, unmet, locale)
     budget, total = await recompute_budget(conn, trip, warnings)
     version = await _save_trip(conn, trip, budget, total, warnings, unmet)
-    await _signal(conn, user_id, trip_id, target, "replaced")
+    if record_signal:  # a weather swap (Ш-40) says nothing about the person's taste
+        await _signal(conn, user_id, trip_id, target, "replaced")
     name = new_place.name_ru if locale == "ru" else new_place.name_en
     return _result(
         trip_id, version, "replace", day, budget,
@@ -428,6 +460,81 @@ async def replace_item(
         },
         dropped=dropped,
     )  # fmt: skip
+
+
+# --- move a stop to another day (Ш-40 weather proposals) ---------------------------------
+async def plan_move(
+    conn,
+    router: Any,
+    trip: Dict[str, Any],
+    items: List[dict],
+    target: dict,
+    to_day: date,
+    forecast: Any = None,
+) -> Tuple[RetimedDay, RetimedDay]:
+    """Read-only: the two days after `target` leaves its day and goes to the END of `to_day`
+    (both re-timed). The caller checks `unplaced` and that the stop is in the second plan."""
+    day = target["day"]
+    rows, places = await _day_stops(conn, items, day)
+    moved = places[target["place_id"]]
+    stops_from = [_kept(r, places[r["place_id"]]) for r in rows if r["id"] != target["id"]]
+    rows_to, places_to = await _day_stops(conn, items, to_day)
+    stops_to = [_kept(r, places_to[r["place_id"]]) for r in rows_to]
+    stops_to.append(KeptStop(moved, target["kind"], target["meal"], target["is_must_have"]))
+    result_from = await _retime(conn, router, trip, day, items, stops_from, forecast)
+    result_to = await _retime(conn, router, trip, to_day, items, stops_to, forecast)
+    return result_from, result_to
+
+
+def move_fits(target: dict, result_from: RetimedDay, result_to: RetimedDay) -> bool:
+    return (
+        not result_from.unplaced
+        and not result_to.unplaced
+        and any(s.place.id == target["place_id"] for s in result_to.plan.stops)
+    )
+
+
+async def move_item(
+    conn,
+    router: Any,
+    user_id: UUID,
+    trip_id: UUID,
+    item_id: UUID,
+    to_day: date,
+    locale: str,
+    forecast: Any = None,
+) -> Dict[str, Any]:
+    """Move a stop to the end of another day of the trip and re-time both days.
+
+    404 for a foreign / missing trip or item, 422 when `to_day` is outside the trip or the same
+    day, 409 `proposal_not_applicable` when the stop no longer fits there. No memory signal: the
+    move is not a statement of taste.
+    """
+    trip = await _locked_trip(conn, user_id, trip_id)
+    items = await store.main_items(conn, trip_id)
+    target = _find_item(items, item_id)
+    if to_day == target["day"] or not trip["start_date"] <= to_day <= trip["end_date"]:
+        raise AppError(422, "validation_error", "to_day must be another day of the trip")
+    result_from, result_to = await plan_move(conn, router, trip, items, target, to_day, forecast)
+    if not move_fits(target, result_from, result_to):
+        raise AppError(409, "proposal_not_applicable")
+    day = target["day"]
+    await store.replace_day(conn, trip_id, day, result_from.plan)
+    new_ids = await store.replace_day(conn, trip_id, to_day, result_to.plan)
+    warnings, unmet = list(trip["warnings"]), list(trip["must_have_unmet"])
+    _apply_retime(result_from, day, warnings, unmet, locale)
+    _apply_retime(result_to, to_day, warnings, unmet, locale)
+    budget, total = await recompute_budget(conn, trip, warnings)
+    version = await _save_trip(conn, trip, budget, total, warnings, unmet)
+    return {
+        "trip_id": str(trip_id),
+        "version": version,
+        "action": "move",
+        "changed_days": [day.isoformat(), to_day.isoformat()],
+        "budget": budget_summary(budget),
+        "moved": {"item_id": str(new_ids[target["place_id"]]), "from_day": day.isoformat(),
+                  "to_day": to_day.isoformat()},
+    }  # fmt: skip
 
 
 # --- transport mode of a leg --------------------------------------------------------------

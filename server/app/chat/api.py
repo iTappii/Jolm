@@ -152,7 +152,8 @@ async def get_chat(chat_id: UUID, request: Request):
     return dict(
         _chat_json(chat),
         messages=[
-            {k: m[k] for k in ("id", "role", "content", "finish", "created_at")} for m in messages
+            {k: m[k] for k in ("id", "role", "content", "finish", "created_at", "proposal_id")}
+            for m in messages
         ],
         brief=public_brief(brief),
         graph_nodes=nodes,
@@ -202,13 +203,14 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
     record = TurnRecord()
 
     router = getattr(request.app.state, "routing_provider", None) or FakeRouter()
+    weather = getattr(request.app.state, "weather_provider", None)  # None: plan without forecast
 
     async def handle_tool(call: ToolCall) -> ToolOutcome:
         handler = {
             tools.UPDATE_TRIP_BRIEF: _update_trip_brief,
             tools.ADD_GRAPH_NODE: _add_graph_node,
             tools.SEARCH_PLACES: _search_places,
-            tools.BUILD_TRIP: lambda *a: _build_trip(*a, router),
+            tools.BUILD_TRIP: lambda *a: _build_trip(*a, router, weather),
             edit_tools.GET_TRIP_PLAN: edit_tools.get_trip_plan,
             edit_tools.REMOVE_TRIP_ITEM: lambda *a: edit_tools.remove_trip_item(*a, router),
             edit_tools.REPLACE_TRIP_ITEM: lambda *a: edit_tools.replace_trip_item(*a, router),
@@ -359,6 +361,8 @@ async def _search_places(db, chat_id: UUID, locale: str, call: ToolCall) -> Tool
     return ToolOutcome(result, events)
 
 
-async def _build_trip(db, chat_id: UUID, locale: str, call: ToolCall, router: Any) -> ToolOutcome:
+async def _build_trip(
+    db, chat_id: UUID, locale: str, call: ToolCall, router: Any, weather: Any = None
+) -> ToolOutcome:
     """Plan, save and announce the trip (Ш-36); see `chat/build_tool.py` for the event shape."""
-    return await build_tool.build_trip(db, chat_id, locale, router)
+    return await build_tool.build_trip(db, chat_id, locale, router, weather)
