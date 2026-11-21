@@ -131,6 +131,33 @@ async def built(chat_env, conn, **brief):
     return headers, chat, event(events, "route_ready")
 
 
+async def test_an_edit_recounts_the_hours_assumed_warning(chat_env, conn):
+    headers, chat, ready = await built(chat_env, conn)
+    trip_id = ready["trip_id"]
+    before = await plan(chat_env, headers, trip_id)
+    day, item = pick(before)
+    # the stored warning is stale on purpose: an edit must replace it with the real count
+    await conn.execute(
+        "UPDATE trips SET warnings = warnings || %s::jsonb",
+        ['[{"code": "hours_assumed", "date": null, "detail": "999"}]'],
+    )
+    assert (await post(chat_env, headers, trip_id, item["id"], "remove")).status_code == 200
+    expected = (
+        await fetch_one(
+            conn,
+            "SELECT count(DISTINCT place_id) AS n FROM trip_items "
+            "WHERE trip_id = %s AND variant = 'main' AND hours_assumed",
+            (trip_id,),
+        )
+    )["n"]
+    row = await fetch_one(conn, "SELECT warnings FROM trips WHERE id = %s", (trip_id,))
+    found = [w for w in row["warnings"] if w["code"] == "hours_assumed"]
+    if expected:
+        assert [w["detail"] for w in found] == [str(expected)]
+    else:
+        assert found == []
+
+
 async def test_remove_twice_or_a_foreign_item_is_404_and_changes_nothing(chat_env, conn):
     headers, chat, ready = await built(chat_env, conn)
     trip = await plan(chat_env, headers, ready["trip_id"])

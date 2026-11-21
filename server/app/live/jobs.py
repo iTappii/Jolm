@@ -36,6 +36,11 @@ log = logging.getLogger("app.live")
 RECHECK_INTERVAL = timedelta(days=2)
 MOUNTAIN_NOTIFY_AT = time(7, 0)  # Asia/Almaty
 SCAN_LIMIT = 500
+RECHECK_ATTEMPTS = 3  # plan attempts before the job gives up and is retried by the worker
+
+
+class TripChanged(Exception):
+    """The trip kept changing while a re-check was being planned; retry the job later."""
 
 
 def _days_ahead(today: date, end: date) -> List[date]:
@@ -79,18 +84,42 @@ async def weather_recheck(db: Database, payload: dict) -> None:
         return  # a duplicate job: someone checked recently
     days = _days_ahead(today, trip["end_date"])
     forecast = ForecastView(await deps.weather(db).forecast(*ALMATY_CENTRE, days))  # may raise
-    async with db.transaction() as conn:
-        locked = await trips_store.get_trip_row(conn, trip["user_id"], trip_id, lock=True)
-        if locked is None or locked["status"] != "active":
+    # plan-then-apply: routing runs WITHOUT the trip lock; the result is applied under the lock
+    # only if the plan version is unchanged, else it is recomputed (a few times, then the job
+    # is retried later by the worker, and `weather_checked_at` stays as it was)
+    for _ in range(RECHECK_ATTEMPTS):
+        async with db.transaction() as conn:
+            current = await trips_store.get_trip_row(conn, trip["user_id"], trip_id)
+            if current is None or current["status"] != "active":
+                return
+            plan = await engine.plan_proposal(conn, deps.router(), current, forecast, now)
+        async with db.transaction() as conn:
+            locked = await trips_store.get_trip_row(conn, trip["user_id"], trip_id, lock=True)
+            if locked is None or locked["status"] != "active":
+                return
+            if locked["version"] != plan.version:
+                continue  # the plan changed while we were routing: recompute
+            await _apply(conn, locked, plan, now)
             return
-        spec = await engine.find_proposal(conn, deps.router(), locked, forecast, now)
-        if spec is not None:
-            chat = await live_store.chat_of(conn, locked["chat_id"])
-            locale = chat["locale"] if chat else await _user_locale(conn, trip["user_id"])
-            await proposals.create(conn, locked, spec, locale, chat["id"] if chat else None)
-        await execute(
-            conn, "UPDATE trips SET weather_checked_at = %s WHERE id = %s", (now, trip_id)
-        )
+    raise TripChanged("trip %s changed during every re-check attempt" % trip_id)
+
+
+async def _apply(conn, locked: dict, plan: engine.Plan, now) -> None:
+    """Writes only (under the trip lock): close what the plan closes, store the proposal."""
+    trip_id = locked["id"]
+    await live_store.expire(conn, plan.expire)
+    spec = plan.spec
+    if spec is not None:
+        # proposals decided or created by someone else since the plan was read: do not nag
+        if await live_store.pending(conn, trip_id) or await live_store.already_proposed(
+            conn, trip_id, spec.place.id, spec.day
+        ):
+            spec = None
+    if spec is not None:
+        chat = await live_store.chat_of(conn, locked["chat_id"])
+        locale = chat["locale"] if chat else await _user_locale(conn, locked["user_id"])
+        await proposals.create(conn, locked, spec, locale, chat["id"] if chat else None)
+    await execute(conn, "UPDATE trips SET weather_checked_at = %s WHERE id = %s", (now, trip_id))
 
 
 async def _user_locale(conn, user_id: UUID) -> str:

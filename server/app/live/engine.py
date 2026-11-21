@@ -1,10 +1,11 @@
 """The weather re-check engine (Ш-40): which stop suffers, what to propose. Read-only.
 
-`find_proposal` looks at ONE trip (its row is locked by the caller) and returns at most one
-proposal (`Spec`):
-1. Pending proposals of an older plan version expire. A pending proposal of the current version
-   whose problem has gone with the new forecast expires too; one that still holds blocks new
-   proposals (no nagging; the next one comes after a decision).
+`plan_proposal` looks at ONE trip WITHOUT locking it (routing is slow: the caller applies the
+result under the lock only if the trip version is unchanged) and returns a `Plan` with at most
+one proposal (`Spec`):
+1. Pending proposals of an older plan version are to expire. A pending proposal of the current
+   version whose problem has gone with the new forecast is to expire too; one that still holds
+   blocks new proposals (no nagging; the next one comes after a decision).
 2. Suffering stops: an outdoor `activity` from today on, not over yet, in the forecast's reach,
    that `rules.stop_problem` flags. Thunderstorms first, then the earliest day and order. A stop
    that already had a proposal for that day (any answer) is skipped.
@@ -82,14 +83,27 @@ def _count_plan(forecast: ForecastView, day: date, result: Any) -> int:
     return _count(forecast, [(s.place, day, s.start, s.end, s.kind) for s in result.plan.stops])
 
 
-async def find_proposal(
+@dataclass
+class Plan:
+    """What a re-check decided; applied by the caller under the trip lock (`jobs`).
+
+    `version` is the plan version it was computed for: the caller applies it only while the
+    locked trip still has this version. `expire` are pending proposals to close first."""
+
+    version: int
+    expire: List[UUID]
+    spec: Optional[Spec] = None
+
+
+async def plan_proposal(
     conn, router: Any, trip: dict, forecast: ForecastView, now: datetime
-) -> Optional[Spec]:
+) -> Plan:
+    """Read-only: no writes, no trip lock. Routing may happen here, never under the lock."""
     trip_id = trip["id"]
-    await live_store.expire_stale(conn, trip_id, trip["version"])
     items = await store.main_items(conn, trip_id)
     places = await edit._places(conn, sorted({r["place_id"] for r in items}, key=str))
     today = now.astimezone(ALMATY_TZ).date()
+    plan = Plan(version=trip["version"], expire=[])
 
     def problem_of(row: dict) -> Optional[rules.Problem]:
         place = places[row["place_id"]]
@@ -100,23 +114,29 @@ async def find_proposal(
         return _problem(forecast, row["day"], row["starts_at"], row["ends_at"])
 
     for old in await live_store.pending(conn, trip_id):
+        if old["trip_version"] != trip["version"]:
+            plan.expire.append(old["id"])  # of an older plan version
+            continue
         row = next(
             (r for r in items if r["place_id"] == old["place_id"] and r["day"] == old["day"]), None
         )
         if row is not None and problem_of(row) is not None:
-            return None  # still valid and unanswered: wait for the person
-        await live_store.expire(conn, [old["id"]])
+            return plan  # still valid and unanswered: wait for the person (spec stays None)
+        plan.expire.append(old["id"])
 
     suffering = [(r, p) for r in items if (p := problem_of(r)) is not None]
     suffering.sort(key=lambda rp: (rp[1].kind != "thunderstorm", rp[0]["day"], rp[0]["ord"]))
     for row, problem in suffering:
-        if await live_store.already_proposed(conn, trip_id, row["place_id"], row["day"]):
+        if await live_store.already_proposed(
+            conn, trip_id, row["place_id"], row["day"], ignore=plan.expire
+        ):
             continue
         spec = await _option(conn, router, trip, forecast, items, places, row, problem, today)
         if spec is not None:
-            return spec
+            plan.spec = spec
+            return plan
         log.info("no weather alternative for a stop", extra={"trip_id": str(trip_id)})
-    return None
+    return plan
 
 
 async def _option(

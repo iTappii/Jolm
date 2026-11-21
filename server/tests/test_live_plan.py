@@ -15,7 +15,7 @@ from app.chat.brief import today_almaty
 from app.db import fetch_all, fetch_one
 from app.live import clock, deps, rules
 from app.live import jobs as live_jobs
-from app.providers.weather.base import DayWeather, HourWeather, WeatherUnavailable
+from app.providers.weather.base import DayWeather, ForecastView, HourWeather, WeatherUnavailable
 from app.push import ApnsProvider, LogPushProvider, PushError, PushMessage, PushOutcome, make_push
 from app.routing import FakeRouter
 from app.routing.service import ALMATY_TZ
@@ -380,6 +380,109 @@ async def test_unavailable_forecast_fails_the_job_so_it_is_retried(chat_env, con
         await recheck(TransactionalDatabase(conn), trip_id)
     row = await fetch_one(conn, "SELECT weather_checked_at FROM trips WHERE id = %s", (trip_id,))
     assert row["weather_checked_at"] is None  # not stamped: it stays due
+
+
+# --- plan-then-apply: no routing under the trip lock (Ш-38 coordinator №1) ----------------
+class RacingRouter(FakeRouter):
+    """Logs routing calls; can edit the trip (version bump) while the worker is routing."""
+
+    def __init__(self, conn, log, bump):
+        super().__init__()
+        self.conn, self.log, self.bump, self.calls = conn, log, bump, 0
+
+    async def matrix(self, sources, targets, mode):
+        self.calls += 1
+        self.log.append("route")
+        if self.bump == "always" or (self.bump == "once" and self.calls == 1):
+            await self.conn.execute("UPDATE trips SET version = version + 1")
+        return await super().matrix(sources, targets, mode)
+
+
+@pytest.fixture
+def lock_log(monkeypatch):
+    from app.trips import store as trips_store
+
+    log = []
+    real = trips_store.get_trip_row
+
+    async def spy(conn, user_id, trip_id, lock=False):
+        if lock:
+            log.append("lock")
+        return await real(conn, user_id, trip_id, lock=lock)
+
+    monkeypatch.setattr(trips_store, "get_trip_row", spy)
+    return log
+
+
+async def rainy_setup(chat_env, conn, router):
+    headers, chat, trip_id = await built(chat_env, conn)
+    trip = (await get(chat_env, headers, trip_id)).json()
+    rainy_day, item = outdoor_item(trip)
+    deps.configure(weather=FakeWeather(rainy_on(rainy_day)), router=router, push=FakePush())
+    return trip_id, item
+
+
+async def test_recheck_routes_before_the_trip_is_locked(chat_env, conn, lock_log):
+    log = lock_log
+    router = RacingRouter(conn, log, None)
+    trip_id, item = await rainy_setup(chat_env, conn, router)
+    log.clear()
+    await recheck(TransactionalDatabase(conn), trip_id)
+    assert len(await proposals(conn, trip_id)) == 1
+    assert "route" in log and log.count("lock") == 1
+    assert log.index("lock") > max(i for i, x in enumerate(log) if x == "route")
+
+
+async def test_a_trip_edited_while_planning_is_replanned_not_applied_stale(
+    chat_env, conn, lock_log
+):
+    router = RacingRouter(conn, lock_log, "once")
+    trip_id, item = await rainy_setup(chat_env, conn, router)
+    lock_log.clear()
+    await recheck(TransactionalDatabase(conn), trip_id)
+    rows = await proposals(conn, trip_id)
+    assert len(rows) == 1  # exactly one proposal
+    assert rows[0]["trip_version"] == 2  # computed for the plan as it is after the edit
+    assert lock_log.count("lock") == 2  # the first attempt stopped at the version check
+    assert router.calls >= 2  # planned twice
+    checked = await fetch_one(
+        conn, "SELECT weather_checked_at FROM trips WHERE id = %s", (trip_id,)
+    )
+    assert checked["weather_checked_at"] is not None
+
+
+async def test_a_trip_that_keeps_changing_fails_the_job_without_writes(chat_env, conn, lock_log):
+    router = RacingRouter(conn, lock_log, "always")
+    trip_id, item = await rainy_setup(chat_env, conn, router)
+    with pytest.raises(live_jobs.TripChanged):
+        await recheck(TransactionalDatabase(conn), trip_id)
+    assert await proposals(conn, trip_id) == []
+    assert await fetch_one(conn, "SELECT count(*) AS n FROM push_notifications") == {"n": 0}
+    row = await fetch_one(conn, "SELECT weather_checked_at FROM trips WHERE id = %s", (trip_id,))
+    assert row["weather_checked_at"] is None  # stays due: the worker retries the job
+    assert lock_log.count("lock") == live_jobs.RECHECK_ATTEMPTS
+
+
+async def test_a_stale_plan_does_not_duplicate_a_proposal_made_meanwhile(chat_env, conn):
+    from app.live import engine
+    from app.trips import store as trips_store
+
+    trip_id, item = await rainy_setup(chat_env, conn, FakeRouter())
+    db = TransactionalDatabase(conn)
+    now = clock.now()
+    row = await fetch_one(conn, "SELECT user_id FROM trips WHERE id = %s", (trip_id,))
+    current = await trips_store.get_trip_row(conn, row["user_id"], trip_id)
+    forecast = ForecastView(
+        await deps.weather(db).forecast(0, 0, [today() + timedelta(days=i) for i in (10, 11, 12)])
+    )
+    plan = await engine.plan_proposal(conn, FakeRouter(), current, forecast, now)
+    assert plan.spec is not None and plan.version == current["version"]
+    await recheck(db, trip_id)  # a concurrent run applied its own plan first
+    assert len(await proposals(conn, trip_id)) == 1
+    locked = await trips_store.get_trip_row(conn, row["user_id"], trip_id, lock=True)
+    await live_jobs._apply(conn, locked, plan, now)  # the stale twin must not add another
+    assert len(await proposals(conn, trip_id)) == 1
+    assert await fetch_one(conn, "SELECT count(*) AS n FROM push_notifications") == {"n": 1}
 
 
 # --- schedule (fake clock) ----------------------------------------------------------------
