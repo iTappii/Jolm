@@ -21,6 +21,10 @@ targets:
     type: application
     platform: iOS
     sources: [Jol]
+    entitlements:
+      path: Jol/Jol.entitlements
+      properties:
+        com.apple.developer.applesignin: [Default]
     dependencies:
       - package: MapLibre
         product: MapLibre

@@ -2,7 +2,8 @@
 """Tiny static server WITH HTTP Range + CORS (python's http.server lacks Range; PMTiles needs it).
 Usage: python3 maps/serve.py [port]   -> http://localhost:8080/demo/ (serves the maps/ dir)
 """
-import os, re, sys
+import json, os, re, sys
+from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 
@@ -18,6 +19,17 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(204); self.end_headers()
 
     def do_GET(self):
+        if self.path == "/native/jol-light.json":
+            style = json.loads(Path("style/jol-light.json").read_text())
+            port = self.server.server_port
+            style["sources"]["openmaptiles"]["url"] = f"pmtiles://http://localhost:{port}/build/almaty.pmtiles"
+            body = json.dumps(style, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         rng = self.headers.get("Range")
         path = self.translate_path(self.path)
         m = re.match(r"bytes=(\d*)-(\d*)$", rng or "")

@@ -1,5 +1,5 @@
-import XCTest
 @testable import Jol
+import XCTest
 
 final class AppConfigTests: XCTestCase {
     func testEmptyConfigFallsBackToBundledStyle() {
@@ -17,4 +17,3 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(AlmatyCamera.center.latitude, 43.2380, accuracy: 0.001)
     }
 }
-

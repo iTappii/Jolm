@@ -16,6 +16,11 @@ xcodebuild -project ios/Jol.xcodeproj -scheme Jol \
 Requires full Xcode (not only Command Line Tools).
 
 ## Map style URL
+For local simulator builds, run `make tiles-serve` at the repository root
+(run `make tiles` once if the archive is missing). The simulator loads the Jol
+style at `http://localhost:8080/native/jol-light.json` and streams the Almaty
+PMTiles archive from the same server.
+
 `Jol/Info.plist` key `JOL_MAP_STYLE_URL` is filled from the build setting of the same name, set in
 `Config.xcconfig` (used by Debug and Release). Empty value -> bundled
 `Jol/Resources/placeholder-style.json` (MapLibre demotiles, temporary).

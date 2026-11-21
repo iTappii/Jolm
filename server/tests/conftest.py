@@ -39,6 +39,29 @@ def test_db_url() -> str:
     return url
 
 
+AUTH_TABLES = (
+    "apple_consumed_challenges",
+    "otp_codes",
+    "sessions",
+    "devices",
+    "auth_identities",
+    "users",
+)
+
+
+@pytest.fixture
+def committed_auth_db_url(test_db_url):
+    """Test database for tests that commit through their own pool; auth tables are emptied after.
+
+    Committed rows would otherwise leak into later tests that count users, sessions or codes.
+    """
+    yield test_db_url
+    with psycopg.connect(test_db_url, autocommit=True) as conn:
+        conn.execute(
+            sql.SQL("TRUNCATE {}").format(sql.SQL(", ").join(map(sql.Identifier, AUTH_TABLES)))
+        )
+
+
 @pytest.fixture
 def scratch_db_url() -> str:
     """Empty database for migration-runner tests."""

@@ -2,3 +2,6 @@
 // Note: in xcconfig "//" starts a comment, so write URLs with the slashes split via $() :
 //   JOL_MAP_STYLE_URL = https:/$()/example.com/style.json
 JOL_MAP_STYLE_URL =
+JOL_MAP_STYLE_URL[sdk=iphonesimulator*] = http:/$()/localhost:8080/native/jol-light.json
+JOL_API_BASE_URL =
+JOL_API_BASE_URL[sdk=iphonesimulator*] = http:/$()/localhost:8000

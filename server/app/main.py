@@ -5,6 +5,9 @@ from fastapi import FastAPI
 
 from app import __version__
 from app.admin.api import install_admin
+from app.auth.api import router as auth_router
+from app.auth.apple import router as apple_router
+from app.auth.otp_api import router as otp_router
 from app.config import get_settings
 from app.db import Database
 from app.errors import install_error_handlers
@@ -40,6 +43,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.include_router(system_router)
+    app.include_router(auth_router)
+    app.include_router(otp_router)
+    app.include_router(apple_router)
     app.include_router(places_router)
     app.include_router(directions_router)
     install_admin(app)

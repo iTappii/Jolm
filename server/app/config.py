@@ -2,6 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,11 +23,14 @@ class Settings(BaseSettings):
     worker_poll_interval_sec: float = 2.0
     worker_max_attempts: int = 5
 
+    apple_client_id: str = "kz.jol.app"
+    auth_secret: SecretStr = SecretStr("")
+
     admin_login_max_failures: int = 5
     admin_login_window_min: int = 15
 
     llm_provider: str = "stub"
-    sms_provider: str = "stub"
+    sms_provider: str = ""
     email_provider: str = "stub"
     valhalla_url: Optional[str] = None
     open_meteo_url: str = "https://api.open-meteo.com"
