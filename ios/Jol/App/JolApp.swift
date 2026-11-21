@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct JolApp: App {
+    @UIApplicationDelegateAdaptor(JolAppDelegate.self) private var appDelegate
     @State private var container = JolApp.makeContainer()
 
     var body: some Scene {
@@ -26,7 +27,8 @@ struct JolApp: App {
                 tokens: EphemeralTokenStore(session),
                 baseURL: .success(URL(string: "http://localhost:8000")!),
                 session: UITestSupport.makeSession(),
-                locator: StubLocationProvider()
+                locator: StubLocationProvider(),
+                push: UITestPush()
             )
         }
         // UI tests: the API answers from fixtures (places, curated routes), no server needed.
@@ -38,7 +40,8 @@ struct JolApp: App {
                 tokens: EphemeralTokenStore(session),
                 baseURL: .success(URL(string: "http://localhost:8000")!),
                 session: UITestSupport.makeSession(),
-                locator: StubLocationProvider()
+                locator: StubLocationProvider(),
+                push: UITestPush()
             )
         }
         #endif

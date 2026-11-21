@@ -189,6 +189,11 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
             ifNoneMatch: request.value(forHTTPHeaderField: "If-None-Match"),
             signedIn: request.value(forHTTPHeaderField: "Authorization") != nil
         ) {
+            if path == "/v1/devices" || path == "/v1/analytics/events" {
+                // Read with `xcrun simctl spawn booted log show --predicate 'eventMessage CONTAINS "JolStub"'`.
+                let auth = request.value(forHTTPHeaderField: "Authorization") != nil
+                NSLog("JolStub %@ auth=%d body=%@", path, auth ? 1 : 0, "\(requestBody())")
+            }
             finish(with: extra)
             return
         }

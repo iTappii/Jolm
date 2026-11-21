@@ -100,6 +100,14 @@ enum UITestExtraStub {
     }
 }
 
+/// UI tests must never see the system's notification question: it would cover the screen.
+@MainActor
+struct UITestPush: PushAuthorizing {
+    func isAuthorized() async -> Bool? { nil }
+    func requestAuthorization() async -> Bool { false }
+    func registerForRemoteNotifications() {}
+}
+
 extension FixtureURLProtocol {
     /// Sends one stub answer (status, headers, body) and finishes.
     func finish(with answer: UITestPlaceActions.Answer) {

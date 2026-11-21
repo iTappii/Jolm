@@ -21,6 +21,7 @@ final class AppContainer {
     @ObservationIgnored let crowd: CrowdModel
     @ObservationIgnored let bookings: BookingModel
     @ObservationIgnored let offline: OfflineTripsModel
+    @ObservationIgnored let devices: DeviceRegistrar
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -28,7 +29,8 @@ final class AppContainer {
         baseURL: Result<URL, APIError> = AppConfig.apiBaseURL,
         session: URLSession = .shared,
         locator: (any LocationProviding)? = nil,
-        offlineStore: OfflineTripStore = OfflineTripStore()
+        offlineStore: OfflineTripStore = OfflineTripStore(),
+        push: any PushAuthorizing = SystemPushAuthorizing()
     ) {
         let auth = AuthState(tokens: tokens)
         let installID = InstallID.current(defaults: defaults)
@@ -54,6 +56,10 @@ final class AppContainer {
         let locator = locator ?? CoreLocationProvider()
         self.directions = DirectionsModel(api: self.api, locator: locator)
         self.offline = OfflineTripsModel(api: self.api, store: offlineStore)
+        self.devices = DeviceRegistrar(
+            api: self.api, installID: installID, language: { languageSettings.code }, defaults: defaults, push: push
+        )
+        JolAppDelegate.registrar = self.devices
         self.tripMap = TripMapModel(api: self.api, offline: self.offline)
         self.events = EventsModel(api: self.api)
         self.crowd = CrowdModel(api: self.api, locator: locator)
