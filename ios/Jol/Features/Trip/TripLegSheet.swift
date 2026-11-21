@@ -8,6 +8,7 @@ struct TripLegSheet: View {
     let leg: TripLeg
     @Environment(AppContainer.self) private var container
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var language: String { container.language.code }
 
@@ -89,12 +90,13 @@ struct TripLegSheet: View {
     private func row(_ option: DirectionOption) -> some View {
         let chosen = current.activeOption?.mode == option.mode
         return Button { model.chooseMode(leg: current, mode: option.mode) } label: {
-            HStack(spacing: JolSpacing.md) {
+            AdaptiveStack(spacing: JolSpacing.md) {
                 Image(systemName: DirectionsFormatting.symbol(option.mode))
                     .font(.title3)
                     .frame(width: 40, height: 40)
                     .background(chosen ? JolColor.brand : JolColor.surface, in: Circle())
                     .foregroundStyle(chosen ? JolColor.onBrand : JolColor.textPrimary)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: JolSpacing.xxs) {
                     HStack(spacing: JolSpacing.xs) {
                         Text(DirectionsFormatting.title(option.mode))
@@ -111,7 +113,7 @@ struct TripLegSheet: View {
                     .font(JolFont.caption)
                 }
                 Spacer(minLength: JolSpacing.sm)
-                VStack(alignment: .trailing, spacing: JolSpacing.xxs) {
+                VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: JolSpacing.xxs) {
                     Text(verbatim: DirectionsFormatting.duration(option, language: language)).font(JolFont.headline)
                     Text(verbatim: DirectionsFormatting.price(option, language: language))
                         .font(JolFont.caption)
@@ -119,10 +121,12 @@ struct TripLegSheet: View {
                 }
                 if chosen {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(JolColor.brand)
+                        .accessibilityHidden(true)
                 }
             }
             .foregroundStyle(JolColor.textPrimary)
             .padding(JolSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(JolColor.surface.opacity(chosen ? 1 : 0.6), in: RoundedRectangle(cornerRadius: JolRadius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: JolRadius.lg).stroke(chosen ? JolColor.brand : .clear, lineWidth: 2)
@@ -130,8 +134,23 @@ struct TripLegSheet: View {
         }
         .buttonStyle(.plain)
         .disabled(model.isWorking)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(rowLabel(option))
+        .accessibilityHint(chosen ? Text("") : Text("Uses this way for the leg"))
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("trip-leg-option-\(option.mode.rawValue)")
+    }
+
+    private func rowLabel(_ option: DirectionOption) -> Text {
+        let mode = Text(DirectionsFormatting.title(option.mode))
+        let title = option.transitRef.map { mode + Text(verbatim: " " + $0) } ?? mode
+        var parts = [
+            title,
+            Text(verbatim: DirectionsFormatting.duration(option, language: language)),
+            Text(verbatim: DirectionsFormatting.price(option, language: language)),
+            Text(verbatim: DirectionsFormatting.distance(option.distanceM, language: language))
+        ]
+        if option.recommended { parts.append(Text("Recommended")) }
+        return Text.spoken(parts)
     }
 }

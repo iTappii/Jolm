@@ -3918,6 +3918,76 @@
           }
         }
       }
+    },
+    "Loading" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Загрузка"
+          }
+        }
+      }
+    },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Страница %lld из %lld"
+          }
+        }
+      }
+    },
+    "Opens the budget" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает бюджет"
+          }
+        }
+      }
+    },
+    "Opens the place card" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает карточку места"
+          }
+        }
+      }
+    },
+    "Shows the ways to get there" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает способы добраться"
+          }
+        }
+      }
+    },
+    "Uses this way for the leg" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать этот способ для перехода"
+          }
+        }
+      }
+    },
+    "Shows this way on the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает этот путь на карте"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

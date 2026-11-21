@@ -14,6 +14,7 @@
 		0AF5836797901E1569DC372A /* MapCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E09803410885F6C9BFFC51B /* MapCamera.swift */; };
 		0B3D2CA182539F51ED8A5D6D /* BookingModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3111B5557089024A7672A29F /* BookingModel.swift */; };
 		0E196BE576C8D0C0B668ACAE /* PhotoSanitizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 995843D0B71E27FE5CC51541 /* PhotoSanitizer.swift */; };
+		0FBEBD9589B7B9B1E61332E2 /* AdaptiveLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */; };
 		117736267B8E9A647C40C09E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C930643C06F8340CDAC60B /* Palette.swift */; };
 		117DFE629019DF23F8A0EAC5 /* SidebarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9311F04BE8DCB091FEA48F4C /* SidebarUITests.swift */; };
 		13B2E6C9381441F0DF712807 /* AccountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A542D7E9F0C6A239B2A1E48D /* AccountGate.swift */; };
@@ -127,6 +128,7 @@
 		A60774FC4214DE8DFEE40722 /* ReverseGeocodeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60F030C1A20EF60685C645E /* ReverseGeocodeTests.swift */; };
 		A75008D41601C959AEE822C6 /* FavoritesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BF5917E0A81AFE480DB86C /* FavoritesUITests.swift */; };
 		AC1C9198147AEFD76BC9C851 /* PlacesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24F5293DA021AA64E97F6AC9 /* PlacesTests.swift */; };
+		ACF8C659F37F77FACB7208F0 /* AccessibilityUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76948EF829EB585BA12510DC /* AccessibilityUITests.swift */; };
 		AD32BEEAEB9FDD8DA16943EA /* PlacePhotoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 476C3D54E3C44A5E52E60072 /* PlacePhotoView.swift */; };
 		B048EF3286A17804669E3F38 /* PlaceholderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E19CEC85799ADE6F510091C /* PlaceholderScreen.swift */; };
 		B0D9577C7AE2F7B329495FB9 /* AnalyticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1C23354153BC03193315058 /* AnalyticsTests.swift */; };
@@ -313,6 +315,7 @@
 		7124D0F8D689B52D4BABBA2B /* BonusModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonusModels.swift; sourceTree = "<group>"; };
 		7297B8FE22E314C22CA9D7D8 /* BonusScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonusScreen.swift; sourceTree = "<group>"; };
 		7498BAA9B71AC1649C4D2088 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		76948EF829EB585BA12510DC /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
 		789E3FA15B29957EBBDF4CC4 /* UITestTripStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestTripStub.swift; sourceTree = "<group>"; };
 		7BC957D2AE795231563F5969 /* ChatModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModelTests.swift; sourceTree = "<group>"; };
 		7E23476566361A47872F6151 /* ContentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentService.swift; sourceTree = "<group>"; };
@@ -324,6 +327,7 @@
 		84367B2746DCF01FA55C7DD0 /* AppConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigTests.swift; sourceTree = "<group>"; };
 		84DAB833243844B9C00E1390 /* ChatState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatState.swift; sourceTree = "<group>"; };
 		863DB5A80578443D36475478 /* OfflineTripModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineTripModels.swift; sourceTree = "<group>"; };
+		86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptiveLayout.swift; sourceTree = "<group>"; };
 		87F2D0F10A503A8F7880E855 /* AppleSignIn.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppleSignIn.xcstrings; sourceTree = "<group>"; };
 		888050248C0E848FDC24BFD9 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		8A4C7FECA6D7895754955CC1 /* TripScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripScreen.swift; sourceTree = "<group>"; };
@@ -443,6 +447,7 @@
 			isa = PBXGroup;
 			children = (
 				5947FF7A2CF761F2DAF3F0E9 /* Accessibility.swift */,
+				86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */,
 				F7D86038F238C4B214FAE5A3 /* Metrics.swift */,
 				90C930643C06F8340CDAC60B /* Palette.swift */,
 				4E19CEC85799ADE6F510091C /* PlaceholderScreen.swift */,
@@ -709,6 +714,7 @@
 			isa = PBXGroup;
 			children = (
 				E209B3DBE6465C62D5D0E706 /* A11yCardUITests.swift */,
+				76948EF829EB585BA12510DC /* AccessibilityUITests.swift */,
 				34E77AA1921A2C7A6353E843 /* AnalyticsUITests.swift */,
 				BDF6AA0343574A8A1C667370 /* AppleSignInUITests.swift */,
 				6E0B6B46A11969B098C84C00 /* BonusUITests.swift */,
@@ -1058,6 +1064,7 @@
 				D3B7B6747971856F76F97A8A /* AboutScreen.swift in Sources */,
 				FECB80DDBB176550E25D94B8 /* Accessibility.swift in Sources */,
 				13B2E6C9381441F0DF712807 /* AccountGate.swift in Sources */,
+				0FBEBD9589B7B9B1E61332E2 /* AdaptiveLayout.swift in Sources */,
 				1D02FB42EB67100F80D0052F /* AnalyticsClient.swift in Sources */,
 				65A62ECE460D3BD9FE00FA04 /* AnalyticsModels.swift in Sources */,
 				44AB54A3C3ADB7FE16448568 /* AppConfig.swift in Sources */,
@@ -1186,6 +1193,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C8562D5861E8E206303F28C1 /* A11yCardUITests.swift in Sources */,
+				ACF8C659F37F77FACB7208F0 /* AccessibilityUITests.swift in Sources */,
 				177E78565C111E8B37911C26 /* AnalyticsUITests.swift in Sources */,
 				85D350B17CBA765367DF36C5 /* AppleSignInUITests.swift in Sources */,
 				4BB87BAB85BF807A4A8C17DA /* BonusUITests.swift in Sources */,

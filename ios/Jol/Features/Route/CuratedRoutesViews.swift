@@ -28,7 +28,9 @@ struct CuratedRoutesSheet: View {
         case .failed:
             VStack(spacing: JolSpacing.md) {
                 Text("Couldn't load routes").foregroundStyle(JolColor.textSecondary)
-                Button("Retry") { Task { await model.loadRoutes() } }
+                Button { Task { await model.loadRoutes() } } label: {
+                    Text("Retry").frame(minHeight: JolTarget.minimum)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("routes-failed")
@@ -67,6 +69,8 @@ struct CuratedRoutesSheet: View {
 /// Bar shown while a curated route is on the map: title, close, stops in order (tap → place card).
 struct RouteBar: View {
     let model: PlacesModel
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .caption) private var badgeSize: CGFloat = 22
 
     var body: some View {
         if let route = model.activeRoute {
@@ -75,13 +79,14 @@ struct RouteBar: View {
                     Text(route.title)
                         .font(JolFont.headline)
                         .foregroundStyle(JolColor.textPrimary)
-                        .lineLimit(1)
+                        .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+                        .accessibilityAddTraits(.isHeader)
                         .accessibilityIdentifier("route-title")
                     Spacer()
                     Button { model.closeRoute() } label: {
                         Image(systemName: "xmark")
                             .font(.footnote.weight(.semibold))
-                            .frame(width: 32, height: 32)
+                            .frame(width: JolTarget.minimum, height: JolTarget.minimum)
                             .background(JolColor.surface, in: Circle())
                             .foregroundStyle(JolColor.textPrimary)
                     }
@@ -94,6 +99,7 @@ struct RouteBar: View {
                         ForEach(Array(model.routeStops.enumerated()), id: \.element.id) { index, stop in
                             Button { model.select(stop) } label: { chip(index + 1, stop) }
                                 .buttonStyle(.plain)
+                                .accessibilityHint(Text("Opens the place card"))
                                 .accessibilityIdentifier("route-stop-\(index + 1)")
                         }
                     }
@@ -112,12 +118,13 @@ struct RouteBar: View {
             Text("\(number)")
                 .font(JolFont.caption.weight(.bold))
                 .foregroundStyle(JolColor.onBrand)
-                .frame(width: 22, height: 22)
+                .frame(width: badgeSize, height: badgeSize)
                 .background(JolColor.brand, in: Circle())
             Text(stop.name).font(JolFont.callout).foregroundStyle(JolColor.textPrimary).lineLimit(1)
         }
         .padding(.horizontal, JolSpacing.sm)
         .padding(.vertical, JolSpacing.xs)
+        .frame(minHeight: JolTarget.minimum)
         .background(JolColor.surface, in: Capsule())
     }
 }

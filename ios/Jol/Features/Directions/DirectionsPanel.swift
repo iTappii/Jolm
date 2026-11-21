@@ -8,6 +8,7 @@ struct DirectionsPanel: View {
     @Environment(AppContainer.self) private var container
     @Environment(\.openURL) private var openURL
     @State var slideFrom = Edge.trailing
+    @Environment(\.dynamicTypeSize) var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
@@ -37,19 +38,22 @@ struct DirectionsPanel: View {
             Button { model.reset() } label: {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
-                    .frame(width: 36, height: 36)
+                    .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .fixedSize()
                     .background(JolColor.surface, in: Circle())
                     .foregroundStyle(JolColor.textPrimary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Back to place"))
+            .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("directions-back")
             VStack(alignment: .leading, spacing: JolSpacing.xxs) {
                 Text("Directions").font(JolFont.caption).foregroundStyle(JolColor.textSecondary)
+                    .accessibilityAddTraits(.isHeader)
                 Text(place.name)
                     .font(JolFont.headline)
                     .foregroundStyle(JolColor.textPrimary)
-                    .lineLimit(2)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                     .accessibilityIdentifier("directions-title")
             }
             Spacer(minLength: 0)
@@ -57,9 +61,10 @@ struct DirectionsPanel: View {
     }
 
     private var originRow: some View {
-        HStack(spacing: JolSpacing.sm) {
+        AdaptiveStack(spacing: JolSpacing.sm) {
             Image(systemName: model.fallback == nil ? "location.fill" : "scope")
                 .foregroundStyle(Color(uiColor: UIColor(hex: 0x2563EB)))
+                .accessibilityHidden(true)
             Group {
                 if model.phase == .locating {
                     Text("Finding your location…")
@@ -75,10 +80,14 @@ struct DirectionsPanel: View {
             Spacer(minLength: 0)
             if model.phase != .locating {
                 if model.fallback == nil {
-                    Button("From map centre") { model.useMapCenter(mapCenter()) }
+                    Button { model.useMapCenter(mapCenter()) } label: {
+                        Text("From map centre").frame(minHeight: JolTarget.minimum)
+                    }
                         .accessibilityIdentifier("directions-use-center")
                 } else {
-                    Button("From my location") { model.useCurrentLocation() }
+                    Button { model.useCurrentLocation() } label: {
+                        Text("From my location").frame(minHeight: JolTarget.minimum)
+                    }
                         .accessibilityIdentifier("directions-use-location")
                 }
             }
@@ -91,12 +100,14 @@ struct DirectionsPanel: View {
     private var notice: some View {
         switch model.fallback {
         case .denied:
-            HStack(alignment: .top) {
+            AdaptiveStack(rowAlignment: .top) {
                 Text("Location access is off, so directions start from the map centre. Pan the map to move the start.")
                     .accessibilityIdentifier("directions-notice-denied")
                 Spacer(minLength: 0)
-                Button("Settings") {
+                Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                } label: {
+                    Text("Settings").frame(minHeight: JolTarget.minimum)
                 }
                 .accessibilityIdentifier("directions-settings")
             }
@@ -124,6 +135,8 @@ struct DirectionsPanel: View {
         case .locating, .loading:
             HStack { Spacer(); ProgressView(); Spacer() }
                 .padding(.vertical, JolSpacing.lg)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("Loading"))
                 .accessibilityIdentifier("directions-loading")
         case .loaded:
             if model.pages.isEmpty {
@@ -154,7 +167,8 @@ struct DirectionsPanel: View {
     private func retryMessage(_ text: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
             Text(text).font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
-            Button("Retry") { model.retry() }.accessibilityIdentifier("directions-retry")
+            Button { model.retry() } label: { Text("Retry").frame(minHeight: JolTarget.minimum) }
+                .accessibilityIdentifier("directions-retry")
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("directions-failed")

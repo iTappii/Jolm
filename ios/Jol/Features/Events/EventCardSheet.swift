@@ -38,7 +38,7 @@ struct EventCardSheet: View {
 
     private func card(_ event: EventItem) -> some View {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
-            HStack(spacing: JolSpacing.sm) {
+            AdaptiveStack(spacing: JolSpacing.sm) {
                 Label("Event", systemImage: "ticket")
                     .font(JolFont.caption.weight(.semibold))
                     .foregroundStyle(JolColor.textSecondary)
@@ -82,10 +82,12 @@ struct EventCardSheet: View {
                         .font(JolFont.callout.weight(.semibold))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(JolSpacing.md)
+                        .frame(minHeight: JolTarget.minimum)
                         .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(JolColor.textPrimary)
+                .accessibilityHint(Text("Opens the place card"))
                 .accessibilityIdentifier("event-place")
             }
         }

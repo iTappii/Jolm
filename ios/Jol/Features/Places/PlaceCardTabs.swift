@@ -156,7 +156,7 @@ struct PlaceTabContent: View {
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Text("Opening hours").font(JolFont.headline)
                 ForEach(0..<7, id: \.self) { day in
-                    AdaptiveStack(alignment: .firstTextBaseline) {
+                    AdaptiveStack(rowAlignment: .firstTextBaseline) {
                         Text(Self.weekdayNames[day])
                         if typeSize.isAccessibilitySize == false { Spacer() }
                         if let text = PlaceFormatting.intervals(hours.first { $0.weekday == day }) {
