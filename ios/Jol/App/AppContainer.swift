@@ -16,6 +16,10 @@ final class AppContainer {
     @ObservationIgnored let gate: AccountGate
     @ObservationIgnored let favorites: FavoritesModel
     @ObservationIgnored let chat: ChatModel
+    @ObservationIgnored let tripMap: TripMapModel
+    @ObservationIgnored let events: EventsModel
+    @ObservationIgnored let crowd: CrowdModel
+    @ObservationIgnored let bookings: BookingModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -45,7 +49,12 @@ final class AppContainer {
         self.gate = AccountGate(auth: auth)
         self.favorites = FavoritesModel(api: self.api)
         self.chat = ChatModel(api: self.api, language: { languageSettings.code })
-        self.directions = DirectionsModel(api: self.api, locator: locator ?? CoreLocationProvider())
+        let locator = locator ?? CoreLocationProvider()
+        self.directions = DirectionsModel(api: self.api, locator: locator)
+        self.tripMap = TripMapModel(api: self.api)
+        self.events = EventsModel(api: self.api)
+        self.crowd = CrowdModel(api: self.api, locator: locator)
+        self.bookings = BookingModel(api: self.api)
     }
 
     func makeProfileModel() -> ProfileModel {

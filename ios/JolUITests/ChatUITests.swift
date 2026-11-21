@@ -104,13 +104,13 @@ final class ChatUITests: XCTestCase {
         XCTAssertTrue(app.buttons["chat-open-route"].exists)
         XCTAssertFalse(element(app, "chat-error").exists)
 
-        // «Open full map» (placeholder until Ш-37): the days of the trip as a list.
+        // «Open full map»: the full route map with the first day's stops (Ш-37; details in TripMapUITests).
         app.buttons["chat-open-route"].tap()
-        waitFor(app, "trip-days")
-        waitFor(app, "trip-day-item")
+        waitFor(app, "trip-map")
+        waitFor(app, "trip-stop-1")
         XCTAssertTrue(app.staticTexts["Fixture Museum"].exists)
-        app.buttons["trip-days-done"].tap()
-        waitForDisappearance(element(app, "trip-days"))
+        app.buttons["trip-map-close"].tap()
+        waitForDisappearance(element(app, "trip-map"))
     }
 
     func testCollapsingKeepsTheStreamRunningAndShowsTypingInTheBar() {

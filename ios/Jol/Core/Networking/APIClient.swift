@@ -149,6 +149,7 @@ final class APIClient: Sendable {
         request.setValue(accept, forHTTPHeaderField: "Accept")
         request.setValue(languageProvider(), forHTTPHeaderField: "Accept-Language")
         request.setValue(installID, forHTTPHeaderField: "X-Install-ID")
+        for (name, value) in endpoint.headers { request.setValue(value, forHTTPHeaderField: name) }
         if let bearer { request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
         if let body = endpoint.body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

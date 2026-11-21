@@ -6,6 +6,9 @@ struct PlaceTabContent: View {
     let place: PlaceSummary
     let detail: PlaceDetail
     @Environment(\.openURL) private var openURL
+    @Environment(\.locale) private var locale
+    @Environment(AppContainer.self) private var container
+    @State private var bookingOpen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
@@ -55,17 +58,68 @@ struct PlaceTabContent: View {
                 .accessibilityIdentifier("place-website")
         }
         NavigatorButton(place: place)
-        Button {} label: {
-            Label("Book — coming soon", systemImage: "calendar.badge.plus")
-                .font(JolFont.callout)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, JolSpacing.sm)
-                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        bookButton
+        CrowdSection(place: place, crowd: detail.crowd)
+        eventsBlock
+    }
+
+    /// Active only where the card says the place has a partner (`booking`); a guest meets the sign-in gate first.
+    @ViewBuilder private var bookButton: some View {
+        if let info = detail.booking, info.isAvailable {
+            Button {
+                if container.auth.isSignedIn { bookingOpen = true } else {
+                    container.gate.requireAccount { bookingOpen = true }
+                }
+            } label: {
+                Label("Book", systemImage: "calendar.badge.plus")
+                    .font(JolFont.callout.weight(.semibold))
+                    .foregroundStyle(JolColor.onBrand)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, JolSpacing.sm)
+                    .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("place-book")
+            .sheet(isPresented: $bookingOpen) {
+                BookingSheet(place: place, kinds: info.supportedKinds)
+            }
+        } else {
+            Button {} label: {
+                Label("Booking isn't available here", systemImage: "calendar.badge.plus")
+                    .font(JolFont.callout)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, JolSpacing.sm)
+                    .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+            }
+            .buttonStyle(.plain)
+            .disabled(true)
+            .opacity(0.5)
+            .accessibilityIdentifier("place-book")
         }
-        .buttonStyle(.plain)
-        .disabled(true)
-        .opacity(0.5)
-        .accessibilityIdentifier("place-book")
+    }
+
+    /// Events at the place in the next 30 days; a promoted one carries the server's ad label.
+    @ViewBuilder private var eventsBlock: some View {
+        if let events = detail.events, !events.isEmpty {
+            VStack(alignment: .leading, spacing: JolSpacing.xs) {
+                Text("Events here").font(JolFont.headline)
+                ForEach(events) { event in
+                    VStack(alignment: .leading, spacing: JolSpacing.xxs) {
+                        HStack(spacing: JolSpacing.xs) {
+                            Text(verbatim: event.title).font(JolFont.callout.weight(.semibold))
+                            if let label = event.visibleAdLabel { AdBadge(label: label) }
+                        }
+                        if let when = event.whenText(locale: locale) {
+                            Text(verbatim: when).font(JolFont.caption).foregroundStyle(JolColor.textSecondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("place-event")
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("place-events")
+        }
     }
 
     @ViewBuilder

@@ -53,3 +53,5 @@ Attribution: MapLibre's own attribution button plus a visible "© OpenStreetMap 
 `-JolStubAPI` (fixtures for places, directions, auth, favorites), `-JolStubSignedIn` (with the stub: a signed-in user),
 `-JolStubLocation denied|unavailable|outside` (location fallbacks). Stub sign-in code is `123456`;
 `ratelimit@…` gets a 429.
+`-JolRealMapStyle` (with the stub: real map tiles from `make tiles-serve`, for screenshots; the offline stub style draws
+no circle layers), `-JolStubSelectEvent` (opens the first event card), `-JolStubLocation near` (at the fixture museum).

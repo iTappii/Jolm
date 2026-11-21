@@ -52,8 +52,35 @@ enum UITestSupport {
         "category":\(category),"kind":"venue","setting":null,"lat":\(lat),"lon":\(lon),\
         "address":"1 Test Street, Almaty","website":null,"prices":\(prices),"typical_visit_min":90,\
         "is_public":true,"is_partner":false,"is_mountain":false,"elevation_m":null,"popularity":50,\
-        "photos":[],"hours":[\(days.joined(separator: ","))],"open_now":true,"menu":null,"crowd":null,\
+        "photos":[],"hours":[\(days.joined(separator: ","))],"open_now":true,"menu":null,\
+        "crowd":\(second ? crowdJSON : "null"),"events":[\(second ? eventsItemsJSON : "")],\
+        "booking":\(second ? "{\"available\":true,\"kinds\":[\"table\",\"ticket\"]}" : "null"),\
         "data_updated_at":"2026-11-21T00:00:00Z"}
+        """
+    }
+
+    /// The cafe has crowd statistics (the museum has none: `crowd: null`), events and a booking partner.
+    static let crowdJSON = """
+    {"now":{"level":0.8,"label":"busy","samples":4},"today":[{"hour":10,"level":0.3,"label":"empty","samples":3},\
+    {"hour":12,"level":0.6,"label":"normal","samples":5},{"hour":14,"level":0.8,"label":"busy","samples":4}],\
+    "samples":12,"updated_at":"2026-11-21T10:00:00+05:00"}
+    """
+
+    static let adEventID = "99999999-9999-4999-8999-999999999999"
+    static let plainEventID = "99999999-9999-4999-8999-999999999998"
+
+    /// A promoted event (the server sets `is_ad` only for non-public places) and an ordinary one.
+    static var eventsItemsJSON: String {
+        let lat = AlmatyCamera.center.latitude
+        let lon = AlmatyCamera.center.longitude
+        return """
+        {"id":"\(adEventID)","title":"Fixture Jazz Night","title_lang":"en","description":"Live jazz.",\
+        "starts_at":"2026-12-06T19:00:00+05:00","ends_at":"2026-12-06T22:00:00+05:00","price_kzt":5000,\
+        "organizer":"Fixture Club","category":"concert","lat":\(lat + 0.03),"lon":\(lon - 0.04),\
+        "place":null,"is_ad":true,"ad_label":"Ad"},\
+        {"id":"\(plainEventID)","title":"Fixture Street Fair","title_lang":"en","description":null,\
+        "starts_at":"2026-12-06T12:00:00+05:00","ends_at":null,"price_kzt":0,"organizer":null,\
+        "category":"festival","lat":\(lat - 0.03),"lon":\(lon + 0.04),"place":null,"is_ad":false,"ad_label":null}
         """
     }
 
@@ -95,6 +122,8 @@ enum UITestSupport {
         case "denied": return .denied
         case "unavailable": return .unavailable
         case "outside": return .located(GeoPoint(lat: 37.33, lon: -122.03))
+        // Standing at the fixture museum (the crowd check-in needs to be within 200 m of the place).
+        case "near": return .located(GeoPoint(AlmatyCamera.center))
         default: return home
         }
     }
@@ -158,16 +187,14 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
         var status = 200
         var headers = ["Content-Type": "application/json"]
         var body: String?
-        if path == "/v1/places" {
-            body = UITestSupport.placesJSON
-        } else if path == "/v1/directions" {
-            body = UITestSupport.directionsJSON
-        } else if path.hasPrefix("/v1/places/") {
-            body = UITestSupport.detailJSON(id: String(path.dropFirst("/v1/places/".count)))
-        } else if path == "/v1/curated-routes" {
-            body = UITestSupport.routesJSON
-        } else if path.hasPrefix("/v1/curated-routes/") {
-            body = UITestSupport.routeJSON
+        if let answer = UITestPlaceActions.answer(
+            method: request.httpMethod ?? "GET", path: path, payload: requestBody(),
+            signedIn: request.value(forHTTPHeaderField: "Authorization") != nil
+        ) {
+            (status, body) = (answer.status, answer.body)
+            headers.merge(answer.headers) { _, new in new }
+        } else if let fixed = Self.fixture(path: path) {
+            body = fixed
         } else if path == "/v1/me/favorites" || path.hasPrefix("/v1/me/favorites/") {
             if request.value(forHTTPHeaderField: "Authorization") == nil {
                 (status, body) = (401, "{\"error\":{\"code\":\"unauthorized\",\"message\":\"stub\"}}")
@@ -191,6 +218,19 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)
         client?.urlProtocolDidFinishLoading(self)
+    }
+
+    /// Fixed answers of the read-only endpoints.
+    private static func fixture(path: String) -> String? {
+        switch path {
+        case "/v1/places": UITestSupport.placesJSON
+        case "/v1/directions": UITestSupport.directionsJSON
+        case "/v1/curated-routes": UITestSupport.routesJSON
+        case _ where path.hasPrefix("/v1/places/"):
+            UITestSupport.detailJSON(id: String(path.dropFirst("/v1/places/".count)))
+        case _ where path.hasPrefix("/v1/curated-routes/"): UITestSupport.routeJSON
+        default: nil
+        }
     }
 
     func requestBody() -> [String: Any] {

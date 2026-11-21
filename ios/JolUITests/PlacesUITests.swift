@@ -46,7 +46,7 @@ final class PlacesUITests: XCTestCase {
         XCTAssertTrue(element(app, "place-hours-today").exists)
         XCTAssertTrue(element(app, "place-directions").isHittable)
         XCTAssertTrue(element(app, "place-navigator").exists)
-        XCTAssertFalse(element(app, "place-book").isEnabled, "booking is disabled until Ф16")
+        XCTAssertFalse(element(app, "place-book").isEnabled, "the museum has no booking partner (`booking: null`)")
         XCTAssertTrue(element(app, "place-gallery").exists)
         XCTAssertTrue(element(app, "place-address").waitForExistence(timeout: 5), "address under the name")
         XCTAssertTrue(element(app, "place-favorite").isHittable, "pinned buttons stay visible")

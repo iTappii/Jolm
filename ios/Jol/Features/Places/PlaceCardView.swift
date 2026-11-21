@@ -32,8 +32,9 @@ struct PlaceCardView: View {
             onDismiss: { container.gate.sheetDismissed() },
             content: { AccountGateSheet() }
         )
-        .onChange(of: model.selected?.id) { _, _ in
+        .onChange(of: model.selected?.id) { _, id in
             tab = .overview
+            container.crowd.reset(for: id)
         }
     }
 

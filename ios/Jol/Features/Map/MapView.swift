@@ -20,11 +20,23 @@ struct MapView: UIViewRepresentable {
     /// changes whenever the list does.
     var chatPlaces: [MapPlace] = []
     var chatPlacesVersion = 0
+    /// The full route map (Ш-37): the stops and legs of the shown day, in the day's colour. `tripVersion` changes when
+    /// they do, `tripFitVersion` when the camera should fit them again.
+    var tripStops: [TripMapStop] = []
+    var tripLines: [TripMapLine] = []
+    var tripColor: UIColor = JolColor.brandUIColor
+    var tripVersion = 0
+    var tripFitVersion = 0
+    /// Events (Ш-48): purple pins; promoted ones carry the ad label in their caption.
+    var events: [EventItem] = []
+    var eventsVersion = 0
     /// Height of what covers the bottom of the map (card, route bar): the camera keeps the target above it.
     var bottomInset: CGFloat = 0
     var onRegionChange: (GeoBounds) -> Void = { _ in }
     var onSelect: (UUID) -> Void = { _ in }
     var onTapEmpty: () -> Void = {}
+    var onSelectLeg: (UUID) -> Void = { _ in }
+    var onSelectEvent: (UUID) -> Void = { _ in }
 
     func makeCoordinator() -> MapCoordinator { MapCoordinator() }
 
@@ -76,6 +88,16 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         static let chatHalo = "jol-chat-halo"
         static let chatDot = "jol-chat-dot"
         static let chatLabel = "jol-chat-label"
+        static let tripSource = "jol-trip"
+        static let tripCasing = "jol-trip-casing"
+        static let tripLine = "jol-trip-line"
+        static let tripDashed = "jol-trip-dashed"
+        static let tripStopsSource = "jol-trip-stops"
+        static let tripStop = "jol-trip-stop"
+        static let tripStopNumber = "jol-trip-stop-number"
+        static let eventsSource = "jol-events"
+        static let eventDot = "jol-event-dot"
+        static let eventLabel = "jol-event-label"
     }
 
     var parent: MapView?
@@ -89,6 +111,9 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     private var appliedDirectionVersion = -1
     private var appliedFitVersion = -1
     private var appliedChatVersion = -1
+    var appliedTripVersion = -1
+    var appliedTripFitVersion = -1
+    var appliedEventsVersion = -1
 
     func attach(to map: MLNMapView) {
         self.map = map
@@ -120,6 +145,9 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedDirectionVersion = -1
         appliedFitVersion = -1
         appliedChatVersion = -1
+        appliedTripVersion = -1
+        appliedTripFitVersion = -1
+        appliedEventsVersion = -1
         apply(to: mapView)
         reportRegion(mapView)
     }
@@ -142,13 +170,15 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         // The route line is reused as is; the places source is replaced by a clustered one (cluster options
         // cannot be changed on an existing source), so the style's own places layers go away.
         // Everything is removed first because didFinishLoading may fire again for the same style object.
-        for id in [Layer.chatLabel, Layer.chatDot, Layer.chatHalo,
+        for id in [Layer.eventLabel, Layer.eventDot, Layer.tripStopNumber, Layer.tripStop, Layer.tripDashed,
+                   Layer.tripLine, Layer.tripCasing, Layer.chatLabel, Layer.chatDot, Layer.chatHalo,
                    Layer.directionsOrigin, Layer.directionsLine, Layer.directionsAlternative, Layer.directionsCasing,
                    Layer.routeStopNumber, Layer.routeStop, Layer.routeLine, Layer.pin, Layer.selection,
                    Layer.clusterCount, Layer.cluster, "jol-places-circle", "jol-places-label"] {
             if let layer = style.layer(withIdentifier: id) { style.removeLayer(layer) }
         }
-        for id in [Layer.chatSource, Layer.directionsOriginSource, Layer.directionsSource,
+        for id in [Layer.eventsSource, Layer.tripStopsSource, Layer.tripSource, Layer.chatSource,
+                   Layer.directionsOriginSource, Layer.directionsSource,
                    Layer.routeStopsSource, Layer.placesSource, "jol-places"] {
             if let source = style.source(withIdentifier: id) { style.removeSource(source) }
         }
@@ -197,6 +227,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         installRouteLayers(in: style)
         installDirectionsLayers(in: style, belowPins: pins)
         installChatLayers(in: style)
+        installTripLayers(in: style)
+        installEventLayers(in: style)
     }
 
     // MARK: - Applying SwiftUI state
@@ -238,6 +270,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             appliedChatVersion = parent.chatPlacesVersion
             applyChatPlaces(parent.chatPlaces, in: style, map: map)
         }
+
+        applyTripAndEvents(parent, style: style, map: map)
 
         if appliedDirectionVersion != parent.directionVersion || appliedFitVersion != parent.directionFitVersion {
             let refit = appliedFitVersion != parent.directionFitVersion
@@ -286,16 +320,25 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         guard let map, gesture.state == .ended else { return }
         let point = gesture.location(in: map)
         let hitBox = CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44)
-        let layers: Set<String> = [Layer.pin, Layer.cluster, Layer.routeStop, Layer.chatDot]
+        let layers: Set<String> = [Layer.pin, Layer.cluster, Layer.routeStop, Layer.chatDot, Layer.tripStop,
+                                   Layer.eventDot]
         let features = map.visibleFeatures(in: hitBox, styleLayerIdentifiers: layers)
         let nearest = features.min { distance($0, point, map) < distance($1, point, map) }
 
         guard let nearest else {
-            parent?.onTapEmpty()
+            let legs = map.visibleFeatures(in: hitBox, styleLayerIdentifiers: [Layer.tripLine, Layer.tripDashed])
+            let raw = legs.compactMap { $0.attribute(forKey: "leg") as? String }.first
+            if let raw, let id = UUID(uuidString: raw) {
+                parent?.onSelectLeg(id)
+            } else {
+                parent?.onTapEmpty()
+            }
             return
         }
         if let cluster = nearest as? MLNPointFeatureCluster {
             map.setCenter(cluster.coordinate, zoomLevel: min(map.zoomLevel + 2, 17), animated: true)
+        } else if let raw = nearest.attribute(forKey: "event") as? String, let id = UUID(uuidString: raw) {
+            parent?.onSelectEvent(id)
         } else if let raw = nearest.attribute(forKey: "id") as? String, let id = UUID(uuidString: raw) {
             parent?.onSelect(id)
         }

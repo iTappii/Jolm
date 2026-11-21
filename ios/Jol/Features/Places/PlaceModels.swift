@@ -88,11 +88,18 @@ struct PlaceDetail: Decodable, Identifiable, Equatable, Sendable {
     let photos: [Photo]
     let hours: [DayHours]
     let openNow: Bool?
+    /// `nil` while the place has fewer than five reports (Ш-47): the card then shows no crowd statistics.
+    let crowd: CrowdBlock?
+    /// Events at the place in the next 30 days (Ш-48).
+    let events: [EventItem]?
+    /// Partner booking (Ш-49): `nil` when the place has no partner — the booking button stays off.
+    let booking: BookingInfo?
 
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, category, kind, lat, lon, address, website, prices, photos, hours
+        case crowd, events, booking
         case typicalVisitMin = "typical_visit_min"
         case isPublic = "is_public"
         case isPartner = "is_partner"

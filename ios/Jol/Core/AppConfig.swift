@@ -9,7 +9,9 @@ enum AppConfig {
     /// `dark` switches `jol-light.json` to `jol-dark.json` on the same host (maps/style builds both).
     static func mapStyleURL(dark: Bool = false) -> URL {
         #if DEBUG
-        if UITestSupport.isStubbed, let url = Bundle.main.url(forResource: "stub-style", withExtension: "json") {
+        let realStyle = ProcessInfo.processInfo.arguments.contains("-JolRealMapStyle")  // screenshots on real tiles
+        if UITestSupport.isStubbed, !realStyle,
+           let url = Bundle.main.url(forResource: "stub-style", withExtension: "json") {
             return url  // UI tests: offline, no tiles server needed
         }
         #endif

@@ -7,11 +7,16 @@ struct SidebarPanel: View {
     let onNewChat: () -> Void
     var onOpenRoutes: () -> Void = {}
     var onOpenFavorites: () -> Void = {}
+    /// Saved trips of a signed-in user (nil: nothing to list, e.g. a guest); a row opens the full route map.
+    var trips: ChatModel.Load<[TripSummary]>?
+    var onOpenTrip: (UUID) -> Void = { _ in }
+    var onRetryTrips: () -> Void = {}
     /// Saved chats of a signed-in user (nil: nothing to list, e.g. a guest).
     var chats: ChatModel.Load<[ChatSummary]>?
     var onOpenChat: (UUID) -> Void = { _ in }
     var onRetryChats: () -> Void = {}
     private let width: CGFloat = 300
+    @Environment(\.locale) private var locale
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -28,6 +33,44 @@ struct SidebarPanel: View {
             }
         }
         .animation(.snappy(duration: 0.3), value: isOpen)
+    }
+
+    @ViewBuilder private var tripsSection: some View {
+        switch trips {
+        case .failed:
+            Button("Couldn't load trips. Try again.", action: onRetryTrips)
+                .font(JolFont.callout)
+                .accessibilityIdentifier("sidebar-trips-retry")
+        case .loaded(let items) where !items.isEmpty:
+            VStack(alignment: .leading, spacing: JolSpacing.xs) {
+                Text("My trips").font(JolFont.callout.weight(.semibold)).foregroundStyle(JolColor.textSecondary)
+                ForEach(items.prefix(5)) { trip in
+                    Button {
+                        onOpenTrip(trip.id)
+                        isOpen = false
+                    } label: {
+                        HStack(spacing: JolSpacing.sm) {
+                            Image(systemName: "map")
+                            let dates = BriefFormatting.dates(start: trip.startDate, end: trip.endDate, locale: locale)
+                            Text(verbatim: dates ?? "…")
+                            Spacer(minLength: 0)
+                            if let days = trip.days { Text("\(days) days").foregroundStyle(JolColor.textSecondary) }
+                        }
+                        .font(JolFont.body)
+                        .foregroundStyle(JolColor.textPrimary)
+                        .padding(.vertical, JolSpacing.sm)
+                        .padding(.horizontal, JolSpacing.md)
+                        .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("sidebar-trip-row")
+                }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("sidebar-trips")
+        default:
+            EmptyView()
+        }
     }
 
     @ViewBuilder private var recentChats: some View {
@@ -142,6 +185,7 @@ struct SidebarPanel: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("sidebar-favorites")
+            tripsSection
             recentChats
             Spacer()
         }

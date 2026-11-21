@@ -236,7 +236,7 @@ struct TripUpdated: Decodable, Equatable, Sendable {
     }
 }
 
-// MARK: - Trip (read side, enough for the placeholder day list; the full screen is Ш-37)
+// MARK: - Trip link (the full trip is in `Features/Trip/TripModels.swift`)
 
 struct TripLink: Decodable, Equatable, Sendable {
     let id: UUID
@@ -252,69 +252,6 @@ struct TripLink: Decodable, Equatable, Sendable {
 
 struct TripLinks: Decodable, Sendable {
     let items: [TripLink]
-}
-
-struct TripPlace: Decodable, Equatable, Sendable {
-    let id: UUID
-    let name: String
-    let category: String?
-    let lat: Double
-    let lon: Double
-}
-
-struct TripDayItem: Decodable, Equatable, Identifiable, Sendable {
-    let id: UUID
-    let kind: String
-    let startsAt: String?
-    let place: TripPlace
-
-    enum CodingKeys: String, CodingKey {
-        case id, kind, place
-        case startsAt = "starts_at"
-    }
-
-    /// "HH:mm" of the local start time as the server wrote it (`2026-12-05T09:30:00+05:00`).
-    var startTime: String? {
-        guard let startsAt, let index = startsAt.firstIndex(of: "T") else { return nil }
-        return String(startsAt[startsAt.index(after: index)...].prefix(5))
-    }
-}
-
-struct TripDay: Decodable, Equatable, Identifiable, Sendable {
-    let date: String
-    let items: [TripDayItem]
-
-    var id: String { date }
-}
-
-struct TripOverview: Decodable, Equatable, Sendable {
-    let id: UUID
-    let version: Int
-    let startDate: String
-    let endDate: String
-    let budgetKzt: Int?
-    let totalCostKzt: Int?
-    let budget: RouteBudget?
-    let days: [TripDay]
-
-    enum CodingKeys: String, CodingKey {
-        case id, version, days, budget
-        case startDate = "start_date"
-        case endDate = "end_date"
-        case budgetKzt = "budget_kzt"
-        case totalCostKzt = "total_cost_kzt"
-    }
-
-    var places: [MapPlace] {
-        var seen = Set<UUID>()
-        return days.flatMap(\.items).compactMap { item in
-            guard seen.insert(item.place.id).inserted else { return nil }
-            return MapPlace(
-                id: item.place.id, name: item.place.name, category: item.place.category,
-                lat: item.place.lat, lon: item.place.lon, mustHave: nil
-            )
-        }
-    }
 }
 
 struct ProposalInfo: Decodable, Equatable, Sendable {

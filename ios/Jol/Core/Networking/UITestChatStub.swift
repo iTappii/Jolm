@@ -57,20 +57,19 @@ enum ChatStub {
         case ("POST", "/v1/chats/\(chatID)/messages"):
             return message((body["content"] as? String) ?? "")
         default:
-            return tripAnswer(method: method, path: path)
+            return tripAnswer(method: method, path: path, body: body)
         }
     }
 
-    private static func tripAnswer(method: String, path: String) -> Answer {
+    private static func tripAnswer(method: String, path: String, body: [String: Any]) -> Answer {
+        if let answer = TripStub.answer(method: method, path: path, body: body, tripIDs: [tripID, oldTripID]) {
+            return answer
+        }
         switch (method, path) {
         case ("GET", "/v1/trips"):
-            let items = (tripBuilt ? ["{\"id\":\"\(tripID)\",\"chat_id\":\"\(chatID)\"}"] : [])
-                + ["{\"id\":\"\(oldTripID)\",\"chat_id\":\"\(oldChatID)\"}"]
+            let items = (tripBuilt ? [TripStub.listItem(id: tripID, chat: chatID)] : [])
+                + [TripStub.listItem(id: oldTripID, chat: oldChatID)]
             return Answer(body: "{\"items\":[\(items.joined(separator: ","))]}")
-        case ("GET", "/v1/trips/\(tripID)"):
-            return Answer(body: tripJSON(id: tripID, chat: chatID))
-        case ("GET", "/v1/trips/\(oldTripID)"):
-            return Answer(body: tripJSON(id: oldTripID, chat: oldChatID))
         case ("GET", "/v1/trips/\(oldTripID)/proposals"):
             return Answer(body: "{\"items\":[{\"id\":\"\(proposalID)\",\"status\":\"\(proposalStatus)\"}]}")
         case ("POST", "/v1/proposals/\(proposalID)/accept"):
@@ -154,28 +153,6 @@ enum ChatStub {
         let nodes = "[{\"ord\":1,\"kind\":\"fact\",\"text\":\"3 days, Dec 5-7\"}]"
         return String(chatHeader(chatID, title: "null").dropLast())
             + ",\"messages\":[\(messages.joined(separator: ","))],\"brief\":\(brief),\"graph_nodes\":\(nodes)}"
-    }
-
-    private static func tripJSON(id: String, chat: String) -> String {
-        func place(_ pid: String, _ name: String, _ category: String, _ dLat: Double, _ dLon: Double) -> String {
-            "{\"id\":\"\(pid)\",\"name\":\"\(name)\",\"name_lang\":\"en\",\"category\":\"\(category)\","
-                + "\"category_name\":\"\(category)\",\"lat\":\(43.238949 + dLat),"
-                + "\"lon\":\(76.889709 + dLon),\"photo\":null}"
-        }
-        func item(_ order: Int, _ place: String, _ time: String) -> String {
-            "{\"id\":\"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa0\(order)\",\"ord\":\(order),\"kind\":\"activity\","
-                + "\"meal\":null,\"place\":\(place),\"starts_at\":\"2026-12-05T\(time):00+05:00\",\"visit_min\":60}"
-        }
-        let museum = place(UITestSupport.centerPlaceID, "Fixture Museum", "museum", 0, 0)
-        let cafe = place(UITestSupport.secondPlaceID, "Fixture Cafe", "coffee", 0.01, 0.012)
-        let days = """
-        [{"date":"2026-12-05","items":[\(item(1, museum, "09:30")),\(item(2, cafe, "12:00"))],"legs":[]},\
-        {"date":"2026-12-06","items":[\(item(3, cafe, "10:00"))],"legs":[]},\
-        {"date":"2026-12-07","items":[],"legs":[]}]
-        """
-        return "{\"id\":\"\(id)\",\"chat_id\":\"\(chat)\",\"version\":1,\"status\":\"active\","
-            + "\"start_date\":\"2026-12-05\",\"end_date\":\"2026-12-07\",\"budget_kzt\":900000,"
-            + "\"total_cost_kzt\":120000,\"days\":\(days)}"
     }
 }
 

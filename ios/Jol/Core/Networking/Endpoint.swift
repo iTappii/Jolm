@@ -17,6 +17,8 @@ struct Endpoint: Sendable {
     /// Guest-accessible endpoints are still fine with `true`: with no session no header is sent.
     var authorized = true
     var timeout: TimeInterval = 10
+    /// Extra request headers (e.g. `Idempotency-Key`).
+    var headers: [String: String] = [:]
 
     init(_ method: Method, _ path: String, query: [URLQueryItem] = [], authorized: Bool = true) {
         self.method = method

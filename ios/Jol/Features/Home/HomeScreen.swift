@@ -10,7 +10,6 @@ struct HomeScreen: View {
     @State private var profileOpen = false
     @State private var routesOpen = false
     @State private var favoritesOpen = false
-    @State private var tripOpen = false
     @State private var cardDetent = PlaceCardSheet.cardDetent
     @State private var screenHeight: CGFloat = 874
 
@@ -20,6 +19,8 @@ struct HomeScreen: View {
                 places: container.places,
                 chat: container.chat,
                 directions: container.directions,
+                tripMap: container.tripMap,
+                events: container.events,
                 bottomInset: mapBottomInset
             )
             if chatExpanded {
@@ -27,7 +28,16 @@ struct HomeScreen: View {
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
             }
-            overlay
+            if container.tripMap.isOpen {
+                TripMapOverlay(
+                    model: container.tripMap,
+                    panelVisible: container.places.selected == nil && container.events.selected == nil,
+                    panelHeight: screenHeight * TripMapOverlay.panelFraction,
+                    onSelectPlace: { container.places.select($0.summary) }
+                )
+            } else {
+                overlay
+            }
             SidebarPanel(
                 isOpen: $sidebarOpen,
                 onNewChat: {
@@ -37,6 +47,12 @@ struct HomeScreen: View {
                 },
                 onOpenRoutes: { routesOpen = true },
                 onOpenFavorites: { container.gate.requireAccount { favoritesOpen = true } },
+                trips: container.auth.isSignedIn ? container.tripMap.summaries : nil,
+                onOpenTrip: { id in
+                    chatExpanded = false
+                    container.tripMap.open(tripID: id)
+                },
+                onRetryTrips: { container.tripMap.loadSummaries() },
                 chats: container.auth.isSignedIn ? container.chat.recent : nil,
                 onOpenChat: { id in
                     draft = ""
@@ -72,14 +88,29 @@ struct HomeScreen: View {
             } else {
                 container.favorites.clear()
                 container.chat.clearRecent()
+                container.tripMap.close()
+                container.tripMap.clearSummaries()
                 container.chat.reset() // a saved chat belongs to the account that is gone
             }
         }
         .onChange(of: sidebarOpen) { _, open in
-            if open, container.auth.isSignedIn { container.chat.loadRecent() }
+            if open, container.auth.isSignedIn {
+                container.chat.loadRecent()
+                container.tripMap.loadSummaries()
+            }
         }
-        .sheet(isPresented: $tripOpen) {
-            TripDaysSheet(model: container.chat)
+        .onChange(of: container.tripMap.isOpen) { _, open in
+            if open {
+                container.events.clearSelection()
+                container.places.clearSelection()
+            }
+        }
+        .onChange(of: container.tripMap.editRevision) { _, _ in
+            // An edit on the full map changed the plan: the pins behind the chat follow it.
+            if container.chat.tripID == container.tripMap.tripID { container.chat.loadTrip() }
+        }
+        .sheet(isPresented: eventPresented) {
+            EventCardSheet(events: container.events, places: container.places)
         }
         .sheet(isPresented: $routesOpen) {
             CuratedRoutesSheet(model: container.places)
@@ -89,7 +120,15 @@ struct HomeScreen: View {
         }
         .onChange(of: container.places.selected?.id) { _, id in
             container.directions.reset()
-            if id != nil { chatExpanded = false } else { cardDetent = PlaceCardSheet.cardDetent }
+            if id != nil {
+                chatExpanded = false
+                container.events.clearSelection()
+            } else {
+                cardDetent = PlaceCardSheet.cardDetent
+            }
+        }
+        .onChange(of: container.events.selected?.id) { _, id in
+            if id != nil { chatExpanded = false }
         }
         .onChange(of: container.directions.isActive) { _, active in
             cardDetent = active ? PlaceCardSheet.directionsDetent : PlaceCardSheet.cardDetent
@@ -134,38 +173,6 @@ struct HomeScreen: View {
         return chat.isGuestTranscript && !chat.isStreaming && chat.state.messages.last?.role == .assistant
     }
 
-    private var gatePresented: Binding<Bool> {
-        // While a place card is up, the card presents the sheet itself (a view cannot present two sheets).
-        Binding(
-            get: { container.gate.isPresenting && container.places.selected == nil },
-            set: { container.gate.isPresenting = $0 }
-        )
-    }
-
-    /// Share of the screen the chat card takes once a conversation is on.
-    private static let conversationFraction: CGFloat = 0.56
-
-    private var chatIsActive: Bool {
-        let chat = container.chat
-        return !chat.state.isEmpty || chat.isOpening || chat.openFailed
-    }
-
-    private var mapBottomInset: CGFloat {
-        if container.places.selected == nil {
-            // The live map keeps its pins above the open conversation.
-            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.08) : 0
-        }
-        let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
-        return screenHeight * fraction
-    }
-
-    private var cardPresented: Binding<Bool> {
-        Binding(
-            get: { container.places.selected != nil },
-            set: { if !$0 { container.places.clearSelection() } }
-        )
-    }
-
     private var overlay: some View {
         VStack(spacing: JolSpacing.sm) {
             if chatExpanded {
@@ -184,7 +191,7 @@ struct HomeScreen: View {
                     },
                     onOpenRoute: {
                         chatExpanded = false
-                        tripOpen = true
+                        if let id = container.chat.tripID { container.tripMap.open(tripID: id) }
                     },
                     onGuestSignIn: guestSignIn
                 )
@@ -251,6 +258,51 @@ struct HomeScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, JolSpacing.sm)
+    }
+}
+
+extension HomeScreen {
+    private var gatePresented: Binding<Bool> {
+        // While a place card is up, the card presents the sheet itself (a view cannot present two sheets).
+        Binding(
+            get: { container.gate.isPresenting && container.places.selected == nil },
+            set: { container.gate.isPresenting = $0 }
+        )
+    }
+
+    /// Share of the screen the chat card takes once a conversation is on.
+    private static let conversationFraction: CGFloat = 0.56
+
+    private var chatIsActive: Bool {
+        let chat = container.chat
+        return !chat.state.isEmpty || chat.isOpening || chat.openFailed
+    }
+
+    private var mapBottomInset: CGFloat {
+        if container.events.selected != nil { return screenHeight * PlaceCardSheet.cardFraction }
+        if container.tripMap.isOpen, container.places.selected == nil {
+            return screenHeight * TripMapOverlay.panelFraction
+        }
+        if container.places.selected == nil {
+            // The live map keeps its pins above the open conversation.
+            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.08) : 0
+        }
+        let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
+        return screenHeight * fraction
+    }
+
+    private var eventPresented: Binding<Bool> {
+        Binding(
+            get: { container.events.selected != nil },
+            set: { if !$0 { container.events.clearSelection() } }
+        )
+    }
+
+    private var cardPresented: Binding<Bool> {
+        Binding(
+            get: { container.places.selected != nil },
+            set: { if !$0 { container.places.clearSelection() } }
+        )
     }
 }
 
