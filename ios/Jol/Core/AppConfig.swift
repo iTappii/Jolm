@@ -68,6 +68,17 @@ enum AppConfig {
         return parseFlag(Bundle.main.object(forInfoDictionaryKey: "JOL_APPLE_SIGN_IN_ENABLED") as? String)
     }
 
+    /// Privacy policy page (`JOL_PRIVACY_URL`, Ш-52); `nil` when the build has none or it is not https.
+    static var privacyPolicyURL: URL? {
+        resolvePrivacyURL(configured: Bundle.main.object(forInfoDictionaryKey: "JOL_PRIVACY_URL") as? String)
+    }
+
+    static func resolvePrivacyURL(configured: String?) -> URL? {
+        let trimmed = configured?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard let url = URL(string: trimmed), url.scheme == "https", url.host?.isEmpty == false else { return nil }
+        return url
+    }
+
     /// `YES`/`TRUE`/`1` (any case) → true; anything else, including a missing value → false.
     static func parseFlag(_ raw: String?) -> Bool {
         guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else { return false }

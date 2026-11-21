@@ -7,6 +7,12 @@
         "ru" : { "stringUnit" : { "state" : "translated", "value" : "Jol" } }
       }
     },
+    "NSPhotoLibraryUsageDescription" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Jol lets you pick photos of places to share with other travellers. Location data is removed from them before upload." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Jol позволяет выбрать фото мест, чтобы поделиться ими с другими путешественниками. Перед загрузкой из фото удаляются данные о местоположении." } }
+      }
+    },
     "NSLocationWhenInUseUsageDescription" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Jol uses your location to show where you are on the map and to build routes from your position." } },

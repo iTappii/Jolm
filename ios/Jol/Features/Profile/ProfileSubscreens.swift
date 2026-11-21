@@ -61,32 +61,3 @@ struct HelpScreen: View {
         .accessibilityIdentifier("help-screen")
     }
 }
-
-struct AboutScreen: View {
-    private var version: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
-        let build = info?["CFBundleVersion"] as? String ?? "?"
-        return "\(short) (\(build))"
-    }
-
-    var body: some View {
-        List {
-            Section {
-                LabeledContent("Version") { Text(verbatim: version) }
-                    .accessibilityIdentifier("about-version")
-            }
-            Section {
-                Text("© OpenStreetMap contributors")
-                    .accessibilityIdentifier("about-osm")
-                Text("Map rendering by MapLibre Native.")
-                    .accessibilityIdentifier("about-maplibre")
-            } header: {
-                Text("Map data")
-            }
-        }
-        .navigationTitle(Text("About"))
-        .navigationBarTitleDisplayMode(.inline)
-        .accessibilityIdentifier("about-screen")
-    }
-}
