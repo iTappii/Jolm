@@ -5,3 +5,7 @@ JOL_MAP_STYLE_URL =
 JOL_MAP_STYLE_URL[sdk=iphonesimulator*] = http:/$()/localhost:8080/native/jol-light.json
 JOL_API_BASE_URL =
 JOL_API_BASE_URL[sdk=iphonesimulator*] = http:/$()/localhost:8000
+
+// Sign in with Apple button on the sign-in screen. NO until the build is signed with the Sign in with Apple
+// capability (paid Apple Developer Program, Ш-26); the button is then shown disabled with an explanation.
+JOL_APPLE_SIGN_IN_ENABLED = NO

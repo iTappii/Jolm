@@ -6,6 +6,7 @@ struct SidebarPanel: View {
     @Binding var isOpen: Bool
     let onNewChat: () -> Void
     var onOpenRoutes: () -> Void = {}
+    var onOpenFavorites: () -> Void = {}
     private let width: CGFloat = 300
 
     var body: some View {
@@ -71,6 +72,20 @@ struct SidebarPanel: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("sidebar-routes")
+            Button {
+                onOpenFavorites()
+                isOpen = false
+            } label: {
+                Label("Favorites", systemImage: "heart")
+                    .font(JolFont.headline)
+                    .foregroundStyle(JolColor.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, JolSpacing.md)
+                    .padding(.horizontal, JolSpacing.md)
+                    .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("sidebar-favorites")
             Text("No chats yet")
                 .font(JolFont.callout)
                 .foregroundStyle(JolColor.textSecondary)

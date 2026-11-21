@@ -44,6 +44,22 @@ private struct RefreshToken: Encodable {
     }
 }
 
+enum OTPChannel: String, Sendable {
+    case email
+    case phone
+}
+
+private struct OTPRequestBody: Encodable {
+    let channel: String
+    let destination: String
+}
+
+private struct OTPVerifyBody: Encodable {
+    let channel: String
+    let destination: String
+    let code: String
+}
+
 /// Auth endpoints on top of `APIClient`.
 struct AuthService: Sendable {
     let api: APIClient
@@ -59,6 +75,23 @@ struct AuthService: Sendable {
         let body = AppleCredential(identityToken: identityToken, authorizationCode: authorizationCode)
         let endpoint = try Endpoint.post("v1/auth/apple", json: body, authorized: false)
         let session: SessionTokens = try await api.send(endpoint)
+        try tokens.save(session)
+    }
+
+    /// `POST /v1/auth/otp/request` (204): the server sends a 6-digit code to the e-mail / phone.
+    /// `destination` is sent as typed (light client-side validation only): the server normalizes e-mail
+    /// and phone numbers (E.164, KZ by default).
+    func requestCode(channel: OTPChannel, destination: String) async throws {
+        let body = OTPRequestBody(channel: channel.rawValue, destination: destination)
+        try await api.send(Endpoint.post("v1/auth/otp/request", json: body, authorized: false))
+    }
+
+    /// `POST /v1/auth/otp/verify`: exchanges the code for a session and stores it in the Keychain.
+    func verifyCode(channel: OTPChannel, destination: String, code: String) async throws {
+        let body = OTPVerifyBody(channel: channel.rawValue, destination: destination, code: code)
+        let session: SessionTokens = try await api.send(
+            Endpoint.post("v1/auth/otp/verify", json: body, authorized: false)
+        )
         try tokens.save(session)
     }
 

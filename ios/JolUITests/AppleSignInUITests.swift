@@ -5,6 +5,7 @@ import XCTest
 final class AppleSignInUITests: XCTestCase {
     func testProfileMenuOpensAppleSignIn() {
         let app = XCUIApplication()
+        app.launchArguments = ["-JolAppleSignInEnabled"]  // the button is off by default (JOL_APPLE_SIGN_IN_ENABLED)
         app.launch()
 
         let profile = app.buttons["open-profile-menu"]

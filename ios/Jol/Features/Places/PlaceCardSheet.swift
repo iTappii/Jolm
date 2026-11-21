@@ -1,18 +1,22 @@
 import SwiftUI
 
-/// Sheet with the place card: the small detent is the mini card (the map behind stays interactive),
-/// swiping up expands it to the full card.
+/// Sheet with the place card (SSOT §6.1): opens at about a third of the screen (the map behind stays interactive)
+/// and can be dragged up. While directions are open it starts taller so a few variants fit.
 struct PlaceCardSheet: View {
-    static let miniHeight: CGFloat = 270
-    static let miniDetent = PresentationDetent.height(miniHeight)
+    static let cardFraction: CGFloat = 1.0 / 3.0
+    static let directionsFraction: CGFloat = 0.5
+    static let cardDetent = PresentationDetent.fraction(cardFraction)
+    static let directionsDetent = PresentationDetent.fraction(directionsFraction)
 
     let model: PlacesModel
+    let directions: DirectionsModel
     @Binding var detent: PresentationDetent
 
     var body: some View {
-        PlaceCardView(model: model, expanded: detent == .large)
-            .presentationDetents([Self.miniDetent, .large], selection: $detent)
-            .presentationBackgroundInteraction(.enabled(upThrough: Self.miniDetent))
+        let base = directions.isActive ? Self.directionsDetent : Self.cardDetent
+        PlaceCardView(model: model, directions: directions)
+            .presentationDetents([base, .large], selection: $detent)
+            .presentationBackgroundInteraction(.enabled(upThrough: base))
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(JolRadius.xl)
     }

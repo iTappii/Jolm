@@ -25,7 +25,7 @@ final class PlacesUITests: XCTestCase {
 
     /// The fixture museum sits exactly at the initial map center; pins load asynchronously, so tap until it opens.
     private func tapCenterPin(_ app: XCUIApplication) {
-        let card = element(app, "place-card-mini")
+        let card = element(app, "place-card")
         for _ in 0..<12 where !card.exists {
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
             _ = card.waitForExistence(timeout: 1.5)
@@ -47,24 +47,51 @@ final class PlacesUITests: XCTestCase {
         XCTAssertTrue(element(app, "place-directions").isHittable)
         XCTAssertTrue(element(app, "place-navigator").exists)
         XCTAssertFalse(element(app, "place-book").isEnabled, "booking is disabled until Ф16")
-        XCTAssertTrue(element(app, "place-photo").exists, "photo placeholder")
+        XCTAssertTrue(element(app, "place-gallery").exists)
+        XCTAssertTrue(element(app, "place-address").waitForExistence(timeout: 5), "address under the name")
+        XCTAssertTrue(element(app, "place-favorite").isHittable, "pinned buttons stay visible")
 
-        // Swipe the sheet up → full card.
-        let sheetTop = app.otherElements["place-card-mini"].firstMatch
-        sheetTop.swipeUp()
-        XCTAssertTrue(element(app, "place-card-full").waitForExistence(timeout: 5), app.debugDescription)
-        XCTAssertTrue(element(app, "place-address").waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "place-hours").exists)
+        // Drag the sheet up → everything fits.
+        element(app, "place-card").swipeUp()
+        XCTAssertTrue(element(app, "place-hours").waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["A fixture place used by UI tests."].exists)
+        XCTAssertTrue(element(app, "place-directions").isHittable, "still pinned when expanded")
+    }
+
+    func testTabsOverviewReviewsPhotos() {
+        let app = launch()
+        collapseChat(app)
+        tapCenterPin(app)
+        XCTAssertTrue(element(app, "place-tab-overview").isSelected)
+        XCTAssertTrue(element(app, "place-tab-content-overview").waitForExistence(timeout: 5))
+
+        element(app, "place-tab-reviews").tap()
+        XCTAssertTrue(element(app, "place-reviews-empty").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "place-tab-reviews").isSelected)
+
+        element(app, "place-tab-photos").tap()
+        XCTAssertTrue(element(app, "place-photos-empty").waitForExistence(timeout: 5))
+
+        element(app, "place-tab-overview").tap()
+        XCTAssertTrue(element(app, "place-open-now").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "place-directions").isHittable)
+    }
+
+    func testFavoritesButtonAsGuestOpensSignInGate() {
+        let app = launch()
+        collapseChat(app)
+        tapCenterPin(app)
+        element(app, "place-favorite").tap()
+        XCTAssertTrue(element(app, "account-gate").waitForExistence(timeout: 5), app.debugDescription)
     }
 
     func testCardClosesBySwipingDown() {
         let app = launch()
         collapseChat(app)
         tapCenterPin(app)
-        element(app, "place-card-mini").swipeDown()
+        element(app, "place-card").swipeDown()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"),
-                                             object: element(app, "place-card-mini"))
+                                             object: element(app, "place-card"))
         XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 5), .completed)
     }
 
@@ -86,7 +113,7 @@ final class PlacesUITests: XCTestCase {
         let second = app.buttons["route-stop-2"]
         XCTAssertTrue(second.waitForExistence(timeout: 5))
         second.tap()
-        XCTAssertTrue(element(app, "place-card-mini").waitForExistence(timeout: 5))
+        XCTAssertTrue(element(app, "place-card").waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["place-name"].label, "Fixture Cafe")
     }
 

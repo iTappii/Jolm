@@ -57,6 +57,21 @@ enum AppConfig {
         return .success(base)
     }
 
+    /// `JOL_APPLE_SIGN_IN_ENABLED` (Info.plist ← `Config.xcconfig`). `NO` while the build has no Sign in with Apple
+    /// capability (needs the paid Apple Developer Program, Ш-26): the sign-in screen then shows the button disabled.
+    static var appleSignInEnabled: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-JolAppleSignInEnabled") { return true }
+        #endif
+        return parseFlag(Bundle.main.object(forInfoDictionaryKey: "JOL_APPLE_SIGN_IN_ENABLED") as? String)
+    }
+
+    /// `YES`/`TRUE`/`1` (any case) → true; anything else, including a missing value → false.
+    static func parseFlag(_ raw: String?) -> Bool {
+        guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else { return false }
+        return ["yes", "true", "1"].contains(value)
+    }
+
     static var isSimulator: Bool {
         #if targetEnvironment(simulator)
         true

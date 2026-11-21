@@ -64,7 +64,7 @@ final class APIClient: Sendable {
                                 body.append(byte)
                                 if body.count > 16_384 { break }
                             }
-                            throw APIErrorBody.decode(status: http.statusCode, data: body)
+                            throw APIErrorBody.decode(response: http, data: body)
                         }
                         return bytes
                     }
@@ -88,7 +88,7 @@ final class APIClient: Sendable {
                 let (data, response) = try await self.session.data(for: request)
                 guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
                 guard (200..<300).contains(http.statusCode) else {
-                    throw APIErrorBody.decode(status: http.statusCode, data: data)
+                    throw APIErrorBody.decode(response: http, data: data)
                 }
                 return data
             }
@@ -123,7 +123,7 @@ final class APIClient: Sendable {
                 let (data, response) = try await self.session.data(for: request)
                 guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
                 guard (200..<300).contains(http.statusCode) else {
-                    throw APIErrorBody.decode(status: http.statusCode, data: data)
+                    throw APIErrorBody.decode(response: http, data: data)
                 }
                 return data
             }

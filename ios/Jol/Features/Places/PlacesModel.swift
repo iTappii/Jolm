@@ -36,8 +36,6 @@ final class PlacesModel {
 
     private(set) var selected: PlaceSummary?
     private(set) var detail: DetailState = .idle
-    /// Last place the user asked directions to. Ш-23 replaces this with the real flow.
-    private(set) var directionsTarget: UUID?
 
     // MARK: - Curated routes
 
@@ -62,6 +60,11 @@ final class PlacesModel {
     }
 
     var routeStops: [PlaceSummary] { activeRoute?.stops ?? [] }
+
+    /// Centre of the visible map (fallback origin for directions when the user's location is unknown).
+    var mapCenter: GeoPoint? {
+        currentBounds.map { GeoPoint(lat: ($0.south + $0.north) / 2, lon: ($0.west + $0.east) / 2) }
+    }
 
     // MARK: - Pins loading
 
@@ -164,11 +167,6 @@ final class PlacesModel {
                 detail = .failed
             }
         }
-    }
-
-    /// "Как добраться" (Ш-23): for now only remembers the request.
-    func requestDirections(to id: UUID) {
-        directionsTarget = id
     }
 
     // MARK: - Curated routes

@@ -41,3 +41,15 @@ change `AppConfig.bundledStyleName` (add the file to the target resources).
 ## Location
 `NSLocationWhenInUseUsageDescription` is in `Jol/Info.plist` (en) and `Jol/Resources/InfoPlist.xcstrings` (en, ru).
 Attribution: MapLibre's own attribution button plus a visible "© OpenStreetMap contributors" label.
+
+## Sign in with Apple switch
+`Config.xcconfig` → `JOL_APPLE_SIGN_IN_ENABLED` (default `NO`) is copied into `Info.plist` and read by
+`AppConfig.appleSignInEnabled`. With `NO` the sign-in screen shows the Apple button disabled with an explanation
+(e-mail and phone codes work). Set `YES` only for a build signed with the Sign in with Apple capability
+(paid Apple Developer Program, see `docs/reviews/Ш-26.md`). Debug builds also accept the launch argument
+`-JolAppleSignInEnabled` (used by `AppleSignInUITests`).
+
+## UI-test stub switches (DEBUG)
+`-JolStubAPI` (fixtures for places, directions, auth, favorites), `-JolStubSignedIn` (with the stub: a signed-in user),
+`-JolStubLocation denied|unavailable|outside` (location fallbacks). Stub sign-in code is `123456`;
+`ratelimit@…` gets a 429.

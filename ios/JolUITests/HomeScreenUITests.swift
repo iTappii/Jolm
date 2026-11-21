@@ -97,7 +97,8 @@ final class HomeScreenUITests: XCTestCase {
 
         app.buttons["profile-sign-in"].tap()
         XCTAssertTrue(element(app, "sign-in-entry").waitForExistence(timeout: 5))
-        XCTAssertTrue(element(app, "sign-in-email").exists)
+        XCTAssertTrue(element(app, "sign-in-channel").exists)
+        XCTAssertTrue(element(app, "sign-in-send").exists)
     }
 
     func testLanguageSwitchAppliesWithoutRestart() {

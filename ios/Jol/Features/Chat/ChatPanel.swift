@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// Expanded chat card: greeting, input, collapse button (top-right). Sending arrives with Ш-32:
-/// for now the field only keeps the text.
+/// Expanded chat card: greeting, input, collapse button (top-right). The real chat arrives with Ш-32; until then
+/// sending only passes the registration gate (Ш-28) and the text stays in the field.
 struct ChatPanel: View {
     @Binding var draft: String
+    var savedNote = false
     let onCollapse: () -> Void
+    let onSend: () -> Void
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -27,12 +29,33 @@ struct ChatPanel: View {
                 .accessibilityLabel(Text("Collapse chat"))
                 .accessibilityIdentifier("chat-collapse")
             }
-            TextField("Where do you want to go?", text: $draft, axis: .vertical)
-                .lineLimit(1...4)
-                .focused($focused)
-                .padding(JolSpacing.md)
-                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-                .accessibilityIdentifier("chat-input")
+            HStack(alignment: .bottom, spacing: JolSpacing.sm) {
+                TextField("Where do you want to go?", text: $draft, axis: .vertical)
+                    .lineLimit(1...4)
+                    .focused($focused)
+                    .submitLabel(.send)
+                    .onSubmit(onSend)
+                    .accessibilityIdentifier("chat-input")
+                Button(action: onSend) {
+                    Image(systemName: "arrow.up")
+                        .font(.body.weight(.bold))
+                        .frame(width: 32, height: 32)
+                        .background(JolColor.brand.opacity(canSend ? 1 : 0.35), in: Circle())
+                        .foregroundStyle(JolColor.onBrand)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .accessibilityLabel(Text("Send"))
+                .accessibilityIdentifier("chat-send")
+            }
+            .padding(JolSpacing.md)
+            .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+            if savedNote {
+                Text("The chat is coming soon. Your message is saved.")
+                    .font(JolFont.caption)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .accessibilityIdentifier("chat-saved-note")
+            }
         }
         .padding(JolSpacing.lg)
         .background(JolColor.surfaceElevated, in: RoundedRectangle(cornerRadius: JolRadius.xl))
@@ -40,6 +63,8 @@ struct ChatPanel: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("chat-panel")
     }
+
+    private var canSend: Bool { !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
 
 /// Collapsed chat: a compact bar next to the profile button; tapping it expands the chat.

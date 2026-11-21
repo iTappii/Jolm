@@ -9,13 +9,17 @@ struct HomeScreen: View {
     @State private var sidebarOpen = false
     @State private var profileOpen = false
     @State private var routesOpen = false
-    @State private var cardDetent = PlaceCardSheet.miniDetent
+    @State private var favoritesOpen = false
+    @State private var savedNote = false
+    @State private var cardDetent = PlaceCardSheet.cardDetent
+    @State private var screenHeight: CGFloat = 874
 
     var body: some View {
         ZStack {
             MapScreen(
                 places: container.places,
-                bottomInset: container.places.selected == nil ? 0 : PlaceCardSheet.miniHeight
+                directions: container.directions,
+                bottomInset: mapBottomInset
             )
             if chatExpanded {
                 Color.black.opacity(0.12)
@@ -27,23 +31,48 @@ struct HomeScreen: View {
                 isOpen: $sidebarOpen,
                 onNewChat: {
                     draft = ""
+                    savedNote = false
                     chatExpanded = true
                 },
-                onOpenRoutes: { routesOpen = true }
+                onOpenRoutes: { routesOpen = true },
+                onOpenFavorites: { container.gate.requireAccount { favoritesOpen = true } }
             )
         }
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { screenHeight = proxy.size.height }
+                    .onChange(of: proxy.size.height) { _, height in screenHeight = height }
+            }
+            .ignoresSafeArea()
+        )
         .animation(.snappy(duration: 0.3), value: chatExpanded)
         .sheet(isPresented: $profileOpen) {
             ProfileMenuSheet()
+        }
+        .sheet(
+            isPresented: gatePresented,
+            onDismiss: { container.gate.sheetDismissed() },
+            content: { AccountGateSheet() }
+        )
+        .sheet(isPresented: $favoritesOpen) {
+            FavoritesSheet(model: container.favorites) { container.places.select($0) }
+        }
+        .task(id: container.auth.isSignedIn) {
+            if container.auth.isSignedIn { await container.favorites.load() } else { container.favorites.clear() }
         }
         .sheet(isPresented: $routesOpen) {
             CuratedRoutesSheet(model: container.places)
         }
         .sheet(isPresented: cardPresented) {
-            PlaceCardSheet(model: container.places, detent: $cardDetent)
+            PlaceCardSheet(model: container.places, directions: container.directions, detent: $cardDetent)
         }
         .onChange(of: container.places.selected?.id) { _, id in
-            if id != nil { chatExpanded = false } else { cardDetent = PlaceCardSheet.miniDetent }
+            container.directions.reset()
+            if id != nil { chatExpanded = false } else { cardDetent = PlaceCardSheet.cardDetent }
+        }
+        .onChange(of: container.directions.isActive) { _, active in
+            cardDetent = active ? PlaceCardSheet.directionsDetent : PlaceCardSheet.cardDetent
         }
         .onChange(of: container.places.activeRoute?.id) { _, id in
             if id != nil {
@@ -51,6 +80,27 @@ struct HomeScreen: View {
                 chatExpanded = false
             }
         }
+    }
+
+    /// A personal trip needs an account (SSOT §3.2): a guest is asked to sign in first, the draft stays in place.
+    /// The real chat (Ш-32) will start from the closure.
+    private func sendDraft() {
+        guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        container.gate.requireAccount { savedNote = true }
+    }
+
+    private var gatePresented: Binding<Bool> {
+        // While a place card is up, the card presents the sheet itself (a view cannot present two sheets).
+        Binding(
+            get: { container.gate.isPresenting && container.places.selected == nil },
+            set: { container.gate.isPresenting = $0 }
+        )
+    }
+
+    private var mapBottomInset: CGFloat {
+        if container.places.selected == nil { return 0 }
+        let fraction = container.directions.isActive ? PlaceCardSheet.directionsFraction : PlaceCardSheet.cardFraction
+        return screenHeight * fraction
     }
 
     private var cardPresented: Binding<Bool> {
@@ -64,7 +114,7 @@ struct HomeScreen: View {
         VStack(spacing: JolSpacing.sm) {
             if chatExpanded {
                 Spacer(minLength: 0)
-                ChatPanel(draft: $draft, onCollapse: { chatExpanded = false })
+                ChatPanel(draft: $draft, savedNote: savedNote, onCollapse: { chatExpanded = false }, onSend: sendDraft)
                     .padding(.horizontal, JolSpacing.lg)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 Spacer(minLength: 0)

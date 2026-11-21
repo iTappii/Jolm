@@ -11,6 +11,11 @@ struct MapView: UIViewRepresentable {
     var routeStops: [PlaceSummary] = []
     var routeID: UUID?
     var selectedID: UUID?
+    /// Chosen way to a place (Ш-23): the line, where it starts, and a counter that changes when either does.
+    var directionLines: [DirectionLine] = []
+    var directionOrigin: GeoPoint?
+    var directionVersion = 0
+    var directionFitVersion = 0
     /// Height of what covers the bottom of the map (card, route bar): the camera keeps the target above it.
     var bottomInset: CGFloat = 0
     var onRegionChange: (GeoBounds) -> Void = { _ in }
@@ -57,6 +62,12 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         static let routeLine = "jol-route-line"
         static let routeStop = "jol-route-stop"
         static let routeStopNumber = "jol-route-stop-number"
+        static let directionsSource = "jol-directions"
+        static let directionsOriginSource = "jol-directions-origin"
+        static let directionsCasing = "jol-directions-casing"
+        static let directionsLine = "jol-directions-line"
+        static let directionsAlternative = "jol-directions-alt"
+        static let directionsOrigin = "jol-directions-origin-dot"
     }
 
     var parent: MapView?
@@ -67,6 +78,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     private var appliedRouteID: UUID?
     private var appliedSelection: UUID?
     private var appliedInset: CGFloat = 0
+    private var appliedDirectionVersion = -1
+    private var appliedFitVersion = -1
 
     func attach(to map: MLNMapView) {
         self.map = map
@@ -95,6 +108,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         styleReady = true
         appliedPinsVersion = -1
         appliedRouteID = nil
+        appliedDirectionVersion = -1
+        appliedFitVersion = -1
         apply(to: mapView)
         reportRegion(mapView)
     }
@@ -117,11 +132,13 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         // The route line is reused as is; the places source is replaced by a clustered one (cluster options
         // cannot be changed on an existing source), so the style's own places layers go away.
         // Everything is removed first because didFinishLoading may fire again for the same style object.
-        for id in [Layer.routeStopNumber, Layer.routeStop, Layer.routeLine, Layer.pin, Layer.selection,
+        for id in [Layer.directionsOrigin, Layer.directionsLine, Layer.directionsAlternative, Layer.directionsCasing,
+                   Layer.routeStopNumber, Layer.routeStop, Layer.routeLine, Layer.pin, Layer.selection,
                    Layer.clusterCount, Layer.cluster, "jol-places-circle", "jol-places-label"] {
             if let layer = style.layer(withIdentifier: id) { style.removeLayer(layer) }
         }
-        for id in [Layer.routeStopsSource, Layer.placesSource, "jol-places"] {
+        for id in [Layer.directionsOriginSource, Layer.directionsSource,
+                   Layer.routeStopsSource, Layer.placesSource, "jol-places"] {
             if let source = style.source(withIdentifier: id) { style.removeSource(source) }
         }
         for entry in PlaceCategoryStyle.allImages {
@@ -167,37 +184,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         style.addLayer(pins)
 
         installRouteLayers(in: style)
-    }
-
-    private func installRouteLayers(in style: MLNStyle) {
-        if style.source(withIdentifier: Layer.routeSource) == nil {
-            // Style without the Jol overlay (bundled placeholder / UI-test stub): draw the line ourselves.
-            let line = MLNShapeSource(identifier: Layer.routeSource, shape: nil, options: nil)
-            style.addSource(line)
-            let lineLayer = MLNLineStyleLayer(identifier: Layer.routeLine, source: line)
-            lineLayer.lineColor = NSExpression(forConstantValue: JolColor.brandUIColor)
-            lineLayer.lineWidth = NSExpression(forConstantValue: 4)
-            lineLayer.lineCap = NSExpression(forConstantValue: "round")
-            lineLayer.lineJoin = NSExpression(forConstantValue: "round")
-            style.addLayer(lineLayer)
-        }
-
-        let stops = MLNShapeSource(identifier: Layer.routeStopsSource, shape: nil, options: nil)
-        style.addSource(stops)
-        let stopLayer = MLNCircleStyleLayer(identifier: Layer.routeStop, source: stops)
-        stopLayer.circleColor = NSExpression(forConstantValue: JolColor.brandUIColor)
-        stopLayer.circleRadius = NSExpression(forConstantValue: 14)
-        stopLayer.circleStrokeColor = NSExpression(forConstantValue: UIColor.white)
-        stopLayer.circleStrokeWidth = NSExpression(forConstantValue: 2.5)
-        style.addLayer(stopLayer)
-
-        let numbers = MLNSymbolStyleLayer(identifier: Layer.routeStopNumber, source: stops)
-        numbers.text = NSExpression(forKeyPath: "number")
-        numbers.textColor = NSExpression(forConstantValue: UIColor.black)
-        numbers.textFontSize = NSExpression(forConstantValue: 14)
-        numbers.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
-        numbers.textAllowsOverlap = NSExpression(forConstantValue: true)
-        style.addLayer(numbers)
+        installDirectionsLayers(in: style, belowPins: pins)
     }
 
     // MARK: - Applying SwiftUI state
@@ -233,6 +220,13 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
                 UIEdgeInsets(top: 0, left: 0, bottom: parent.bottomInset, right: 0),
                 animated: true, completionHandler: nil
             )
+        }
+
+        if appliedDirectionVersion != parent.directionVersion || appliedFitVersion != parent.directionFitVersion {
+            let refit = appliedFitVersion != parent.directionFitVersion
+            appliedDirectionVersion = parent.directionVersion
+            appliedFitVersion = parent.directionFitVersion
+            applyDirections(parent.directionLines, origin: parent.directionOrigin, refit: refit, in: style, map: map)
         }
     }
 

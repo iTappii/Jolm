@@ -12,12 +12,16 @@ final class AppContainer {
     @ObservationIgnored let api: APIClient
     @ObservationIgnored let tokens: any TokenStore
     @ObservationIgnored let places: PlacesModel
+    @ObservationIgnored let directions: DirectionsModel
+    @ObservationIgnored let gate: AccountGate
+    @ObservationIgnored let favorites: FavoritesModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
         defaults: UserDefaults = .standard,
         baseURL: Result<URL, APIError> = AppConfig.apiBaseURL,
-        session: URLSession = .shared
+        session: URLSession = .shared,
+        locator: (any LocationProviding)? = nil
     ) {
         let auth = AuthState(tokens: tokens)
         let installID = InstallID.current(defaults: defaults)
@@ -36,6 +40,9 @@ final class AppContainer {
             onSessionCleared: { Task { @MainActor in auth.refresh() } }
         )
         self.places = PlacesModel(api: self.api)
+        self.gate = AccountGate(auth: auth)
+        self.favorites = FavoritesModel(api: self.api)
+        self.directions = DirectionsModel(api: self.api, locator: locator ?? CoreLocationProvider())
     }
 
     func makeProfileModel() -> ProfileModel {
