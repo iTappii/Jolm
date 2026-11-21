@@ -1,4 +1,6 @@
-"""Public transport search (TECH_PLAN Ш-21): A -> B with at most one transfer. All times approximate.
+"""Public transport search (TECH_PLAN Ш-21): A -> B with at most one transfer.
+
+All times approximate.
 
 There is no official GTFS/timetable for Almaty, so the model is deliberately simple:
 
@@ -47,7 +49,12 @@ WALK_SPEED_MS = 4.8 / 3.6
 # stop-to-stop straight line -> distance travelled by the vehicle
 RIDE_DETOUR = {"metro": 1.05, "bus": 1.2, "trolleybus": 1.2, "tram": 1.1}
 # local service windows (hour of day, fractional); metro: OSM opening_hours Mo-Su 06:20-00:00
-SERVICE_HOURS = {"metro": (6 + 20 / 60, 24.0), "bus": (6.0, 23.5), "trolleybus": (6.0, 23.5), "tram": (6.0, 23.5)}
+SERVICE_HOURS = {
+    "metro": (6 + 20 / 60, 24.0),
+    "bus": (6.0, 23.5),
+    "trolleybus": (6.0, 23.5),
+    "tram": (6.0, 23.5),
+}
 ALMATY_TZ_OFFSET = timezone(timedelta(hours=5))  # UTC+5 since 2024-03; used if tzdata is missing
 CACHE_TTL_S = 600.0
 GRID_DEG = 0.004  # ~440 m lat / ~325 m lon at Almaty: cell >= TRANSFER_RADIUS_M
@@ -134,11 +141,25 @@ class TransitNetwork:
 
     @classmethod
     def build(cls, stop_rows: Sequence[dict], route_rows: Sequence[dict], rs_rows: Sequence[dict]):
-        stops = [Stop(i, **{k: r[k] for k in ("id", "lat", "lon", "name_ru", "name_en", "name_kk", "kind")})
-                 for i, r in enumerate(stop_rows)]
+        stops = [
+            Stop(
+                i,
+                **{k: r[k] for k in ("id", "lat", "lon", "name_ru", "name_en", "name_kk", "kind")},
+            )
+            for i, r in enumerate(stop_rows)
+        ]
         stop_ix = {s.id: s.idx for s in stops}
         routes = [
-            Route(i, r["id"], r["kind"], r["ref"], r["name_ru"], r["name_en"], r["headway"], r["speed"])
+            Route(
+                i,
+                r["id"],
+                r["kind"],
+                r["ref"],
+                r["name_ru"],
+                r["name_en"],
+                r["headway"],
+                r["speed"],
+            )
             for i, r in enumerate(route_rows)
         ]
         route_ix = {r.id: r.idx for r in routes}
@@ -161,7 +182,9 @@ class TransitNetwork:
         rs_rows = await fetch_all(conn, ROUTE_STOPS_SQL)
         return cls.build(stop_rows, route_rows, rs_rows)
 
-    def neighbors(self, stop_idx: int, radius_m: float = TRANSFER_RADIUS_M) -> List[Tuple[int, float]]:
+    def neighbors(
+        self, stop_idx: int, radius_m: float = TRANSFER_RADIUS_M
+    ) -> List[Tuple[int, float]]:
         """[(stop idx, straight-line metres)] within radius, including the stop itself (0 m)."""
         cached = self._neighbors.get(stop_idx)
         if cached is not None:
@@ -280,10 +303,18 @@ def _in_service(kind: str, hour: Optional[float]) -> bool:
     return start <= hour < end
 
 
-def _walk_leg(a: Point, b: Point, dur: float, dist: float, from_name=None, to_name=None) -> TransitLeg:
+def _walk_leg(
+    a: Point, b: Point, dur: float, dist: float, from_name=None, to_name=None
+) -> TransitLeg:
     return TransitLeg(
-        type="walk", duration_s=dur, distance_m=dist, from_point=a, to_point=b,
-        from_name=from_name, to_name=to_name, geometry=encode_polyline6([a, b]),
+        type="walk",
+        duration_s=dur,
+        distance_m=dist,
+        from_point=a,
+        to_point=b,
+        from_name=from_name,
+        to_name=to_name,
+        geometry=encode_polyline6([a, b]),
     )
 
 
@@ -294,10 +325,18 @@ def _ride_leg(net: TransitNetwork, r: Route, p: int, q: int) -> TransitLeg:
         type="ride",
         duration_s=wait + r.ride_s(p, q),
         distance_m=r.cum_m[q] - r.cum_m[p],
-        from_point=a.point, to_point=b.point,
-        from_name=a.name, to_name=b.name, from_name_en=a.name_en, to_name_en=b.name_en,
+        from_point=a.point,
+        to_point=b.point,
+        from_name=a.name,
+        to_name=b.name,
+        from_name_en=a.name_en,
+        to_name_en=b.name_en,
         geometry=encode_polyline6([net.stops[s].point for s in r.stops[p : q + 1]]),
-        route_id=r.id, route_ref=r.ref, kind=r.kind, n_stops=q - p, wait_s=wait,
+        route_id=r.id,
+        route_ref=r.ref,
+        kind=r.kind,
+        n_stops=q - p,
+        wait_s=wait,
         headway_min=r.headway_min,
     )
 
@@ -363,7 +402,7 @@ async def find_transit_options(
 
     found: List[Tuple[float, tuple]] = []  # (total_s, description)
 
-    for sa, (wa_s, wa_m) in cand_a.items():
+    for sa, (wa_s, _wa_m) in cand_a.items():
         for r1i, p in net.by_stop[sa]:
             if r1i not in allowed:
                 continue
@@ -371,7 +410,7 @@ async def find_transit_options(
             wait1 = r1.headway_min * 30.0
             head = wa_s + wait1
             # direct
-            for q, sb, wb_s, wb_m in b_by_route.get(r1i, ()):
+            for q, sb, wb_s, _wb_m in b_by_route.get(r1i, ()):
                 if q > p:
                     found.append((head + r1.ride_s(p, q) + wb_s, ("direct", sa, r1i, p, q, sb)))
             # one transfer: ride r1 to s, walk to t, ride r2 to the destination side
@@ -387,12 +426,24 @@ async def find_transit_options(
                         if r2.ref == r1.ref and r2.kind == r1.kind:
                             continue  # same line, other direction: pointless transfer
                         t2 = t1 + walk_s + TRANSFER_BUFFER_S + r2.headway_min * 30.0
-                        for q, sb, wb_s, wb_m in b_by_route[r2i]:
+                        for q, sb, wb_s, _wb_m in b_by_route[r2i]:
                             if q > qpos:
                                 found.append(
                                     (
                                         t2 + r2.ride_s(qpos, q) + wb_s,
-                                        ("transfer", sa, r1i, p, s_pos, t_idx, d_m, r2i, qpos, q, sb),
+                                        (
+                                            "transfer",
+                                            sa,
+                                            r1i,
+                                            p,
+                                            s_pos,
+                                            t_idx,
+                                            d_m,
+                                            r2i,
+                                            qpos,
+                                            q,
+                                            sb,
+                                        ),
                                     )
                                 )
 
@@ -400,7 +451,7 @@ async def find_transit_options(
     chosen: List[TransitOption] = []
     seen_lines = set()
     pool: List[TransitOption] = []
-    for total, desc in found:
+    for _total, desc in found:
         key = _line_key(net, desc)
         if key in seen_lines:
             continue
@@ -449,8 +500,12 @@ def _materialize(net, a: Point, b: Point, cand_a, cand_b, desc: tuple) -> Transi
         if d_m > 0:
             legs.append(
                 _walk_leg(
-                    s_stop.point, t_stop.point, d_m * TRANSFER_DETOUR / WALK_SPEED_MS,
-                    d_m * TRANSFER_DETOUR, s_stop.name, t_stop.name,
+                    s_stop.point,
+                    t_stop.point,
+                    d_m * TRANSFER_DETOUR / WALK_SPEED_MS,
+                    d_m * TRANSFER_DETOUR,
+                    s_stop.name,
+                    t_stop.name,
                 )
             )
         legs.append(_ride_leg(net, r2, qpos, q))

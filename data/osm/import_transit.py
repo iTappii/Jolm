@@ -163,7 +163,10 @@ def relation_sequence(rel: dict, nodes: dict, bbox, stats: Counter):
 
 
 def build_network(relations: dict, nodes: dict, bbox=BBOX):
-    """-> (stops, routes, stats). stops: node_id -> dict; routes: list of dicts with 'stop_nodes'."""
+    """-> (stops, routes, stats).
+
+    stops: node_id -> dict; routes: list of dicts with 'stop_nodes'.
+    """
     stats: Counter = Counter()
     stats["relations_total"] = len(relations)
     alias: Dict[int, int] = {}
@@ -297,7 +300,8 @@ RETURNING id, (xmax = 0) AS inserted
 """
 
 UPSERT_ROUTE = """
-INSERT INTO transit_routes (osm_relation_id, kind, ref, name_ru, name_en, avg_headway_min, speed_kmh)
+INSERT INTO transit_routes
+    (osm_relation_id, kind, ref, name_ru, name_en, avg_headway_min, speed_kmh)
 VALUES (%(relation_id)s, %(kind)s, %(ref)s, %(name_ru)s, %(name_en)s, %(headway)s, %(speed)s)
 ON CONFLICT (osm_relation_id) DO UPDATE SET
     kind     = CASE WHEN transit_routes.manual_override @> '"kind"'::jsonb
@@ -386,7 +390,10 @@ def main(argv=None) -> int:
         with psycopg.connect(database_url()) as conn:
             with conn.transaction():
                 stats.update(write_db(conn, stops, routes, seed))
-    print(f"routes imported: {len(routes)}  stops: {len(stops)}" + ("  (dry run)" if args.dry_run else ""))
+    print(
+        f"routes imported: {len(routes)}  stops: {len(stops)}"
+        + ("  (dry run)" if args.dry_run else "")
+    )
     for k in sorted(stats):
         print(f"  {k}: {stats[k]}")
     return 0
