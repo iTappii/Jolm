@@ -10,6 +10,7 @@ from app.db import fetch_all, fetch_one
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.places import schemas, service, sql
+from app.providers.storage import media_url
 
 router = APIRouter(prefix="/v1")
 
@@ -144,7 +145,7 @@ async def get_place(request: Request, place_id: UUID):
         "is_mountain": row["is_mountain"],
         "elevation_m": row["elevation_m"],
         "popularity": row["popularity"],
-        "photos": photos,
+        "photos": [dict(p, url=media_url(p["storage_key"])) for p in photos],
         "hours": service.group_hours(hours),
         "open_now": service.is_open_now(hours),
         "menu": menu,

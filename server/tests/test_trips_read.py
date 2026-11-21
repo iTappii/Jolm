@@ -111,7 +111,8 @@ async def test_get_trip_returns_everything_the_full_map_needs(chat_env, conn):
     assert all(i["place"]["name_lang"] == "ru" for i in all_items)
     with_photo = [i for i in all_items if i["place"]["id"] == str(first_place)]
     assert with_photo and all(
-        i["place"]["photo"] == {"id": str(photo["id"]), "storage_key": "first.jpg"}
+        i["place"]["photo"]
+        == {"id": str(photo["id"]), "storage_key": "first.jpg", "url": None}  # no MEDIA_BASE_URL
         for i in with_photo
     )
     assert all(i["place"]["photo"] is None for i in all_items if i not in with_photo)

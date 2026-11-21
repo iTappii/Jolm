@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -14,6 +15,8 @@ from starlette.templating import Jinja2Templates
 from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
 from app.places.service import ALMATY_TZ
+from app.providers.storage import media_url
+from app.submissions import moderation
 
 from . import auth, service, sql
 
@@ -207,6 +210,35 @@ async def index(request: Request, session: auth.AdminSession = GET_ADMIN):
     async with db(request) as conn:
         counts = await fetch_one(conn, sql.COUNTS)
     return render(request, "index.html", session, counts=counts)
+
+
+# ---------------------------------------------------------------- moderation (Ш-45)
+
+
+@router.get("/moderation", response_class=HTMLResponse)
+async def moderation_queue(
+    request: Request, session: auth.AdminSession = GET_ADMIN, done: str = ""
+):
+    async with db(request) as conn:
+        data = await moderation.queue(conn)
+    return render(request, "moderation.html", session, media_url=media_url, done=done, **data)
+
+
+@router.post("/moderation/{submission_id}/{decision}")
+async def moderation_decide(
+    request: Request, submission_id: str, decision: str, ctx: PostCtx = POST_ADMIN
+):
+    if decision not in ("approve", "reject"):
+        raise AdminError(404, "Не найдено")
+    submission_id = need_uuid(submission_id)
+    try:
+        async with db(request) as conn:
+            await moderation.decide(
+                conn, ctx.session.admin_id, UUID(submission_id), decision == "approve"
+            )
+    except moderation.AlreadyDecided:
+        return redirect("/admin/moderation?done=already")
+    return redirect("/admin/moderation?done=" + decision)
 
 
 # ---------------------------------------------------------------- places

@@ -133,6 +133,22 @@ async def _apple_revoke(db: Database, payload: dict) -> None:
     await apple_grants.get_apple_grants().revoke(token)
 
 
+@register("storage.delete", external=True)
+async def _storage_delete(db: Database, payload: dict) -> None:
+    """Remove rejected / deleted-account uploads from the bucket; a failure raises and retries."""
+    from app.providers.storage import make_storage
+
+    storage = make_storage()
+    if storage is None:
+        log.warning("storage.delete: no storage, %d object(s) kept", len(payload["keys"]))
+        return
+    try:
+        for key in payload["keys"]:
+            await storage.delete(key)
+    finally:
+        await storage.aclose()
+
+
 # --- processing --------------------------------------------------------------------------
 
 

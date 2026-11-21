@@ -77,6 +77,8 @@ MOVE_STATEMENTS = (
     "AND NOT EXISTS (SELECT 1 FROM user_favorites j "
     "WHERE j.user_id = user_favorites.user_id AND j.place_id = %(keep)s)",
     "DELETE FROM user_favorites WHERE place_id = %(drop)s",
+    # user submissions (Ш-44): FK without ON DELETE CASCADE; no unique constraint to collide with
+    "UPDATE submissions SET place_id = %(keep)s WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

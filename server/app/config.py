@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     # Base URL of the photo storage (Ш-44): photo previews in the offline trip (Ш-42) are
     # `<media_base_url>/<storage_key>`; empty = no photo URLs yet (they are null).
     media_base_url: str = ""
+    # Object storage for user uploads (Ш-44): "" = none (uploads answer 503), "s3" = any
+    # S3-compatible service (MinIO in dev), "local" = files on disk, dev/test only.
+    storage_provider: str = ""
+    s3_endpoint: str = ""  # e.g. http://127.0.0.1:9000 (path-style addressing)
+    s3_bucket: str = ""
+    s3_region: str = "us-east-1"
+    s3_access_key: str = ""
+    s3_secret_key: SecretStr = SecretStr("")
+    storage_local_dir: str = ""  # empty = <system temp>/jol-media-dev
+    storage_local_upload_base: str = "http://127.0.0.1:8000"  # where the dev PUT endpoint is
 
 
 @lru_cache

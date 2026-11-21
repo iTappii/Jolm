@@ -12,6 +12,7 @@ from psycopg.rows import dict_row
 import migrate
 from app.config import get_settings
 from app.main import create_app
+from app.providers.storage.local import LocalStorage
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,6 +42,8 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "submissions",  # Ш-44: user content hangs off users and places
+    "uploads",
     "push_notifications",  # Ш-40: the push outbox, trip day notices and proposals hang off users
     "trip_day_notices",
     "trip_change_proposals",
@@ -58,6 +61,7 @@ AUTH_TABLES = (
     "place_photos",  # author_user_id references users, so TRUNCATE users needs it listed
     "apple_consumed_challenges",
     "otp_codes",
+    "session_retired_tokens",
     "sessions",
     "devices",
     "auth_identities",
@@ -110,6 +114,16 @@ async def client(conn):
     app.state.db = TransactionalDatabase(conn)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
+
+
+@pytest.fixture
+async def env(conn, tmp_path):
+    """App + client + local storage for user-content tests (Ш-44)."""
+    app = create_app()
+    app.state.db = TransactionalDatabase(conn)
+    app.state.storage = LocalStorage(tmp_path, "http://test", "k" * 32)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield SimpleNamespace(app=app, client=client, storage=app.state.storage)
 
 
 @pytest.fixture

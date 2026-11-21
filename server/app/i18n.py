@@ -64,6 +64,26 @@ MESSAGES = {
         "en": "The change no longer fits the plan",
         "ru": "Это изменение больше не вписывается в план",
     },
+    "storage_unavailable": {
+        "en": "Photo upload is unavailable right now",
+        "ru": "Загрузка фото сейчас недоступна",
+    },
+    "invalid_image": {
+        "en": "The uploaded file is not a valid image of the declared type",
+        "ru": "Загруженный файл не является допустимым изображением",
+    },
+    "upload_not_found": {
+        "en": "The upload was not found, has expired or its file did not arrive",
+        "ru": "Загрузка не найдена, просрочена или файл не поступил",
+    },
+    "upload_used": {
+        "en": "This upload was already attached to a submission",
+        "ru": "Эта загрузка уже использована в другой отправке",
+    },
+    "already_submitted": {
+        "en": "You have already reviewed this place",
+        "ru": "Вы уже оставили отзыв об этом месте",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

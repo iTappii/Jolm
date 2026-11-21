@@ -15,8 +15,14 @@ class RefreshRequest(BaseModel):
 @router.post("/auth/refresh")
 async def refresh(payload: RefreshRequest, request: Request, response: Response) -> sessions.Tokens:
     response.headers["Cache-Control"] = "no-store"
+    reused = False
     async with request.app.state.db.transaction() as conn:
-        return await sessions.rotate(conn, payload.refresh_token)
+        try:
+            return await sessions.rotate(conn, payload.refresh_token)
+        except sessions.RefreshReuse:
+            reused = True  # swallow so the transaction COMMITS the revocation
+    if reused:
+        raise AppError(401, "unauthorized")
 
 
 @router.post("/auth/logout", status_code=204)

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}Модерация{% endblock %}
+{% block content %}
+<h1>Модерация</h1>
+{% if done == "approve" %}<div class="flash">Одобрено.</div>{% endif %}
+{% if done == "reject" %}<div class="flash">Отклонено.</div>{% endif %}
+{% if done == "already" %}<div class="flash bad">Это уже решено или снято с очереди.</div>{% endif %}
+<p class="muted">Прошло автофильтр и уже опубликовано с пометкой «проверится позже» (отзывы и фото
+видны сразу; меню и цены применяются к месту после одобрения). В очереди: {{ total }}{% if total > rows|length %}, показаны первые {{ rows|length }}{% endif %}.</p>
+<table>
+  <tr><th>Тип</th><th>Место</th><th>Содержимое</th><th>Прислано</th><th></th></tr>
+  {% for r in rows %}
+  <tr>
+    <td><span class="badge">{{ r.type }}</span></td>
+    <td>{% if r.place_id %}<a href="/admin/places/{{ r.place_id }}">{{ r.name_ru or r.name_en or "(без названия)" }}</a>{% else %}—{% endif %}</td>
+    <td>
+      {% if r.type == "review" %}
+        <b>{{ r.payload.rating }}/5</b> {{ r.payload.text or "" }}
+      {% elif r.type == "menu" %}
+        {% for i in r.payload["items"] or [] %}{{ i.name }}{% if i.price_kzt is not none %} — {{ kzt(i.price_kzt) }}{% endif %}<br>{% endfor %}
+      {% elif r.type == "price" %}
+        {{ kzt(r.payload.price_kzt) }} ({{ r.payload.audience or "adult" }}){% if r.entry_price_kzt is not none %}, сейчас в базе {{ kzt(r.entry_price_kzt) }}{% endif %}
+        {{ r.payload.note or "" }}
+      {% elif r.type == "photo" %}
+        {{ r.payload.caption or "" }}
+      {% elif r.type == "transit" %}
+        маршрут {{ r.payload.route_ref }}{% if r.payload.stop %}, остановка {{ r.payload.stop }}{% endif %}{% if r.payload.direction %}, {{ r.payload.direction }}{% endif %}{% if r.payload.interval_min %}, интервал {{ r.payload.interval_min }} мин{% endif %}{% if r.payload.price_kzt is not none %}, {{ kzt(r.payload.price_kzt) }}{% endif %} {{ r.payload.note or "" }}
+      {% endif %}
+      {% if r.photo_key %}{% set url = media_url(r.photo_key) %}<br>{% if url %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer"><img src="{{ url }}" alt="" style="max-height:90px"></a>{% else %}<span class="muted">файл: {{ r.photo_key }}</span>{% endif %}{% endif %}
+    </td>
+    <td class="muted">{{ r.created_at.strftime("%d.%m.%Y %H:%M") }}</td>
+    <td>
+      <form class="inline" method="post" action="/admin/moderation/{{ r.id }}/approve">{{ csrf_field(csrf) }}<button class="small" type="submit">Одобрить</button></form>
+      <form class="inline" method="post" action="/admin/moderation/{{ r.id }}/reject" data-confirm="Отклонить?">{{ csrf_field(csrf) }}<button class="danger small" type="submit">Отклонить</button></form>
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">Очередь пуста</td></tr>{% endfor %}
+</table>
+{% endblock %}

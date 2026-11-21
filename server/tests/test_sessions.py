@@ -94,3 +94,85 @@ async def test_concurrent_identity_creation_and_refresh(committed_auth_db_url):
     assert len(denied) == 1 and denied[0].status_code == 401
     async with await psycopg.AsyncConnection.connect(test_db_url) as conn:
         await conn.execute("DELETE FROM users WHERE id = %s", (subjects[0],))
+
+
+async def _age_retired(conn, seconds):
+    await conn.execute(
+        "UPDATE session_retired_tokens SET retired_at = retired_at - make_interval(secs => %s)",
+        (seconds,),
+    )
+
+
+async def test_reuse_of_rotated_token_after_grace_revokes_whole_session(client, conn):
+    first = await sessions.sign_in(conn, "email", "thief@example.org", "ru")
+    other = await sessions.sign_in(conn, "email", "thief@example.org", "ru")  # another family
+    second = (
+        await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    ).json()
+    third = (
+        await client.post("/v1/auth/refresh", json={"refresh_token": second["refresh_token"]})
+    ).json()
+    await _age_retired(conn, sessions.REUSE_GRACE_SECONDS + 1)
+    # the first token is stale: an attacker (or a replay) presents it
+    response = await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    assert response.status_code == 401
+    # the revocation was committed, not rolled back with the error: the newest token is dead too
+    assert (
+        await client.post("/v1/auth/refresh", json={"refresh_token": third["refresh_token"]})
+    ).status_code == 401
+    assert (
+        await client.get("/v1/me", headers={"Authorization": f"Bearer {third['access_token']}"})
+    ).status_code == 401
+    # a different sign-in of the same user is a different family and stays alive
+    assert (
+        await client.get("/v1/me", headers={"Authorization": f"Bearer {other.access_token}"})
+    ).status_code == 200
+    assert (
+        await client.post("/v1/auth/refresh", json={"refresh_token": other.refresh_token})
+    ).status_code == 200
+
+
+async def test_reuse_within_grace_is_a_race_and_keeps_the_session(client, conn):
+    first = await sessions.sign_in(conn, "email", "racer@example.org", "ru")
+    winner = (
+        await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    ).json()
+    loser = await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    assert loser.status_code == 401
+    ok = await client.post("/v1/auth/refresh", json={"refresh_token": winner["refresh_token"]})
+    assert ok.status_code == 200  # the winner's chain survives
+
+
+async def test_unknown_token_and_revoked_session_do_not_trigger_reuse(client, conn):
+    first = await sessions.sign_in(conn, "email", "plain@example.org", "ru")
+    assert (
+        await client.post("/v1/auth/refresh", json={"refresh_token": "never-issued"})
+    ).status_code == 401
+    second = (
+        await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    ).json()
+    await client.post("/v1/auth/logout", json={"refresh_token": second["refresh_token"]})
+    await _age_retired(conn, 60)
+    row = await (await conn.execute("SELECT revoked_at FROM sessions")).fetchone()
+    stamp = row["revoked_at"]
+    assert (
+        await client.post("/v1/auth/refresh", json={"refresh_token": first.refresh_token})
+    ).status_code == 401
+    row = await (await conn.execute("SELECT revoked_at FROM sessions")).fetchone()
+    assert row["revoked_at"] == stamp  # not revoked a second time
+
+
+async def test_retired_tokens_are_pruned_and_cascade(client, conn):
+    first = await sessions.sign_in(conn, "email", "prune@example.org", "ru")
+    refresh = first.refresh_token
+    for _ in range(3):
+        refresh = (await client.post("/v1/auth/refresh", json={"refresh_token": refresh})).json()[
+            "refresh_token"
+        ]
+    count = "SELECT count(*) AS n FROM session_retired_tokens"
+    assert (await (await conn.execute(count)).fetchone())["n"] == 3
+    await _age_retired(conn, 61 * 86400)
+    await client.post("/v1/auth/refresh", json={"refresh_token": refresh})
+    assert (await (await conn.execute(count)).fetchone())["n"] == 1  # only the fresh one
+    await conn.execute("DELETE FROM users")
+    assert (await (await conn.execute(count)).fetchone())["n"] == 0

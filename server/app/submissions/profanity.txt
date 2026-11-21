@@ -1,0 +1,66 @@
+# Seed list of obscene words for the auto-filter (Ш-45), RU / EN / KZ. A SEED, not a dictionary:
+# extend it with native speakers. Matching is on whole words after lower-casing, ё->е and
+# collapsing repeated letters ("хуууй" -> "хуй").
+#   prefix <stem>  - any word that starts with the stem (covers inflections)
+#   exact  <word>  - the word only (short stems that would hit innocent words as prefixes)
+# Lines starting with # are comments.
+
+# --- русский ---
+prefix хуй
+prefix хуя
+prefix хуе
+prefix нахуй
+prefix пизд
+prefix ебан
+prefix ебат
+prefix ебал
+prefix ебла
+prefix ебуч
+prefix заеб
+prefix уеб
+prefix долбоеб
+prefix мудак
+prefix мудил
+prefix блят
+prefix бляд
+prefix пидор
+prefix пидар
+prefix пидр
+prefix гандон
+prefix залуп
+prefix шлюх
+exact сука
+exact суки
+exact сучка
+exact сучар
+exact ебу
+exact ебя
+exact хер
+exact херня
+
+# --- English ---
+prefix fuck
+prefix shit
+prefix bitch
+prefix asshole
+prefix cunt
+prefix faggot
+prefix whore
+prefix slut
+prefix bastard
+prefix motherf
+prefix nigger
+exact dick
+exact cock
+exact piss
+exact twat
+
+# --- қазақша ---
+prefix сиктир
+prefix сіктір
+prefix сиқтир
+prefix амшық
+prefix амына
+prefix жезөкше
+prefix көтеншек
+prefix ебанат

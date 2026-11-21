@@ -279,3 +279,31 @@ def test_merge_moves_user_favorites_to_the_survivor(sconn):
         (only_keep, keep),
     }
     assert len(rows) == 3
+
+
+def test_merge_moves_submissions_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: submissions (Ш-44) has no cascade on place_id; the rows move, none lost."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop = place("Оставить"), place("Удалить")
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    for pid in (drop, drop, keep):  # the same person reviewed both places: no uniqueness to break
+        sconn.execute(
+            "INSERT INTO submissions (user_id, place_id, type, payload, status) "
+            "VALUES (%s, %s, 'review', '{\"rating\": 5}', 'approved')",
+            (user, pid),
+        )
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    rows = q(sconn, "SELECT place_id FROM submissions")
+    assert [r["place_id"] for r in rows] == [keep] * 3

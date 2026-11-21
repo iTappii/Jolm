@@ -1,6 +1,7 @@
 """Sessions shared by verified email, phone and Apple identities."""
 
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -15,6 +16,10 @@ from app.errors import AppError
 ACCESS_SECONDS = 15 * 60
 ISSUER = "jol-api"
 AUDIENCE = "jol-access"
+# A retired refresh token presented again within this many seconds is a race, not theft.
+REUSE_GRACE_SECONDS = 10
+
+log = logging.getLogger(__name__)
 
 
 def signing_key() -> bytes:
@@ -96,8 +101,29 @@ async def sign_in(conn, provider: str, subject: str, locale: str) -> Tokens:
     return tokens(row, refresh)
 
 
+class RefreshReuse(AppError):
+    """An already-rotated refresh token came back after the grace window: session revoked.
+
+    The caller must COMMIT the transaction (the revocation is the point) and only then answer
+    401; raising through `Database.transaction()` would roll the revocation back.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(401, "unauthorized")
+
+
 async def rotate(conn, old: str) -> Tokens:
+    """Swap a refresh token for a new pair; one session = one token family.
+
+    The replaced hash is kept in `session_retired_tokens`. If it is presented again later than
+    REUSE_GRACE_SECONDS after it was retired, somebody holds a copy (a stolen token was used
+    first, or the owner is replaying), so the whole session is revoked (`RefreshReuse`). Inside
+    the grace window the call just fails with 401 and revokes nothing: that is the loser of two
+    concurrent refreshes with the same token (the client single-flights, but a retry after a lost
+    response or two app extensions can still race).
+    """
     refresh = secrets.token_urlsafe(32)
+    old_hash = digest(old)
     row = await fetch_one(
         conn,
         """
@@ -105,10 +131,41 @@ async def rotate(conn, old: str) -> Tokens:
         FROM users u WHERE s.user_id = u.id AND u.deleted_at IS NULL AND s.refresh_token_hash = %s
         AND s.revoked_at IS NULL AND s.expires_at > now() RETURNING s.id, s.user_id
     """,
-        (digest(refresh), digest(old)),
+        (digest(refresh), old_hash),
     )
     if row is None:
+        retired = await fetch_one(
+            conn,
+            """
+            SELECT r.session_id,
+                   clock_timestamp() - r.retired_at > make_interval(secs => %s) AS stale
+            FROM session_retired_tokens r JOIN sessions s ON s.id = r.session_id
+            WHERE r.token_hash = %s AND s.revoked_at IS NULL
+        """,
+            (REUSE_GRACE_SECONDS, old_hash),
+        )
+        if retired is not None and retired["stale"]:
+            await execute(
+                conn,
+                "UPDATE sessions SET revoked_at = now() WHERE id = %s AND revoked_at IS NULL",
+                (retired["session_id"],),
+            )
+            log.warning("refresh token reuse: session revoked")
+            raise RefreshReuse()
         raise AppError(401, "unauthorized")
+    await execute(
+        conn,
+        "INSERT INTO session_retired_tokens(token_hash, session_id) VALUES (%s, %s)"
+        " ON CONFLICT DO NOTHING",
+        (old_hash, row["id"]),
+    )
+    # A retired hash older than the refresh lifetime can no longer be told from garbage anyway.
+    await execute(
+        conn,
+        "DELETE FROM session_retired_tokens WHERE session_id = %s"
+        " AND retired_at < clock_timestamp() - interval '60 days'",
+        (row["id"],),
+    )
     return tokens(row, refresh)
 
 

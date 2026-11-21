@@ -2,6 +2,7 @@ import logging
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.admin.api import install_admin
@@ -19,9 +20,12 @@ from app.favorites.api import router as favorites_router
 from app.logging_setup import setup_logging
 from app.middleware import RequestIdMiddleware
 from app.places.api import router as places_router
+from app.providers.storage import make_storage
 from app.providers.weather import OpenMeteoProvider
 from app.routing import make_router
 from app.routing.api import router as directions_router
+from app.submissions.api import router as submissions_router
+from app.submissions.dev_api import router as dev_uploads_router
 from app.system.api import router as system_router
 from app.trips.api import router as trips_router
 
@@ -42,6 +46,10 @@ async def lifespan(app: FastAPI):
         weather_provider = OpenMeteoProvider.from_settings(db)  # forecast for builds (Ш-40)
         stack.push_async_callback(weather_provider.aclose)
         app.state.weather_provider = weather_provider
+        storage = make_storage(settings)
+        if storage is not None:
+            stack.push_async_callback(storage.aclose)
+        app.state.storage = storage
         log.info("api started", extra={"env": settings.app_env, "version": __version__})
         yield
 
@@ -64,6 +72,12 @@ def create_app() -> FastAPI:
     app.include_router(trips_router)
     app.include_router(devices_router)
     app.include_router(favorites_router)
+    app.include_router(submissions_router)
+    app.include_router(dev_uploads_router)
+    if settings.storage_provider == "local" and settings.app_env in ("dev", "test"):
+        local = make_storage(settings)
+        local.root.mkdir(parents=True, exist_ok=True)
+        app.mount("/media", StaticFiles(directory=str(local.root)), name="media")  # dev only
     install_admin(app)
     return app
 

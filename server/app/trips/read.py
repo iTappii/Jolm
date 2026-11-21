@@ -9,6 +9,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from app.places import service
+from app.providers.storage import media_url
 from app.routing.service import ALMATY_TZ
 
 
@@ -33,7 +34,13 @@ def place_summary(row: Dict[str, Any], locale: str) -> Dict[str, Any]:
     out = place_ref(row, locale)
     out["category_name"] = row["category_name_ru" if locale == "ru" else "category_name_en"]
     out["photo"] = (
-        {"id": str(row["photo_id"]), "storage_key": row["photo_key"]} if row["photo_id"] else None
+        {
+            "id": str(row["photo_id"]),
+            "storage_key": row["photo_key"],
+            "url": media_url(row["photo_key"]),  # null while MEDIA_BASE_URL is unset
+        }
+        if row["photo_id"]
+        else None
     )
     return out
 
@@ -244,13 +251,13 @@ def offline_place(
     order = ("ru", "en") if locale == "ru" else ("en", "ru")
     extra = extra or {}
     address, _ = service.pick_text(extra, "address", locale, order)
-    key, base = row["photo_key"], media_base_url.strip().rstrip("/")
+    key = row["photo_key"]
     out.update(
         names={"ru": row["name_ru"], "en": row["name_en"], "kk": extra.get("name_kk")},
         category_name=row["category_name_ru" if locale == "ru" else "category_name_en"],
         address=address,
         hours=service.group_hours(hours),
-        photo_url="%s/%s" % (base, key.lstrip("/")) if key and base else None,
+        photo_url=media_url(key, media_base_url),
     )
     return out
 

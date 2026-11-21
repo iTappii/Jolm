@@ -50,6 +50,7 @@ class DayHours(BaseModel):
 class Photo(BaseModel):
     id: UUID
     storage_key: str
+    url: Optional[str] = None  # `MEDIA_BASE_URL/<storage_key>`; null while MEDIA_BASE_URL is unset
     source: str
 
 
