@@ -1,0 +1,8 @@
+{
+  "version": 8,
+  "name": "Jol UI-test stub (offline, background only)",
+  "sources": {},
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#eef1e8" } }
+  ]
+}

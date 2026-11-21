@@ -3,7 +3,12 @@
 SwiftUI, iOS 17+. Map: MapLibre Native iOS (SPM `maplibre-gl-native-distribution`, pinned exactly to 6.31.0).
 
 ## Layout
-- `Jol/App` entry point, `Jol/Core` config/infra, `Jol/Features/Map` map, `Jol/Resources` assets, String Catalog, bundled style.
+- `Jol/App` entry point, DI container (`AppContainer`), `RootView`.
+- `Jol/Core`: `Networking/` (`APIClient`, `SSEClient`, `APIError`), `Localization/` (language override),
+  `Design/` (color, typography, spacing tokens), `SessionStore` (Keychain), `InstallID`, `AppConfig`.
+- `Jol/Features/<Feature>`: Map, Auth, Chat, Places, Route, Trip, Profile, Sidebar (placeholders), System.
+- `Jol/Resources`: assets, `Localizable.xcstrings`, `InfoPlist.xcstrings`, bundled style.
+- Debug builds: launch argument `-JolFeatureGallery` shows an index of all feature screens + language picker + `/v1/meta` status.
 - `JolTests`, `JolUITests`.
 - `project.yml` — XcodeGen spec (reproducible source). `Jol.xcodeproj` is committed and equivalent;
   with XcodeGen installed, `cd ios && xcodegen generate` regenerates it.

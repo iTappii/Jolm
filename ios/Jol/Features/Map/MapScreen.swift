@@ -1,37 +1,24 @@
 import SwiftUI
 
-/// Full-screen map with a visible OSM attribution.
+/// Full-screen map layer. `HomeScreen` puts the chat, profile button and attribution label on top.
 struct MapScreen: View {
-    @State private var showAppleSignIn = false
+    let places: PlacesModel
+    var bottomInset: CGFloat = 0
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            MapView(styleURL: AppConfig.mapStyleURL)
-                .ignoresSafeArea()
-            Text("© OpenStreetMap contributors")
-                .font(.caption2)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(.thinMaterial, in: Capsule())
-                .padding(8)
-                .accessibilityIdentifier("osm-attribution")
-        }
-        .overlay(alignment: .bottomLeading) {
-            Button {
-                showAppleSignIn = true
-            } label: {
-                Image(systemName: "person.crop.circle")
-                    .font(.title2)
-                    .padding(10)
-                    .background(.thinMaterial, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Sign In", tableName: "AppleSignIn"))
-            .accessibilityIdentifier("open-apple-sign-in")
-            .padding(8)
-        }
-        .sheet(isPresented: $showAppleSignIn) {
-            AppleSignInView()
-        }
+        MapView(
+            styleURL: AppConfig.mapStyleURL(dark: colorScheme == .dark),
+            pins: places.activeRoute == nil ? places.pins : [],
+            pinsVersion: places.activeRoute == nil ? places.pinsVersion : -2,
+            routeStops: places.routeStops,
+            routeID: places.activeRoute?.id,
+            selectedID: places.selected?.id,
+            bottomInset: bottomInset,
+            onRegionChange: { places.regionChanged($0) },
+            onSelect: { places.select($0) },
+            onTapEmpty: { places.clearSelection() }
+        )
+        .ignoresSafeArea()
     }
 }

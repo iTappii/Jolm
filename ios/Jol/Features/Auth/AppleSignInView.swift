@@ -2,7 +2,9 @@ import AuthenticationServices
 import SwiftUI
 
 struct AppleSignInView: View {
-    @Environment(\.dismiss) private var dismiss
+    /// Called after the session is stored (the caller closes whatever flow it is in).
+    var onSignedIn: () -> Void = {}
+    @Environment(AppContainer.self) private var container
     @State private var nonce: String?
     @State private var failed = false
     @State private var attempt = 0
@@ -31,16 +33,19 @@ struct AppleSignInView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("apple-sign-in")
-        .padding(24)
+        .padding(.vertical, JolSpacing.sm)
         .interactiveDismissDisabled(exchanging)
-        .presentationDetents([.height(180)])
         .task(id: attempt) {
             do {
-                nonce = try await AppleSignInAPI.challenge()
+                nonce = try await service.appleChallenge()
             } catch {
                 failed = !Task.isCancelled
             }
         }
+    }
+
+    private var service: AuthService {
+        AuthService(api: container.api, tokens: container.tokens)
     }
 
     private func finish(_ result: Result<ASAuthorization, Error>) {
@@ -53,76 +58,25 @@ struct AppleSignInView: View {
                 failed = true
                 return
             }
+            let code = credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
             exchanging = true
             Task {
                 defer { exchanging = false }
                 do {
-                    let tokens = try await AppleSignInAPI.signIn(identityToken: token)
-                    try SessionStore.shared.save(tokens)
-                    dismiss()
+                    try await service.signInWithApple(identityToken: token, authorizationCode: code)
+                    container.auth.refresh()
+                    onSignedIn()
                 } catch {
                     failed = true
                 }
             }
         case .failure(let error):
+            // A cancelled Apple sheet just returns here: show the button again.
             if (error as? ASAuthorizationError)?.code == .canceled {
-                dismiss()
+                attempt += 1
             } else {
                 failed = true
             }
         }
-    }
-}
-
-private struct AppleIdentityToken: Encodable {
-    let identityToken: String
-
-    enum CodingKeys: String, CodingKey {
-        case identityToken = "identity_token"
-    }
-}
-
-private enum AppleSignInAPI {
-    struct Challenge: Decodable {
-        let nonce: String
-    }
-
-    static func challenge() async throws -> String {
-        let result: Challenge = try await post("v1/auth/apple/challenge")
-        return result.nonce
-    }
-
-    static func signIn(identityToken: String) async throws -> SessionTokens {
-        let body = try JSONEncoder().encode(AppleIdentityToken(identityToken: identityToken))
-        return try await post("v1/auth/apple", body: body)
-    }
-
-    private static func post<T: Decodable>(_ path: String, body: Data? = nil) async throws -> T {
-        guard let configured = Bundle.main.object(forInfoDictionaryKey: "JOL_API_BASE_URL") as? String,
-              let base = URL(string: configured),
-              let host = base.host, !host.isEmpty else {
-            throw URLError(.badURL)
-        }
-        #if targetEnvironment(simulator)
-        let local = base.scheme == "http" && host == "localhost"
-        #else
-        let local = false
-        #endif
-        guard base.scheme == "https" || local else {
-            throw URLError(.appTransportSecurityRequiresSecureConnection)
-        }
-
-        var request = URLRequest(url: base.appending(path: path), timeoutInterval: 10)
-        request.httpMethod = "POST"
-        request.setValue(Locale.preferredLanguages.first, forHTTPHeaderField: "Accept-Language")
-        if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = body
-        }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw URLError(.badServerResponse)
-        }
-        return try JSONDecoder().decode(T.self, from: data)
     }
 }

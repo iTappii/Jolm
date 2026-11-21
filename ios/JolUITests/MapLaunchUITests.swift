@@ -1,5 +1,6 @@
 import XCTest
 
+@MainActor
 final class MapLaunchUITests: XCTestCase {
     func testLaunchShowsAttribution() {
         let app = XCUIApplication()

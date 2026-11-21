@@ -19,8 +19,9 @@ class H(SimpleHTTPRequestHandler):
         self.send_response(204); self.end_headers()
 
     def do_GET(self):
-        if self.path == "/native/jol-light.json":
-            style = json.loads(Path("style/jol-light.json").read_text())
+        native = re.fullmatch(r"/native/(jol-(?:light|dark)(?:\.en)?\.json)", self.path)
+        if native:
+            style = json.loads(Path("style", native.group(1)).read_text())
             port = self.server.server_port
             style["sources"]["openmaptiles"]["url"] = f"pmtiles://http://localhost:{port}/build/almaty.pmtiles"
             body = json.dumps(style, ensure_ascii=False).encode("utf-8")

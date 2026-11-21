@@ -24,6 +24,10 @@
 	<string>$(JOL_MAP_STYLE_URL)</string>
 	<key>JOL_API_BASE_URL</key>
 	<string>$(JOL_API_BASE_URL)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>dgis</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>

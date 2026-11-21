@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-struct SessionTokens: Codable, Equatable {
+struct SessionTokens: Codable, Equatable, Sendable {
     let accessToken: String
     let refreshToken: String
 
@@ -11,7 +11,7 @@ struct SessionTokens: Codable, Equatable {
     }
 }
 
-struct SessionStore {
+struct SessionStore: Sendable {
     static let shared = SessionStore(service: "kz.jol.app.session")
     let service: String
 
