@@ -44,6 +44,14 @@ MESSAGES = {
         "en": "Nothing to choose: the trip fits the budget or the choice was already made",
         "ru": "Выбирать нечего: поездка укладывается в бюджет или выбор уже сделан",
     },
+    "must_have": {
+        "en": "This stop is one of your must-haves; confirm to change it anyway",
+        "ru": "Это обязательное место из ваших пожеланий; подтвердите, чтобы изменить его",
+    },
+    "no_replacement": {
+        "en": "No suitable replacement fits that day",
+        "ru": "Подходящей замены на этот день не нашлось",
+    },
     "http_error": {"en": "Request failed", "ru": "Не удалось выполнить запрос"},
 }
 

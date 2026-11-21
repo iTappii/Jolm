@@ -140,6 +140,24 @@ class DirectionsLegs:
         return self._cache[key]
 
 
+class PreferredLegs:
+    """`LegProvider` wrapper (Ш-38): where the person chose a transport mode for a transition,
+    that option becomes the default (`recommended`) again, so re-timing a day after an edit
+    keeps their choices. `prefs` maps (origin, destination) points to a mode."""
+
+    def __init__(self, inner: LegProvider, prefs: Dict[Tuple[Point, Point], str]):
+        self.inner, self.prefs = inner, prefs
+
+    async def options(
+        self, origin: Point, destination: Point, depart_at: datetime
+    ) -> List[DirectionOption]:
+        options = await self.inner.options(origin, destination, depart_at)
+        mode = self.prefs.get((origin, destination))
+        if mode is None or not any(o.mode == mode for o in options):
+            return options
+        return [o.model_copy(update={"recommended": o.mode == mode}) for o in options]
+
+
 def pick_default(options: Sequence[DirectionOption]) -> Optional[DirectionOption]:
     """The default leg: the option Ш-22 marks `recommended` (walk up to 15 minutes, otherwise
     the lowest duration + 1 second per tenge of the upper cost). Recomputed if no flag is set."""

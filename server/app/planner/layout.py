@@ -759,6 +759,69 @@ async def _plan_once(
     return layout
 
 
+@dataclass(frozen=True)
+class KeptStop:
+    """A stop of an existing day in the order to keep (Ш-38 edits)."""
+
+    place: Place
+    kind: str  # "activity" | "meal"
+    meal: Optional[str]
+    must_have: bool
+
+
+@dataclass
+class RetimedDay:
+    plan: DayPlan
+    unplaced: List[Unplaced]  # stops that no longer fit (opening hours, end of the day)
+    warnings: List[LayoutWarning]
+    travel_estimated: bool
+
+
+async def retime_day(
+    day: date,
+    pace: Optional[str],
+    stops: Sequence[KeptStop],
+    hours: Mapping[UUID, hrs.HoursRows],
+    travel: TravelMatrixProvider,
+    legs: LegProvider,
+    forecast: Optional[Forecast] = None,
+    start_point: Optional[Point] = None,
+) -> RetimedDay:
+    """Ш-38: time ONE day again with its stops in the given order (no re-planning of the trip).
+
+    Used after an edit (a stop removed or replaced): the order the person saw is kept, transitions
+    are rebuilt with real legs (Ш-22 options) and the stops are timed one after another from the
+    start of the day. A stop that no longer fits (hours, end of the day) is dropped and reported
+    in `unplaced`, a dropped must-have is never silent. Deterministic.
+    """
+    pace = pace if pace in DAY_START else scoring.DEFAULT_PACE
+    ctx = _Ctx(
+        dates=[day],
+        start_min=DAY_START[pace],
+        end_min=DAY_END[pace],
+        cap=scoring.ACTIVITIES_PER_DAY[pace],
+        hours=hours,
+        forecast=forecast or UnknownForecast(),
+        start_point=start_point or ALMATY_CENTRE,
+    )
+    order = [
+        ctx.make_item(s.place, day, s.kind, s.must_have, rank, s.meal)
+        for rank, s in enumerate(stops)
+    ]
+    ids = sorted({s.place.id for s in stops}, key=str)
+    idx = {pid: n + 1 for n, pid in enumerate(ids)}
+    by_id = {s.place.id: s.place for s in stops}
+    points: List[Point] = [ctx.start_point] + [_pt(by_id[pid]) for pid in ids]
+    tm = await travel.build(points)
+    unplaced: List[Unplaced] = []
+    warnings: List[LayoutWarning] = []
+    plan = await _time_day(
+        ctx, day, order, tm, idx, legs, start_point is not None, unplaced, warnings
+    )
+    estimated = tm.estimated or any(leg.estimated for leg in plan.legs)
+    return RetimedDay(plan, unplaced, warnings, estimated)
+
+
 async def layout_selection(
     conn,
     selection,

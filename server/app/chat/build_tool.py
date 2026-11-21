@@ -22,24 +22,22 @@ SSE event `route_ready` (once per successful build; JSON exactly):
   with `POST /v1/trips/{id}/budget-choice`.
 
 One trip per chat: building again after the brief changed updates the same trip (`trip_id`
-stays, `version` grows). The tool result for the model is a compact day-by-day summary.
+stays, `version` grows). The tool result for the model is a compact day-by-day summary; every
+stop has an `item_id` that the edit tools (`chat/edit_tools.py`, Ш-38) take.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 from uuid import UUID
 
-from app.chat import store
+from app.chat import edit_tools, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
 from app.db import fetch_one
-from app.planner import budget as bud
 from app.planner.build import (
-    BuiltPlan,
     budget_json,
     build_plan,
     must_have_unmet_json,
-    place_name,
     warnings_json,
 )
 from app.routing import FakeRouter
@@ -55,27 +53,6 @@ EXPLAIN = (
     "person chooses in the app. If must_have_unmet is not empty, say honestly which wishes "
     "could not be included and why. Do not promise bookings."
 )
-
-
-def _day_summary(plan: BuiltPlan, locale: str) -> List[Dict[str, Any]]:
-    days = []
-    for day in plan.layout.days:
-        stops = []
-        for stop in day.stops:
-            kzt, _assumed = bud.stop_cost(stop)
-            item: Dict[str, Any] = {
-                "time": stop.start.strftime("%H:%M"),
-                "name": place_name(stop.place, locale),
-                "kind": stop.kind,
-                "cost_kzt": kzt,
-            }
-            if stop.meal:
-                item["meal"] = stop.meal
-            if stop.must_have:
-                item["must_have"] = True
-            stops.append(item)
-        days.append({"date": day.date.isoformat(), "stops": stops})
-    return days
 
 
 def _model_budget(public: Dict[str, Any]) -> Dict[str, Any]:
@@ -126,6 +103,8 @@ async def build_trip(db, chat_id: UUID, locale: str, router: Any) -> ToolOutcome
         trip_id, version, _created = await trips_store.save_plan(
             conn, owner["user_id"], chat_id, plan, locale
         )
+        trip = await trips_store.get_trip_row(conn, owner["user_id"], trip_id)
+        days = await edit_tools.plan_days(conn, trip, locale)  # with the item ids (Ш-38)
 
     budget = budget_json(plan, locale)
     warnings = warnings_json(plan)
@@ -142,7 +121,7 @@ async def build_trip(db, chat_id: UUID, locale: str, router: Any) -> ToolOutcome
         "ok": True,
         "trip_id": str(trip_id),
         "version": version,
-        "days": _day_summary(plan, locale),
+        "days": days,
         "budget": _model_budget(budget),
         "warnings": [w["code"] for w in warnings],
         "must_have_unmet": unmet,

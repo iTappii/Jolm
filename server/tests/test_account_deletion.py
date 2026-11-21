@@ -182,8 +182,14 @@ async def test_delete_removes_trips_with_items_legs_and_lodging_but_not_places(
             "nights, total_kzt) VALUES (%s, %s, 1, 5000, 1, 5000)",
             (trip, place),
         )
+        await conn.execute(  # memory signal of an edit (Ш-38), tied to the user and the trip
+            "INSERT INTO user_place_signals (user_id, place_id, category_slug, signal, trip_id) "
+            "VALUES (%s, %s, 'museum', 'removed', %s)",
+            (user["id"], place, trip),
+        )
     for table in ("trips", "trip_items", "trip_legs", "trip_lodging_options"):
         assert await count(conn, table) in (2, 4), table
+    assert await count(conn, "user_place_signals") == 2
 
     assert (await client.delete("/v1/me", headers=auth(tokens))).status_code == 204
 
@@ -191,6 +197,7 @@ async def test_delete_removes_trips_with_items_legs_and_lodging_but_not_places(
     assert await count(conn, "trip_items") == 2
     assert await count(conn, "trip_legs") == 1
     assert await count(conn, "trip_lodging_options") == 1
+    assert await count(conn, "user_place_signals") == 1  # only the other user's signal is left
     assert await count(conn, "places") == 1  # the place itself is never deleted with a user
 
 

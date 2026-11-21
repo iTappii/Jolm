@@ -12,6 +12,8 @@ Stream events (`event: <name>` + `data: <json>`); the stream ends with `done` or
 - `map_places`    {"reason": "must_have"|"chosen", "places": [{id, name, category, lat, lon}]}
 - `route_ready`   {"trip_id", "version", "days", "warnings", "must_have_unmet", "budget"}
                   after `build_trip` (exact shape: chat/build_tool.py)
+- `trip_updated`  {"trip_id", "version", "action", "changed_days", "budget"}
+                  after `remove_trip_item` / `replace_trip_item` (exact shape: chat/edit_tools.py)
 - `done`          {"message_id": n, "usage": {"input_tokens", "output_tokens"}}
 - `error`         {"code", "message"}
 
@@ -41,7 +43,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.auth import sessions
 from app.auth.api import bearer_token
-from app.chat import build_tool, store, tools
+from app.chat import build_tool, edit_tools, store, tools
 from app.chat.brief import (
     BriefError,
     BriefUpdate,
@@ -58,6 +60,7 @@ from app.chat.sse import format_event, sse_response
 from app.config import get_settings
 from app.errors import AppError
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
+from app.routing import FakeRouter
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["chat"])
@@ -198,14 +201,17 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
     history.insert(0, Message(role="user", content=brief_data_block(brief)))
     record = TurnRecord()
 
+    router = getattr(request.app.state, "routing_provider", None) or FakeRouter()
+
     async def handle_tool(call: ToolCall) -> ToolOutcome:
         handler = {
             tools.UPDATE_TRIP_BRIEF: _update_trip_brief,
             tools.ADD_GRAPH_NODE: _add_graph_node,
             tools.SEARCH_PLACES: _search_places,
-            tools.BUILD_TRIP: lambda *a: _build_trip(
-                *a, getattr(request.app.state, "routing_provider", None)
-            ),
+            tools.BUILD_TRIP: lambda *a: _build_trip(*a, router),
+            edit_tools.GET_TRIP_PLAN: edit_tools.get_trip_plan,
+            edit_tools.REMOVE_TRIP_ITEM: lambda *a: edit_tools.remove_trip_item(*a, router),
+            edit_tools.REPLACE_TRIP_ITEM: lambda *a: edit_tools.replace_trip_item(*a, router),
         }.get(call.name)
         if handler is None:
             return ToolOutcome({"error": "unknown tool %r" % call.name}, ok=False, error="unknown")
@@ -250,6 +256,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
                 tools.ADD_GRAPH_NODE_SPEC,
                 tools.SEARCH_PLACES_SPEC,
                 tools.BUILD_TRIP_SPEC,
+                *edit_tools.EDIT_SPECS,
             ],
             system,
             handle_tool,

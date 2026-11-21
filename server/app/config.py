@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     email_provider: str = "stub"
     valhalla_url: Optional[str] = None
     open_meteo_url: str = "https://api.open-meteo.com"
+    # Commercial use of Open-Meteo needs the paid plan (Ш-39); empty = the free, non-commercial API.
+    open_meteo_api_key: SecretStr = SecretStr("")
 
 
 @lru_cache

@@ -85,3 +85,16 @@ WHERE p.status = 'active'
 ORDER BY p.popularity DESC, p.id
 LIMIT 500
 """
+
+# Places by id for trip edits (Ш-38): no status or area filter, a place that is already in a trip
+# stays editable. params: ids (uuid[]).
+PLACES_BY_ID = (
+    "SELECT"
+    + _COLS
+    + """
+FROM places p
+LEFT JOIN place_categories c ON c.id = p.category_id
+LEFT JOIN place_categories pc ON pc.id = c.parent_id
+WHERE p.id = ANY(%(ids)s::uuid[])
+"""
+)

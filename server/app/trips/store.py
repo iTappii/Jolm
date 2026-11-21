@@ -3,7 +3,9 @@
 `save_plan` writes a whole `BuiltPlan` in the caller's transaction: the trip row (new, or the
 chat's existing trip with `version + 1`), the main plan, the over-budget variants and the
 lodging options. `apply_budget_choice` promotes a variant (SSOT §5.2, TECH_PLAN §2).
-Readers of `trip_items` / `trip_legs` must filter `variant = 'main'`.
+Readers of `trip_items` / `trip_legs` must filter `variant = 'main'`: that filter lives in ONE
+place, `MAIN` and `main_items` / `main_legs` below (Ш-36 coordinator note, closed in Ш-37);
+over-budget variants are read only through `variant_items`, for the budget section.
 """
 
 from datetime import date
@@ -36,6 +38,26 @@ def brief_json(brief: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
+async def insert_leg(conn, trip_id: UUID, variant: str, leg, item_ids: Dict[UUID, UUID]) -> None:
+    """Insert one leg; `item_ids` maps place id -> trip_items id of the leg's day."""
+    options = [o.model_dump(exclude_none=True, exclude={"steps"}) for o in leg.options]
+    await execute(
+        conn,
+        """
+        INSERT INTO trip_legs
+            (trip_id, variant, from_item_id, to_item_id, depart_at, options, chosen_mode,
+             travel_s, cost_kzt, estimated)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            trip_id, variant,
+            item_ids.get(leg.origin_place_id) if leg.origin_place_id else None,
+            item_ids[leg.destination_place_id], leg.depart_at, Jsonb(options),
+            leg.default_mode, int(round(leg.travel_s)), bud.leg_cost(leg), leg.estimated,
+        ),
+    )  # fmt: skip
+
+
 async def write_layout(conn, trip_id: UUID, variant: str, layout: TripLayout) -> int:
     """Insert items and legs of one layout; returns the number of items."""
     count = 0
@@ -62,22 +84,7 @@ async def write_layout(conn, trip_id: UUID, variant: str, layout: TripLayout) ->
             item_ids[stop.place.id] = row["id"]
             count += 1
         for leg in day.legs:
-            options = [o.model_dump(exclude_none=True, exclude={"steps"}) for o in leg.options]
-            await execute(
-                conn,
-                """
-                INSERT INTO trip_legs
-                    (trip_id, variant, from_item_id, to_item_id, depart_at, options, chosen_mode,
-                     travel_s, cost_kzt, estimated)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    trip_id, variant,
-                    item_ids.get(leg.origin_place_id) if leg.origin_place_id else None,
-                    item_ids[leg.destination_place_id], leg.depart_at, Jsonb(options),
-                    leg.default_mode, int(round(leg.travel_s)), bud.leg_cost(leg), leg.estimated,
-                ),
-            )  # fmt: skip
+            await insert_leg(conn, trip_id, variant, leg, item_ids)
     return count
 
 
@@ -222,4 +229,167 @@ async def lodging_rows(conn, trip_id: UUID) -> List[dict]:
         "SELECT place_id, rank, price_per_night_kzt, price_assumed, nights, total_kzt, recommended "
         "FROM trip_lodging_options WHERE trip_id = %s ORDER BY rank",
         (trip_id,),
+    )
+
+
+# --- readers (Ш-37, Ш-38) ---------------------------------------------------------------------
+MAIN = "main"  # the plan; 'drop_places' / 'cheaper' are over-budget alternatives (SSOT §5.2)
+
+_ITEM_COLUMNS = """
+    i.id, i.day, i.ord, i.place_id, i.kind, i.meal, i.starts_at, i.ends_at, i.visit_min,
+    i.is_must_have, i.est_cost_kzt, i.cost_assumed, i.hours_assumed, i.rain_exposed,
+    p.name_ru, p.name_en, c.slug AS category, c.name_ru AS category_name_ru,
+    c.name_en AS category_name_en, pc.slug AS parent_category,
+    ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon,
+    (SELECT ph.id FROM place_photos ph WHERE ph.place_id = p.id AND ph.status = 'approved'
+     ORDER BY ph.created_at, ph.id LIMIT 1) AS photo_id,
+    (SELECT ph.storage_key FROM place_photos ph WHERE ph.place_id = p.id
+     AND ph.status = 'approved' ORDER BY ph.created_at, ph.id LIMIT 1) AS photo_key
+"""
+
+_ITEM_FROM = """
+FROM trip_items i
+JOIN places p ON p.id = i.place_id
+LEFT JOIN place_categories c ON c.id = p.category_id
+LEFT JOIN place_categories pc ON pc.id = c.parent_id
+WHERE i.trip_id = %s AND i.variant = %s
+ORDER BY i.day, i.ord
+"""
+
+
+async def variant_items(conn, trip_id: UUID, variant: str) -> List[dict]:
+    """Items of one variant with their place; for the budget section only (use `main_items`)."""
+    return await fetch_all(conn, "SELECT" + _ITEM_COLUMNS + _ITEM_FROM, (trip_id, variant))
+
+
+async def main_items(conn, trip_id: UUID) -> List[dict]:
+    """The plan's items (variant 'main') with place columns, ordered by day and `ord`."""
+    return await variant_items(conn, trip_id, MAIN)
+
+
+async def main_legs(conn, trip_id: UUID) -> List[dict]:
+    """The plan's legs (variant 'main'); `day` is the day of the destination item."""
+    return await fetch_all(
+        conn,
+        """
+        SELECT l.id, l.from_item_id, l.to_item_id, l.depart_at, l.options, l.chosen_mode,
+               l.travel_s, l.cost_kzt, l.estimated, i.day, i.ord
+        FROM trip_legs l JOIN trip_items i ON i.id = l.to_item_id
+        WHERE l.trip_id = %s AND l.variant = %s
+        ORDER BY i.day, i.ord
+        """,
+        (trip_id, MAIN),
+    )
+
+
+async def get_trip_row(conn, user_id: UUID, trip_id: UUID, lock: bool = False) -> Optional[dict]:
+    """The user's trip (foreign and missing look the same: None); `lock` = FOR UPDATE."""
+    return await fetch_one(
+        conn,
+        "SELECT id, chat_id, user_id, brief, start_date, end_date, budget_kzt, status, version, "
+        "weather_checked_at, must_have_unmet, warnings, budget, total_cost_kzt, budget_choice, "
+        "created_at, updated_at FROM trips WHERE id = %s AND user_id = %s"
+        + (" FOR UPDATE" if lock else ""),
+        (trip_id, user_id),
+    )
+
+
+async def lodging_options(conn, trip_id: UUID) -> List[dict]:
+    """Lodging options with the place columns the client shows, best rank first."""
+    return await fetch_all(
+        conn,
+        """
+        SELECT o.place_id, o.rank, o.price_per_night_kzt, o.price_assumed, o.nights, o.total_kzt,
+               o.recommended, p.name_ru, p.name_en, c.slug AS category,
+               ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon
+        FROM trip_lodging_options o
+        JOIN places p ON p.id = o.place_id
+        LEFT JOIN place_categories c ON c.id = p.category_id
+        WHERE o.trip_id = %s ORDER BY o.rank
+        """,
+        (trip_id,),
+    )
+
+
+async def replace_day(conn, trip_id: UUID, day: date, plan) -> Dict[UUID, UUID]:
+    """Ш-38: make the main plan's `day` equal to `plan` (a `DayPlan`) without touching other days.
+
+    Items of places that stay keep their ids (clients hold them); stops of new places are
+    inserted, items of places that left are deleted. Legs of the day are rebuilt (new ids).
+    Returns place id -> item id for the day's items.
+    """
+    old = await fetch_all(
+        conn,
+        "SELECT id, place_id FROM trip_items WHERE trip_id = %s AND variant = %s AND day = %s "
+        "ORDER BY ord",
+        (trip_id, MAIN, day),
+    )
+    old_ids = [r["id"] for r in old]
+    await execute(
+        conn,
+        "DELETE FROM trip_legs WHERE trip_id = %s AND to_item_id = ANY(%s)",
+        (trip_id, old_ids),
+    )
+    # (trip_id, variant, day, ord) is unique: park the old ords out of the way first
+    await execute(conn, "UPDATE trip_items SET ord = ord + 1000 WHERE id = ANY(%s)", (old_ids,))
+    free: Dict[UUID, List[UUID]] = {}
+    for r in old:
+        free.setdefault(r["place_id"], []).append(r["id"])
+    item_ids: Dict[UUID, UUID] = {}
+    used: List[UUID] = []
+    for ord_, stop in enumerate(plan.stops, start=1):
+        kzt, assumed = bud.stop_cost(stop)
+        reuse = free.get(stop.place.id)
+        if reuse:
+            item_id = reuse.pop(0)
+            await execute(
+                conn,
+                """
+                UPDATE trip_items SET ord = %s, kind = %s, meal = %s, starts_at = %s, ends_at = %s,
+                    visit_min = %s, is_must_have = %s, est_cost_kzt = %s, cost_assumed = %s,
+                    hours_assumed = %s, rain_exposed = %s
+                WHERE id = %s
+                """,
+                (
+                    ord_, stop.kind, stop.meal, stop.start, stop.end, stop.visit_min,
+                    stop.must_have, kzt, assumed, stop.hours_assumed, stop.rain_exposed, item_id,
+                ),
+            )  # fmt: skip
+        else:
+            row = await fetch_one(
+                conn,
+                """
+                INSERT INTO trip_items
+                    (trip_id, variant, day, ord, place_id, kind, meal, starts_at, ends_at,
+                     visit_min, is_must_have, est_cost_kzt, cost_assumed, hours_assumed,
+                     rain_exposed)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    trip_id, MAIN, day, ord_, stop.place.id, stop.kind, stop.meal, stop.start,
+                    stop.end, stop.visit_min, stop.must_have, kzt, assumed, stop.hours_assumed,
+                    stop.rain_exposed,
+                ),
+            )  # fmt: skip
+            item_id = row["id"]
+        item_ids[stop.place.id] = item_id
+        used.append(item_id)
+    leftover = [i for i in old_ids if i not in used]
+    if leftover:
+        await execute(conn, "DELETE FROM trip_items WHERE id = ANY(%s)", (leftover,))
+    for leg in plan.legs:
+        await insert_leg(conn, trip_id, MAIN, leg, item_ids)
+    return item_ids
+
+
+async def list_trips(conn, user_id: UUID, limit: int, before: Optional[Any] = None) -> List[dict]:
+    """The user's trips, most recently updated first; `before` = updated_at of the last item."""
+    return await fetch_all(
+        conn,
+        "SELECT id, chat_id, start_date, end_date, budget_kzt, status, version, budget, "
+        "total_cost_kzt, updated_at FROM trips WHERE user_id = %s "
+        "AND (%s::timestamptz IS NULL OR updated_at < %s::timestamptz) "
+        "ORDER BY updated_at DESC, id LIMIT %s",
+        (user_id, before, before, limit),
     )

@@ -175,3 +175,31 @@ def test_merge_moves_trip_rows_to_the_survivor(sconn):
         (trips[0], keep, True),
         (trips[1], keep, True),  # the collision kept one row and the recommendation
     }
+
+
+def test_merge_moves_user_place_signals_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: user_place_signals (Ш-38) references places without cascade."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop = place("Оставить"), place("Удалить")
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    for pid, signal in ((drop, "removed"), (drop, "replaced"), (keep, "removed")):
+        sconn.execute(
+            "INSERT INTO user_place_signals (user_id, place_id, category_slug, signal) "
+            "VALUES (%s, %s, 'museum', %s)",
+            (user, pid, signal),
+        )
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    rows = q(sconn, "SELECT place_id FROM user_place_signals")
+    assert len(rows) == 3 and {r["place_id"] for r in rows} == {keep}  # none lost

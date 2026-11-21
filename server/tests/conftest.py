@@ -41,6 +41,7 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "user_place_signals",  # memory signals of trip edits (Ш-38) hang off users
     "trip_lodging_options",  # trips hang off users and chats (Ш-36)
     "trip_legs",
     "trip_items",

@@ -21,7 +21,7 @@ from app.planner.candidates import Selection, select_candidates
 from app.planner.layout import TripLayout, plan_days
 from app.planner.model import Place
 from app.planner.travel import DirectionsLegs, RouterMatrix
-from app.planner.weather import UnknownForecast
+from app.planner.weather import Forecast, UnknownForecast
 from app.routing import get_network
 from app.routing.base import RoutingProvider
 from app.routing.costs import load_tariffs
@@ -58,8 +58,26 @@ def trip_dates(brief: Mapping[str, Any]) -> List[date]:
     return [start + timedelta(days=i) for i in range((end - start).days + 1)]
 
 
-async def build_plan(db, brief: Mapping[str, Any], router: RoutingProvider) -> BuiltPlan:
-    """Plan the whole trip for a complete brief (dates and budget set)."""
+async def leg_tools(conn, router: RoutingProvider, first_day: date):
+    """(travel matrix, leg option builder) for planning; shared by `build_plan` and trip edits.
+
+    Reads tariffs and the transit network on `conn`; the router is called later, by the caller,
+    with whatever connection state it likes.
+    """
+    tariffs = await load_tariffs(conn, first_day)
+    network = None
+    if "bus" in tariffs or "metro" in tariffs:
+        network = await get_network(conn)
+    return RouterMatrix(router), DirectionsLegs(router, network, tariffs)
+
+
+async def build_plan(
+    db, brief: Mapping[str, Any], router: RoutingProvider, forecast: Optional[Forecast] = None
+) -> BuiltPlan:
+    """Plan the whole trip for a complete brief (dates and budget set).
+
+    `forecast`: the planner's weather view (`providers.weather.city_forecast`); default none.
+    """
     dates = trip_dates(brief)
     west, south, east, north = ALMATY_BBOX
     area = {"west": west, "south": south, "east": east, "north": north}
@@ -69,18 +87,13 @@ async def build_plan(db, brief: Mapping[str, Any], router: RoutingProvider) -> B
         acts = [c.place for c in selection.activities]
         food = [c.place for c in selection.food]
         hours = await hrs.load_hours(conn, [p.id for p in must + acts + food])
-        tariffs = await load_tariffs(conn, dates[0])
-        network = None
-        if "bus" in tariffs or "metro" in tariffs:
-            network = await get_network(conn)
+        travel, legs = await leg_tools(conn, router, dates[0])
         lodging_rows = (
             await fetch_all(conn, sql.LODGING, area) if brief.get("has_accommodation") is not True
             else []
         )  # fmt: skip
 
-    travel = RouterMatrix(router)
-    legs = DirectionsLegs(router, network, tariffs)
-    forecast = UnknownForecast()  # Ф11 brings the real one
+    forecast = forecast or UnknownForecast()  # Ш-39: `city_forecast`, not wired in yet (Ш-40)
     pace = brief.get("pace")
 
     async def replan(activities: Sequence[Place], meals: Sequence[Place]) -> TripLayout:

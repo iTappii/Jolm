@@ -3,8 +3,8 @@
 Used by the OSM importer (duplicate OSM objects of one venue) and by the curated popular
 import (a manual row that turns out to be an OSM object). The surviving row ("keep") gets:
   - dependent rows of the dropped row (hours, photos, menu, curated-route items, events, trip
-    items, trip lodging options), except where the survivor already has its own (hours, menu,
-    same route item, same trip's lodging option);
+    items, trip lodging options, user place signals), except where the survivor already has its
+    own (hours, menu, same route item, same trip's lodging option);
   - fields the survivor lacks (names, descriptions, address, prices ...);
   - fields the dropped row set by hand (manual_override) when the survivor did not;
   - the union of both manual_override lists.
@@ -67,6 +67,8 @@ MOVE_STATEMENTS = (
     "WHERE d.place_id = %(drop)s AND d.recommended AND k.trip_id = d.trip_id "
     "AND k.place_id = %(keep)s",
     "DELETE FROM trip_lodging_options WHERE place_id = %(drop)s",
+    # memory signals of trip edits (Ш-38): FK without ON DELETE CASCADE
+    "UPDATE user_place_signals SET place_id = %(keep)s WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"
