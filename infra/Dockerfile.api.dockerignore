@@ -1,0 +1,17 @@
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+.git
+.env
+.env.*
+!.env.example
+ios
+maps
+logo
+graphify-out
+data/osm/cache
+data/**/*.pbf
+docs

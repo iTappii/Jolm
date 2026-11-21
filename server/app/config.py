@@ -39,7 +39,27 @@ class Settings(BaseSettings):
     apns_private_key: SecretStr = SecretStr("")  # contents of the .p8 file ("\n" escapes allowed)
     apns_topic: str = ""  # the app's bundle id; empty = apple_client_id
     apns_sandbox: bool = True  # development builds use the sandbox host
+    # Secrets (Ш-51). `auth_secret` is the legacy single key: in dev/test it is the fallback for the
+    # four below; in any other APP_ENV each of the four must be set (distinct, >= 32 bytes) or the
+    # API and the worker refuse to start (app/auth/keys.py). See docs/deploy.md.
     auth_secret: SecretStr = SecretStr("")
+    jwt_secret: SecretStr = SecretStr("")  # signs access tokens
+    otp_secret: SecretStr = SecretStr("")  # HMAC of one-time codes, destinations and IPs
+    apple_challenge_secret: SecretStr = SecretStr("")  # signs the Sign in with Apple nonce
+    # Fernet keys (urlsafe base64, 32 bytes) for tokens stored at rest, comma separated: the first
+    # encrypts, all of them decrypt (rotation). Generate: `python -m app.auth.keys generate`.
+    token_encryption_keys: SecretStr = SecretStr("")
+    # Old AUTH_SECRET, only while Apple tokens encrypted before Ш-51 still exist (decrypt-only).
+    legacy_token_secret: SecretStr = SecretStr("")
+    # Reverse proxies whose X-Forwarded-For is believed (IPs/CIDRs, comma separated;
+    # app/clientip.py).
+    trusted_proxies: str = ""
+    # Observability (Ш-51): both off by default.
+    sentry_dsn: str = ""  # Sentry-compatible DSN; needs `pip install sentry-sdk` (optional extra)
+    sentry_traces_sample_rate: float = 0.0
+    metrics_token: SecretStr = SecretStr(
+        ""
+    )  # bearer token for GET /metrics; empty = off outside dev
 
     admin_login_max_failures: int = 5
     admin_login_window_min: int = 15
@@ -47,13 +67,14 @@ class Settings(BaseSettings):
     llm_provider: str = "fake"
     llm_timeout_sec: float = 60.0
     llm_max_retries: int = 2
-    # Chat limits (Ш-30/31). Guest counters live in process memory (nothing is written for guests).
+    # Chat limits (Ш-30/31). Counted in PostgreSQL (`rate_limit_hits`, Ш-51), shared by all API
+    # processes; only hashed keys and timestamps are stored, never chat content.
     guest_chat_install_limit: int = 20  # requests per window per X-Install-ID
     guest_chat_ip_limit: int = 60  # requests per window per client IP (NAT-friendly)
     guest_chat_window_sec: int = 3600
     chat_user_limit: int = 60  # messages per window per registered user
     chat_user_window_sec: int = 3600
-    # Analytics batches (Ш-50), in-process counters like the chat's: per X-Install-ID and per IP
+    # Analytics batches (Ш-50), counted like the chat's: per X-Install-ID and per IP
     analytics_install_limit: int = 120
     analytics_ip_limit: int = 600
     analytics_window_sec: int = 3600

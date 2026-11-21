@@ -17,14 +17,15 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.chat import tools
-from app.chat.deps import client_ip, install_id, make_llm
+from app.chat.deps import install_id, make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
 from app.chat.prompts import GUEST, load_prompt
-from app.chat.ratelimit import acquire
 from app.chat.sse import format_event, sse_response
+from app.clientip import client_ip
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
+from app.ratelimit import acquire_own
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
@@ -68,7 +69,7 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
     installation = install_id(request)
     if installation:
         checks.append((limiters.guest_install, "install:" + installation))
-    wait = acquire(checks)
+    wait = await acquire_own(request.app.state.db, checks)
     if wait is not None:
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
 

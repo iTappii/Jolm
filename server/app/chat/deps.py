@@ -1,46 +1,35 @@
 """Request helpers shared by guest and registered chat."""
 
 from dataclasses import dataclass
-from ipaddress import IPv6Address, ip_address
 from typing import Optional
 from uuid import UUID
 
 from fastapi import Request
 
-from app.chat.ratelimit import SlidingWindowLimiter
 from app.config import Settings, get_settings
 from app.errors import AppError
 from app.providers.llm import LLMNotConfigured, ResilientLLM, get_llm_provider
+from app.ratelimit import RateRule
 
 INSTALL_HEADER = "x-install-id"
 
 
 @dataclass
 class ChatLimiters:
-    guest_install: SlidingWindowLimiter
-    guest_ip: SlidingWindowLimiter
-    user: SlidingWindowLimiter
+    guest_install: RateRule
+    guest_ip: RateRule
+    user: RateRule
 
 
 def make_limiters(settings: Settings) -> ChatLimiters:
     guest_window = settings.guest_chat_window_sec
     return ChatLimiters(
-        guest_install=SlidingWindowLimiter(settings.guest_chat_install_limit, guest_window),
-        guest_ip=SlidingWindowLimiter(settings.guest_chat_ip_limit, guest_window),
-        user=SlidingWindowLimiter(settings.chat_user_limit, settings.chat_user_window_sec),
+        guest_install=RateRule(
+            "chat_guest_install", settings.guest_chat_install_limit, guest_window
+        ),
+        guest_ip=RateRule("chat_guest_ip", settings.guest_chat_ip_limit, guest_window),
+        user=RateRule("chat_user", settings.chat_user_limit, settings.chat_user_window_sec),
     )
-
-
-def client_ip(request: Request) -> str:
-    # TODO(proxy): behind a reverse proxy this is the proxy address; trust X-Forwarded-For only
-    # from a configured proxy before deploying behind one.
-    try:
-        address = ip_address(request.client.host) if request.client else None
-    except ValueError:
-        return "unknown"
-    if isinstance(address, IPv6Address) and address.ipv4_mapped:
-        address = address.ipv4_mapped
-    return str(address) if address is not None else "unknown"
 
 
 def install_id(request: Request) -> Optional[str]:

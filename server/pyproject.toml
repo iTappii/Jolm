@@ -29,11 +29,16 @@ dev = [
 osm = [
   "osmium>=3.7",
 ]
+# Optional error reporting (Ш-51): enabled only when SENTRY_DSN is set.
+sentry = [
+  "sentry-sdk>=2.0",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
 
 [tool.setuptools.package-data]
+"app.admin" = ["templates/*", "static/*"]
 "app.chat.prompts" = ["*.md"]
 "app.submissions" = ["*.txt"]
 

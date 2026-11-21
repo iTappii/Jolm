@@ -1,0 +1,92 @@
+# Production template (Ш-51). A starting point, not a provider: it runs on any Docker host.
+# Fill `.env.prod` (copy from .env.prod.example below), then:  infra/deploy.sh up
+#
+# What is NOT here on purpose:
+#  - TLS and the public entry point: put a reverse proxy / load balancer in front of `api`
+#    (Caddy, nginx, a cloud LB) and list its address in TRUSTED_PROXIES.
+#  - Object storage (S3-compatible, STORAGE_PROVIDER=s3) and the tile CDN: external services.
+#  - A managed database is the better choice for production (PITR, failover, backups): then drop
+#    the `postgres` service and point DATABASE_URL at it. PITR is a HOSTING REQUIREMENT.
+name: jol-prod
+
+x-app: &app
+  image: ${JOL_IMAGE:?set JOL_IMAGE, e.g. registry.example.com/jol-api:2026-11-21}
+  env_file: ${ENV_FILE:-../.env.prod}
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+  logging:
+    driver: json-file
+    options: {max-size: "20m", max-file: "5"}
+
+services:
+  migrate:
+    <<: *app
+    command: ["python", "db/migrate.py"]
+    restart: "no"
+
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"   # only the reverse proxy on this host reaches it
+    environment:
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.worker"]
+    healthcheck:
+      disable: true   # the worker has no HTTP port; alert on jol_jobs_overdue_seconds instead
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  postgres:
+    image: postgis/postgis:16-3.4
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:-jol}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-jol}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # no published port: only the services of this compose network reach the database
+
+  # Routing (Ш-20). Tiles are built from the Kazakhstan extract on the first start (minutes).
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:3.9.3
+    restart: unless-stopped
+    volumes:
+      - valhalla_data:/custom_files
+      - ${OSM_PBF:?path to kazakhstan.osm.pbf on the host}:/custom_files/kazakhstan.osm.pbf:ro
+    environment:
+      serve_tiles: "True"
+      build_tar: "True"
+      build_admins: "True"
+      build_time_zones: "False"
+      build_elevation: "False"
+      use_default_speeds_config: "False"
+      server_threads: "${VALHALLA_THREADS:-4}"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8002/status || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 240
+
+volumes:
+  pgdata:
+  valhalla_data:

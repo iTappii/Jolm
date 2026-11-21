@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
 from app.analytics import service as analytics
+from app.clientip import client_ip
 from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
 from app.live import clock
@@ -74,10 +75,6 @@ class PostCtx:
 
 def db(request: Request):
     return request.app.state.db.transaction()
-
-
-def client_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
 
 
 def set_cookie(response: Response, name: str, value: str, max_age: int) -> None:

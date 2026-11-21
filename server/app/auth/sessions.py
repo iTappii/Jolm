@@ -10,7 +10,7 @@ import jwt
 from pydantic import BaseModel
 
 from app.analytics import service as analytics
-from app.config import get_settings
+from app.auth import keys
 from app.db import execute, fetch_one
 from app.errors import AppError
 from app.live import clock
@@ -25,10 +25,8 @@ log = logging.getLogger(__name__)
 
 
 def signing_key() -> bytes:
-    key = get_settings().auth_secret.get_secret_value().encode()
-    if len(key) < 32:
-        raise AppError(503, "auth_unavailable")
-    return key
+    """The access-token (JWT) key; separate from the OTP / Apple-nonce / encryption keys."""
+    return keys.jwt_key()
 
 
 def digest(token: str) -> str:

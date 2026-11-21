@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from app.auth import apple_grants, sessions
+from app.auth import apple_grants, keys, sessions
 from app.config import get_settings
 from app.db import execute, fetch_one
 from app.errors import AppError
@@ -93,7 +93,7 @@ async def challenge(response: Response) -> Challenge:
                 "exp": int(time.time()) + CHALLENGE_SECONDS,
                 "jti": secrets.token_urlsafe(32),
             },
-            sessions.signing_key(),
+            keys.challenge_key(),
             algorithm="HS256",
         )
     )
@@ -113,7 +113,7 @@ def verify_identity(token: str) -> tuple[str, str, int]:
             raise jwt.InvalidTokenError
         challenge_claims = jwt.decode(
             nonce,
-            sessions.signing_key(),
+            keys.challenge_key(),
             algorithms=["HS256"],
             audience=CHALLENGE_AUDIENCE,
             options={"require": ["aud", "exp", "jti"], "strict_aud": True},

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app import worker
 from app.analytics import service as analytics
-from app.auth import otp, sessions
+from app.auth import keys, otp, sessions
 from app.db import execute, fetch_all
 from app.submissions import service
 
@@ -33,7 +33,7 @@ async def delete_account(conn, user_id: UUID) -> None:
     for identity in identities:
         # Same lock as sign-in, so a concurrent sign-in cannot revive the identity mid-delete.
         await sessions.lock_identity(conn, identity["provider"], identity["subject"])
-    key = sessions.signing_key()
+    key = keys.otp_key()
     for identity in identities:
         if identity["provider"] in ("email", "phone"):
             await execute(

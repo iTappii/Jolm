@@ -31,7 +31,8 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 from psycopg import AsyncConnection
 from psycopg.types.json import Jsonb
 
-from app.auth import apple_grants
+from app import observability, ratelimit
+from app.auth import apple_grants, keys
 from app.config import get_settings
 from app.db import Database, execute, fetch_all, fetch_one
 from app.jobs import sql
@@ -163,6 +164,7 @@ async def _retention_cleanup(conn: AsyncConnection, payload: dict) -> None:
         " WHERE retired_at < clock_timestamp() - make_interval(days => %s)",
         (RETIRED_TOKEN_KEEP_DAYS,),
     )
+    await ratelimit.cleanup_expired(conn)  # Ш-51: shared rate-limit hits past their window
 
 
 @register("apple.revoke", external=True)
@@ -199,6 +201,7 @@ async def _finish(db: Database, statement: str, params: tuple) -> bool:
 async def _run_job(db: Database, job: dict, max_attempts: int) -> None:
     kind, token = job["kind"], job["locked_at"]
     error: Optional[str] = None
+    failure: Optional[BaseException] = None
     try:
         handler = _HANDLERS.get(kind)
         if handler is None:
@@ -216,11 +219,15 @@ async def _run_job(db: Database, job: dict, max_attempts: int) -> None:
         log.warning("lease lost, result discarded", extra={"job_id": str(job["id"]), "kind": kind})
         return
     except Exception as exc:
+        failure = exc
         error = f"{type(exc).__name__}: {exc}"[:2000]
         log.warning("job failed", extra={"job_id": str(job["id"]), "kind": kind, "err": error})
     if error is not None:
         if job["attempts"] >= max_attempts:  # the attempt was counted at claim
             await _finish(db, sql.MARK_DEAD, (error, job["id"], token))
+            log.error("job dead", extra={"job_id": str(job["id"]), "kind": kind, "err": error})
+            if failure is not None:
+                observability.capture_exception(failure, None)
         else:
             delay = backoff_seconds(job["attempts"])
             await _finish(db, sql.MARK_RETRY, (error, delay, job["id"], token))
@@ -267,6 +274,8 @@ async def run_worker(
 async def _main() -> None:
     settings = get_settings()
     setup_logging(settings.log_level)
+    keys.validate(settings)  # refuse to start with missing secrets outside dev/test (Ш-51)
+    observability.init_error_reporting(settings)
     db = Database(settings.database_url, 1, max(2, settings.db_pool_min))
     await db.open()
     stop = asyncio.Event()

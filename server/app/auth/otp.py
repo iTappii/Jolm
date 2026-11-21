@@ -4,7 +4,7 @@ import hmac
 import secrets
 from uuid import uuid4
 
-from app.auth import sessions
+from app.auth import keys, sessions
 from app.db import execute, fetch_one
 from app.errors import AppError
 
@@ -54,7 +54,7 @@ async def _retry_after(conn, where: str, params: tuple, offset: int) -> int:
 
 
 async def issue(db, provider, channel: str, destination: str, ip: str) -> None:
-    key = sessions.signing_key()
+    key = keys.otp_key()
     destination_hash = _digest(key, f"destination:{channel}", destination)
     ip_hash = _digest(key, "ip", ip)
     code_id = uuid4()
@@ -120,7 +120,7 @@ async def issue(db, provider, channel: str, destination: str, ip: str) -> None:
 # code themselves. Brute force is not easier: only active codes accept guesses, 5 per code, and
 # every new code spends a rate-limit slot.
 async def verify(db, channel: str, destination: str, code: str, locale: str) -> sessions.Tokens:
-    key = sessions.signing_key()
+    key = keys.otp_key()
     destination_hash = _digest(key, f"destination:{channel}", destination)
     async with db.transaction() as conn:
         await _lock(conn, "destination", destination_hash)

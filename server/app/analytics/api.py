@@ -30,11 +30,11 @@ from pydantic import ValidationError
 from app.analytics import service
 from app.analytics.schemas import EventBatch
 from app.auth import sessions
-from app.chat.deps import client_ip
-from app.chat.ratelimit import SlidingWindowLimiter, acquire
+from app.clientip import client_ip
 from app.config import Settings
 from app.errors import AppError
 from app.live import clock
+from app.ratelimit import RateRule, acquire_own
 
 router = APIRouter(prefix="/v1/analytics", tags=["analytics"])
 
@@ -43,15 +43,15 @@ MAX_BODY_BYTES = 32 * 1024
 
 @dataclass
 class AnalyticsLimiters:
-    install: SlidingWindowLimiter
-    ip: SlidingWindowLimiter
+    install: RateRule
+    ip: RateRule
 
 
 def make_limiters(settings: Settings) -> AnalyticsLimiters:
     window = settings.analytics_window_sec
     return AnalyticsLimiters(
-        install=SlidingWindowLimiter(settings.analytics_install_limit, window),
-        ip=SlidingWindowLimiter(settings.analytics_ip_limit, window),
+        install=RateRule("analytics_install", settings.analytics_install_limit, window),
+        ip=RateRule("analytics_ip", settings.analytics_ip_limit, window),
     )
 
 
@@ -72,8 +72,9 @@ async def post_events(request: Request, response: Response):
     response.headers["Cache-Control"] = "no-store"
     install = _install_id(request)
     limiters = request.app.state.analytics_limiters
-    wait = acquire(
-        [(limiters.install, "install:%s" % install), (limiters.ip, "ip:%s" % client_ip(request))]
+    wait = await acquire_own(
+        request.app.state.db,
+        [(limiters.install, "install:%s" % install), (limiters.ip, "ip:%s" % client_ip(request))],
     )
     if wait:
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})

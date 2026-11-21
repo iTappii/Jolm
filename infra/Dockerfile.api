@@ -1,0 +1,36 @@
+# One image for the API and the worker (Ш-51): the command decides which one runs.
+#   API:     (default)            uvicorn app.main:app
+#   worker:  python -m app.worker
+#   migrate: python db/migrate.py
+# Build from the repository root:  docker build -f infra/Dockerfile.api -t jol-api:TAG .
+# No secrets are baked in: everything comes from the environment (see docs/deploy.md).
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /srv
+
+# Dependencies first (cache layer), then the code. `pip install` (not editable) copies the package
+# data too: prompts, admin templates / static.
+COPY server/pyproject.toml server/pyproject.toml
+COPY server/app server/app
+ARG EXTRAS=""
+RUN pip install "./server${EXTRAS}"
+
+# The migration runner and the SQL files (run with `python db/migrate.py`).
+COPY db db
+
+RUN useradd --system --uid 10001 --no-create-home jol
+USER jol
+
+EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/livez', timeout=2).status == 200 else 1)"
+
+# --no-proxy-headers: the client IP is decided by app/clientip.py (TRUSTED_PROXIES), not by uvicorn.
+# WEB_CONCURRENCY = uvicorn processes per container. Default 1: /metrics counters are per process,
+# so scale with containers (each scraped on its own). Limits are shared through PostgreSQL anyway.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-proxy-headers --workers ${WEB_CONCURRENCY:-1}"]

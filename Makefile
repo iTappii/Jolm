@@ -29,7 +29,7 @@ migrate: venv
 	$(PY) db/migrate.py
 
 run: venv
-	cd server && ../$(PY) -m uvicorn app.main:app --host $${API_HOST:-127.0.0.1} --port $${API_PORT:-8000} --reload
+	cd server && ../$(PY) -m uvicorn app.main:app --host $${API_HOST:-127.0.0.1} --port $${API_PORT:-8000} --reload --no-proxy-headers
 
 worker: venv
 	cd server && ../$(PY) -m app.worker
@@ -99,3 +99,29 @@ valhalla-rebuild: valhalla-down
 	docker volume rm jol_valhalla_data
 
 ci: lint test
+
+# Production scaffolding (Ш-51). Nothing here picks a host or pushes anything on its own.
+# Details and env variables: docs/deploy.md and the header of infra/deploy.sh.
+#   make deploy-build | deploy-check | deploy-migrate | deploy-up | deploy-rollback | deploy-status
+#   make deploy-push REGISTRY=ghcr.io/org     (explicit; `deploy-up` never pushes)
+.PHONY: backup backup-verify secrets-generate
+deploy-%:
+	infra/deploy.sh $*
+
+backup: venv
+	infra/backup.sh
+
+# Restore drill on the local dev database: dump, restore into jol_restore_scratch, compare the row
+# counts of every table, then remove the scratch database. Never touches the dev database itself.
+backup-verify: venv up
+	mkdir -p infra/.backups-verify; \
+	export PG_DOCKER_CONTAINER=$$($(COMPOSE) ps -q postgres) PG_USER=$${POSTGRES_USER:-jol} \
+	  BACKUP_DB=$${POSTGRES_DB:-jol} BACKUP_DIR=infra/.backups-verify BACKUP_KEEP_LOCAL=1 \
+	  DATABASE_URL="$(DATABASE_URL)" VERIFY_SOURCE_URL="$(DATABASE_URL)" DROP_SCRATCH=1 \
+	  PATH="$(CURDIR)/$(VENV)/bin:$$PATH"; \
+	infra/backup.sh && \
+	infra/restore.sh "$$(ls -t infra/.backups-verify/jol-*.dump | head -1)" jol_restore_scratch
+
+# New secrets for a .env.prod (JWT / OTP / Apple nonce / token encryption)
+secrets-generate: venv
+	cd server && ../$(PY) -m app.auth.keys generate

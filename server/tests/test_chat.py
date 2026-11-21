@@ -10,11 +10,11 @@ from app.auth import sessions
 from app.chat import api as chat_api
 from app.chat.api import SendMessage
 from app.chat.brief import BriefError, BriefUpdate, apply_update, empty_brief, today_almaty
-from app.chat.ratelimit import SlidingWindowLimiter
 from app.config import get_settings
 from app.db import fetch_all, fetch_one
 from app.providers.llm import FakeLLM, LLMError, TextDelta
 from app.providers.llm.fake import FakeToolCall, Step
+from app.ratelimit import RateRule
 from tests.conftest import parse_sse
 from tests.test_places import add_place
 
@@ -152,7 +152,7 @@ async def test_full_chat_does_not_use_a_rate_limit_slot(chat_env, conn, monkeypa
     chat = await new_chat(chat_env, headers)
     monkeypatch.setattr(chat_api, "MAX_CHAT_MESSAGES", 2)
     use(chat_env)
-    chat_env.app.state.chat_limiters.user = SlidingWindowLimiter(2, 3600)
+    chat_env.app.state.chat_limiters.user = RateRule("t", 2, 3600)
     assert (await say(chat_env, headers, chat["id"])).status_code == 200  # slot 1
     for _ in range(3):  # refused as full, no slot is spent
         refused = await say(chat_env, headers, chat["id"])
@@ -165,7 +165,7 @@ async def test_user_rate_limit(chat_env, conn):
     headers = await sign_in(conn)
     chat = await new_chat(chat_env, headers)
     use(chat_env)
-    chat_env.app.state.chat_limiters.user = SlidingWindowLimiter(1, 3600)
+    chat_env.app.state.chat_limiters.user = RateRule("t", 1, 3600)
     assert (await say(chat_env, headers, chat["id"])).status_code == 200
     blocked = await say(chat_env, headers, chat["id"], "again")
     assert blocked.status_code == 429 and int(blocked.headers["retry-after"]) > 0
@@ -613,7 +613,7 @@ async def test_normal_turn_releases_the_lease_and_busy_does_not_use_a_rate_slot(
 
     headers = await sign_in(conn)
     chat = await new_chat(chat_env, headers)
-    chat_env.app.state.chat_limiters.user = SlidingWindowLimiter(3, 3600)
+    chat_env.app.state.chat_limiters.user = RateRule("t", 3, 3600)
     use(chat_env, steps=[Step(text=["a"]), Step(text=["b"]), Step(text=["c"])])
     frames = await open_stream(chat_env, headers, UUID(chat["id"]))  # slot 1, lease held
     for _ in range(4):

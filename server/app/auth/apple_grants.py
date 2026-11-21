@@ -9,17 +9,15 @@ provisioned yet, so only the stub adapter has run; the HTTP adapter is covered b
 tests only and has never talked to Apple.
 """
 
-import base64
-import hashlib
 import logging
 import time
 from typing import Optional, Protocol, Tuple
 
 import httpx
 import jwt
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import InvalidToken
 
-from app.auth import sessions
+from app.auth import keys
 from app.config import Settings, get_settings
 
 log = logging.getLogger(__name__)
@@ -151,22 +149,15 @@ def get_apple_grants() -> AppleGrants:
     return MissingCredentialsGrants()
 
 
-# --- encryption of the stored refresh token -------------------------------------------------
-
-
-def _fernet() -> Fernet:
-    # The key is derived from AUTH_SECRET: rotating it makes stored Apple tokens unreadable
-    # (revocation then fails and is logged). A dedicated key comes with Ш-51 secret management.
-    digest = hashlib.sha256(b"jol:apple-refresh:" + sessions.signing_key()).digest()
-    return Fernet(base64.urlsafe_b64encode(digest))
+# --- encryption of the stored refresh token (keys: app/auth/keys.py) ------------------------
 
 
 def encrypt_token(token: str) -> str:
-    return _fernet().encrypt(token.encode()).decode()
+    return keys.encrypt(token)
 
 
 def decrypt_token(ciphertext: str) -> str:
     try:
-        return _fernet().decrypt(ciphertext.encode()).decode()
+        return keys.decrypt(ciphertext)
     except InvalidToken:
         raise AppleGrantError("Stored Apple token cannot be decrypted") from None

@@ -4,10 +4,11 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__
+from app import __version__, observability
 from app.admin.api import install_admin
 from app.analytics.api import make_limiters as make_analytics_limiters
 from app.analytics.api import router as analytics_router
+from app.auth import keys
 from app.auth.api import router as auth_router
 from app.auth.apple import router as apple_router
 from app.auth.otp_api import router as otp_router
@@ -15,7 +16,6 @@ from app.bookings.api import router as bookings_router
 from app.chat.api import router as chat_router
 from app.chat.deps import make_limiters
 from app.chat.guest import router as guest_chat_router
-from app.chat.ratelimit import SlidingWindowLimiter
 from app.config import get_settings
 from app.crowd.api import router as crowd_router
 from app.db import Database
@@ -30,6 +30,7 @@ from app.middleware import RequestIdMiddleware
 from app.places.api import router as places_router
 from app.providers.storage import make_storage
 from app.providers.weather import OpenMeteoProvider
+from app.ratelimit import RateRule
 from app.routing import make_router
 from app.routing.api import router as directions_router
 from app.submissions.api import router as submissions_router
@@ -43,6 +44,13 @@ log = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    keys.validate(settings)  # missing / shared secrets outside dev and test: do not start (Ш-51)
+    observability.init_error_reporting(settings)
+    if settings.app_env not in ("dev", "test") and not settings.trusted_proxies:
+        log.warning(
+            "TRUSTED_PROXIES is empty: behind a reverse proxy every client shares the proxy's IP"
+            " and per-IP limits (OTP, guest chat) will lock everybody out together"
+        )
     db = Database(settings.database_url, settings.db_pool_min, settings.db_pool_max)
     async with AsyncExitStack() as stack:
         stack.push_async_callback(db.close)
@@ -65,12 +73,20 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     setup_logging(settings.log_level)
-    app = FastAPI(title="Jol API", version=__version__, lifespan=lifespan)
+    public_docs = settings.app_env in ("dev", "test")  # no interactive docs on staging / prod
+    app = FastAPI(
+        title="Jol API",
+        version=__version__,
+        lifespan=lifespan,
+        docs_url="/docs" if public_docs else None,
+        redoc_url="/redoc" if public_docs else None,
+        openapi_url="/openapi.json" if public_docs else None,
+    )
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.state.chat_limiters = make_limiters(settings)
     app.state.analytics_limiters = make_analytics_limiters(settings)
-    app.state.geocode_limiter = SlidingWindowLimiter(GEOCODE_LIMIT, 60)
+    app.state.geocode_limiter = RateRule("geocode", GEOCODE_LIMIT, 60)
     app.include_router(system_router)
     app.include_router(auth_router)
     app.include_router(otp_router)

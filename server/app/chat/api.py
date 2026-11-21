@@ -57,13 +57,13 @@ from app.chat.brief import (
 from app.chat.deps import make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
 from app.chat.prompts import TRIP_BRIEF, load_prompt
-from app.chat.ratelimit import acquire
 from app.chat.sse import format_event, sse_response
 from app.config import get_settings
 from app.errors import AppError
 from app.memory import affinity
 from app.memory.notes import latest_notes, memory_data_block
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
+from app.ratelimit import acquire
 from app.routing import FakeRouter
 
 log = logging.getLogger(__name__)
@@ -193,7 +193,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         # Taken inside this transaction: any refusal below rolls the lease back with it.
         if not await store.try_acquire_turn(conn, chat_id, lease_sec()):
             raise AppError(409, "chat_busy")
-        wait = acquire([(request.app.state.chat_limiters.user, "user:%s" % user["id"])])
+        wait = await acquire(conn, [(request.app.state.chat_limiters.user, "user:%s" % user["id"])])
         if wait is not None:
             raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
         await store.add_user_message(conn, chat_id, payload.content)

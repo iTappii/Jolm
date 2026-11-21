@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app import observability
 from app.i18n import pick_locale, translate
 
 log = logging.getLogger("app.errors")
@@ -65,5 +66,6 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception):
-        log.exception("unhandled error")
+        log.exception("unhandled error", extra={"path": request.url.path})
+        observability.capture_exception(exc, getattr(request.state, "request_id", None))
         return error_response(request, 500, "internal_error")

@@ -1,4 +1,3 @@
-from ipaddress import IPv6Address, ip_address
 from typing import Literal
 
 from fastapi import APIRouter, Request, Response
@@ -6,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.auth import email, otp, sms
 from app.auth.sessions import Tokens
+from app.clientip import client_ip
 from app.i18n import pick_locale
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -25,16 +25,6 @@ class OtpVerifyRequest(OtpRequest):
     code: str = Field(pattern=r"^[0-9]{6}$")
 
 
-def _client_ip(request: Request) -> str:
-    try:
-        address = ip_address(request.client.host) if request.client else None
-    except ValueError:
-        return "unknown"
-    if isinstance(address, IPv6Address) and address.ipv4_mapped:
-        address = address.ipv4_mapped
-    return str(address) if address is not None else "unknown"
-
-
 @router.post("/otp/request", status_code=204)
 async def request_code(payload: OtpRequest, request: Request) -> Response:
     destination = payload.normalized_destination()
@@ -43,7 +33,7 @@ async def request_code(payload: OtpRequest, request: Request) -> Response:
     else:
         provider = sms.get_sms_provider()
     await otp.issue(
-        request.app.state.db, provider, payload.channel, destination, _client_ip(request)
+        request.app.state.db, provider, payload.channel, destination, client_ip(request)
     )
     return Response(status_code=204, headers={"Cache-Control": "no-store"})
 

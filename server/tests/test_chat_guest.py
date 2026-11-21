@@ -3,10 +3,10 @@ import json
 import pytest
 
 from app.chat import guest
-from app.chat.ratelimit import SlidingWindowLimiter
 from app.db import fetch_all, fetch_one
 from app.providers.llm import FakeLLM, LLMError
 from app.providers.llm.fake import FakeToolCall, Step
+from app.ratelimit import RateRule
 from tests.conftest import parse_sse
 from tests.test_places import add_place
 
@@ -160,7 +160,7 @@ async def test_history_at_the_limits_is_accepted(chat_env):
 async def test_rate_limit_by_install_id(chat_env):
     use(chat_env)
     limiters = chat_env.app.state.chat_limiters
-    limiters.guest_install = SlidingWindowLimiter(2, 3600)
+    limiters.guest_install = RateRule("t", 2, 3600)
     headers = {"X-Install-ID": INSTALL}
     assert (await post(chat_env, headers=headers)).status_code == 200
     assert (await post(chat_env, headers=headers)).status_code == 200
@@ -178,7 +178,7 @@ async def test_rate_limit_by_install_id(chat_env):
 @pytest.mark.parametrize("header", [{}, {"X-Install-ID": "not-a-uuid"}, {"X-Install-ID": ""}])
 async def test_rate_limit_by_ip_when_install_id_missing_or_invalid(chat_env, header):
     use(chat_env)
-    chat_env.app.state.chat_limiters.guest_ip = SlidingWindowLimiter(2, 3600)
+    chat_env.app.state.chat_limiters.guest_ip = RateRule("t", 2, 3600)
     assert (await post(chat_env, headers=header)).status_code == 200
     assert (await post(chat_env, headers=header)).status_code == 200
     assert (await post(chat_env, headers=header)).status_code == 429
@@ -186,7 +186,7 @@ async def test_rate_limit_by_ip_when_install_id_missing_or_invalid(chat_env, hea
 
 async def test_ip_limit_also_stops_rotating_install_ids(chat_env):
     use(chat_env)
-    chat_env.app.state.chat_limiters.guest_ip = SlidingWindowLimiter(2, 3600)
+    chat_env.app.state.chat_limiters.guest_ip = RateRule("t", 2, 3600)
     ids = ["00000000-0000-4000-8000-00000000000%d" % i for i in range(3)]
     codes = [(await post(chat_env, headers={"X-Install-ID": i})).status_code for i in ids]
     assert codes == [200, 200, 429]
@@ -194,31 +194,10 @@ async def test_ip_limit_also_stops_rotating_install_ids(chat_env):
 
 async def test_rejected_requests_do_not_consume_the_limit(chat_env):
     use(chat_env)
-    chat_env.app.state.chat_limiters.guest_install = SlidingWindowLimiter(1, 3600)
+    chat_env.app.state.chat_limiters.guest_install = RateRule("t", 1, 3600)
     headers = {"X-Install-ID": INSTALL}
     assert (await post(chat_env, {"messages": []}, headers)).status_code == 422
     assert (await post(chat_env, headers=headers)).status_code == 200
-
-
-def test_limiter_window_slides():
-    now = [0.0]
-    limiter = SlidingWindowLimiter(2, 10, clock=lambda: now[0])
-    for _ in range(2):
-        assert limiter.retry_after("k") == 0
-        limiter.record("k")
-    assert limiter.retry_after("k") == 11
-    now[0] = 10.5
-    assert limiter.retry_after("k") == 0
-
-
-def test_limiter_forgets_idle_keys():
-    now = [0.0]
-    limiter = SlidingWindowLimiter(1, 10, clock=lambda: now[0], max_keys=3)
-    for i in range(3):
-        limiter.record("k%d" % i)
-    now[0] = 20.0
-    limiter.record("fresh")  # 4 keys > max: the expired ones are dropped
-    assert list(limiter._hits) == ["fresh"]
 
 
 async def test_guest_chat_writes_nothing_to_the_database(chat_env, conn):
@@ -230,6 +209,8 @@ async def test_guest_chat_writes_nothing_to_the_database(chat_env, conn):
         )
     ]
     assert "chats" in tables and "otp_codes" in tables
+    # shared rate-limit counters (Ш-51) are bookkeeping, not chat data: hashed key + timestamps
+    tables = [t for t in tables if t != "rate_limit_hits"]
 
     async def snapshot():
         rows = {}

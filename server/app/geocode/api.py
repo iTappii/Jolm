@@ -11,14 +11,14 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, Query, Request, Response
 
-from app.chat.deps import client_ip
-from app.chat.ratelimit import acquire
+from app.clientip import client_ip
 from app.db import fetch_one
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.places import service
 from app.places import sql as places_sql
 from app.places.api import _summary
+from app.ratelimit import acquire_own
 
 router = APIRouter(prefix="/v1/geocode", tags=["geocode"])
 
@@ -74,7 +74,9 @@ async def reverse(
 ) -> Dict[str, Any]:
     if not (WEST <= lon <= EAST and SOUTH <= lat <= NORTH):
         raise AppError(422, "validation_error", "The point is outside Almaty")
-    wait = acquire([(request.app.state.geocode_limiter, client_ip(request))])
+    wait = await acquire_own(
+        request.app.state.db, [(request.app.state.geocode_limiter, client_ip(request))]
+    )
     if wait:
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
 

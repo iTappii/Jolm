@@ -5,6 +5,7 @@ import uuid
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from app import metrics
 from app.logging_setup import request_id_var
 
 log = logging.getLogger("app.request")
@@ -29,6 +30,14 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         finally:
             request_id_var.reset(token)
         response.headers["X-Request-ID"] = rid
+        elapsed = time.perf_counter() - started
+        route = request.scope.get("route")
+        metrics.observe_request(
+            request.method,
+            getattr(route, "path", None) or "unmatched",
+            response.status_code,
+            elapsed,
+        )
         log.info(
             "request",
             extra={
@@ -36,7 +45,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
                 "method": request.method,
                 "path": request.url.path,
                 "status": response.status_code,
-                "duration_ms": round((time.perf_counter() - started) * 1000, 1),
+                "duration_ms": round(elapsed * 1000, 1),
             },
         )
         return response
