@@ -20,6 +20,7 @@ struct MapScreen: View {
             routeStops: places.routeStops,
             routeID: places.activeRoute?.id,
             selectedID: places.selected?.id,
+            markedPoint: places.selected?.tappedPoint == nil ? nil : places.selected.map { GeoPoint($0.coordinate) },
             directionLines: directions?.lines ?? [],
             directionOrigin: directions?.origin,
             directionVersion: directions?.lineVersion ?? 0,
@@ -47,9 +48,15 @@ struct MapScreen: View {
                     places.select(id)
                 }
             },
-            onTapEmpty: {
-                places.clearSelection()
+            onTapEmpty: { coordinate in
                 events?.clearSelection()
+                // Ш-23c: a tap on any point opens its card. While a route is drawn, a tap on the empty map keeps
+                // its old meaning (closing the card), so the route is not replaced by accident.
+                if directions?.isActive == true {
+                    places.clearSelection()
+                } else {
+                    places.tapPoint(GeoPoint(coordinate))
+                }
             },
             onSelectLeg: { tripMap?.selectLeg($0) },
             onSelectEvent: { id in

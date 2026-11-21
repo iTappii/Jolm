@@ -12,6 +12,7 @@ struct TripMapOverlay: View {
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
     @State private var budgetOpen = false
+    @State private var offlineCard: OfflinePlaceCard?
 
     var body: some View {
         VStack(spacing: JolSpacing.sm) {
@@ -29,6 +30,9 @@ struct TripMapOverlay: View {
         .sheet(item: legBinding) { leg in
             TripLegSheet(model: model, leg: leg)
         }
+        .sheet(item: $offlineCard) { card in
+            TripOfflinePlaceSheet(card: card)
+        }
         .alert(
             Text("Remove a must-have?"),
             isPresented: Binding(get: { model.pendingRemoval != nil }, set: { if !$0 { model.cancelRemoval() } })
@@ -39,6 +43,17 @@ struct TripMapOverlay: View {
                 .accessibilityIdentifier("trip-remove-keep")
         } message: {
             Text("\(model.pendingRemoval?.name ?? "") is something you asked for. Remove it anyway?")
+        }
+    }
+
+    /// A stop's card: the usual one needs the server, the saved copy has its own.
+    private func select(_ place: TripPlace) {
+        guard model.isSavedCopy else { return onSelectPlace(place) }
+        for day in model.days {
+            if let item = day.items.first(where: { $0.place.id == place.id }), let saved = model.savedPlaces[place.id] {
+                offlineCard = OfflinePlaceCard(item: item, place: saved, dayDate: day.date)
+                return
+            }
         }
     }
 
@@ -71,6 +86,7 @@ struct TripMapOverlay: View {
                 }
             }
             .accessibilityIdentifier("trip-day-switcher")
+            TripDownloadButton(model: model)
         }
         .padding(.horizontal, JolSpacing.sm)
         .padding(.top, JolSpacing.sm)
@@ -157,7 +173,7 @@ struct TripMapOverlay: View {
             }
             warnings
             ScrollView {
-                TripDayListView(model: model, day: day, onSelectPlace: onSelectPlace)
+                TripDayListView(model: model, day: day, onSelectPlace: select)
             }
             .accessibilityIdentifier("trip-day-list")
         }
@@ -182,10 +198,29 @@ struct TripMapOverlay: View {
             .background(JolColor.surface, in: Capsule())
         }
         .buttonStyle(.plain)
+        .disabled(model.isSavedCopy)
         .accessibilityIdentifier("trip-budget-chip")
     }
 
     @ViewBuilder private var warnings: some View {
+        if model.isSavedCopy {
+            Text("No connection. This is the copy saved on your device: times, places and ways. "
+                + "The map may be missing.")
+                .font(JolFont.caption)
+                .foregroundStyle(JolColor.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("trip-offline-note")
+        }
+        if let problem = container.offline.problem {
+            Button { container.offline.dismissProblem() } label: {
+                downloadProblemText(problem)
+                    .font(JolFont.caption)
+                    .foregroundStyle(JolColor.danger)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("trip-download-problem")
+        }
         if let trip = model.trip, trip.budgetDetail?.isOver ?? trip.budget?.isOver ?? false {
             Button { budgetOpen = true } label: {
                 HStack(spacing: JolSpacing.sm) {
@@ -218,6 +253,13 @@ struct TripMapOverlay: View {
         let shortfall = trip.budgetDetail?.shortfallKzt ?? trip.budget?.shortfallKzt ?? 0
         let amount = TripFormatting.kzt(shortfall, locale: locale)
         return shortfall > 0 ? Text("Over budget by \(amount)") : Text("Over budget")
+    }
+
+    private func downloadProblemText(_ problem: OfflineTripsModel.Problem) -> Text {
+        switch problem {
+        case .network: Text("Couldn't download the route. Check your connection.")
+        case .server(let message): Text(verbatim: message)
+        }
     }
 
     private func problemText(_ problem: TripMapModel.Problem) -> Text {

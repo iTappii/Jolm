@@ -16,6 +16,13 @@ struct TripService: Sendable {
         try await api.send(.get("v1/trips/\(Self.path(id))"))
     }
 
+    /// `GET /v1/trips/{id}/offline` (Ш-42). `etag` is the one of the saved copy: unchanged → `.notModified`.
+    func offline(id: UUID, etag: String?) async throws -> ConditionalResult<OfflineTrip> {
+        var endpoint = Endpoint.get("v1/trips/\(Self.path(id))/offline")
+        endpoint.timeout = 30
+        return try await api.sendConditional(endpoint, etag: etag)
+    }
+
     func setMode(tripID: UUID, legID: UUID, mode: TransportMode) async throws -> LegModeChange {
         try await api.send(Endpoint.post(
             "v1/trips/\(Self.path(tripID))/legs/\(Self.path(legID))/mode", json: ["mode": mode.rawValue]

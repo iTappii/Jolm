@@ -55,6 +55,8 @@ struct HomeScreen: View {
                     container.tripMap.open(tripID: id)
                 },
                 onRetryTrips: { container.tripMap.loadSummaries() },
+                downloads: container.offline,
+                onDownloadTrip: { id in Task { await container.offline.download(tripID: id) } },
                 chats: container.auth.isSignedIn ? container.chat.recent : nil,
                 onOpenChat: { id in
                     draft = ""
@@ -92,6 +94,7 @@ struct HomeScreen: View {
                 container.chat.clearRecent()
                 container.tripMap.close()
                 container.tripMap.clearSummaries()
+                container.offline.removeAll() // a saved plan belongs to the account that is gone
                 container.chat.reset() // a saved chat belongs to the account that is gone
             }
         }

@@ -11,6 +11,9 @@ struct SidebarPanel: View {
     var trips: ChatModel.Load<[TripSummary]>?
     var onOpenTrip: (UUID) -> Void = { _ in }
     var onRetryTrips: () -> Void = {}
+    /// Trips saved on the device (Ш-42): each row gets a download / downloaded mark.
+    var downloads: OfflineTripsModel?
+    var onDownloadTrip: (UUID) -> Void = { _ in }
     /// Saved chats of a signed-in user (nil: nothing to list, e.g. a guest).
     var chats: ChatModel.Load<[ChatSummary]>?
     var onOpenChat: (UUID) -> Void = { _ in }
@@ -45,6 +48,7 @@ struct SidebarPanel: View {
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Text("My trips").font(JolFont.callout.weight(.semibold)).foregroundStyle(JolColor.textSecondary)
                 ForEach(items.prefix(5)) { trip in
+                    HStack(spacing: JolSpacing.xs) {
                     Button {
                         onOpenTrip(trip.id)
                         isOpen = false
@@ -64,12 +68,43 @@ struct SidebarPanel: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("sidebar-trip-row")
+                    downloadButton(trip.id)
+                    }
+                }
+                if downloads?.problem != nil {
+                    Text("Couldn't download the route. Check your connection.")
+                        .font(JolFont.caption)
+                        .foregroundStyle(JolColor.danger)
+                        .accessibilityIdentifier("sidebar-download-problem")
                 }
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("sidebar-trips")
         default:
             EmptyView()
+        }
+    }
+
+    @ViewBuilder private func downloadButton(_ id: UUID) -> some View {
+        if let downloads {
+            let state = downloads.state(for: id)
+            Button { onDownloadTrip(id) } label: {
+                Group {
+                    switch state {
+                    case .none: Image(systemName: "arrow.down.circle")
+                    case .downloading: ProgressView()
+                    case .saved: Image(systemName: "checkmark.circle.fill").foregroundStyle(JolColor.brand)
+                    }
+                }
+                .font(.title3)
+                .frame(width: 40, height: 40)
+                .foregroundStyle(JolColor.textPrimary)
+            }
+            .buttonStyle(.plain)
+            .disabled(state != .none)
+            .accessibilityLabel(state == .none ? Text("Download route") : state == .saved
+                                ? Text("Route downloaded") : Text("Downloading the route…"))
+            .accessibilityIdentifier("sidebar-trip-download")
         }
     }
 

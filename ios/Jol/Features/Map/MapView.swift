@@ -11,6 +11,8 @@ struct MapView: UIViewRepresentable {
     var routeStops: [PlaceSummary] = []
     var routeID: UUID?
     var selectedID: UUID?
+    /// The tapped address / point shown in the card (Ш-23c); `nil` for a place of ours.
+    var markedPoint: GeoPoint?
     /// Chosen way to a place (Ш-23): the line, where it starts, and a counter that changes when either does.
     var directionLines: [DirectionLine] = []
     var directionOrigin: GeoPoint?
@@ -34,7 +36,8 @@ struct MapView: UIViewRepresentable {
     var bottomInset: CGFloat = 0
     var onRegionChange: (GeoBounds) -> Void = { _ in }
     var onSelect: (UUID) -> Void = { _ in }
-    var onTapEmpty: () -> Void = {}
+    /// A tap that hit nothing: the coordinate under the finger (Ш-23c).
+    var onTapEmpty: (CLLocationCoordinate2D) -> Void = { _ in }
     var onSelectLeg: (UUID) -> Void = { _ in }
     var onSelectEvent: (UUID) -> Void = { _ in }
 
@@ -114,6 +117,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     var appliedTripVersion = -1
     var appliedTripFitVersion = -1
     var appliedEventsVersion = -1
+    private var appliedMarker: GeoPoint?
 
     func attach(to map: MLNMapView) {
         self.map = map
@@ -148,6 +152,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedTripVersion = -1
         appliedTripFitVersion = -1
         appliedEventsVersion = -1
+        appliedMarker = nil
         apply(to: mapView)
         reportRegion(mapView)
     }
@@ -170,6 +175,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         // The route line is reused as is; the places source is replaced by a clustered one (cluster options
         // cannot be changed on an existing source), so the style's own places layers go away.
         // Everything is removed first because didFinishLoading may fire again for the same style object.
+        removeTapLayers(from: style)
         for id in [Layer.eventLabel, Layer.eventDot, Layer.tripStopNumber, Layer.tripStop, Layer.tripDashed,
                    Layer.tripLine, Layer.tripCasing, Layer.chatLabel, Layer.chatDot, Layer.chatHalo,
                    Layer.directionsOrigin, Layer.directionsLine, Layer.directionsAlternative, Layer.directionsCasing,
@@ -229,6 +235,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         installChatLayers(in: style)
         installTripLayers(in: style)
         installEventLayers(in: style)
+        installTapLayers(in: style)
     }
 
     // MARK: - Applying SwiftUI state
@@ -256,6 +263,11 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
                let target = (parent.routeStops + parent.pins).first(where: { $0.id == id }) {
                 map.setCenter(target.coordinate, animated: true)
             }
+        }
+
+        if appliedMarker != parent.markedPoint {
+            appliedMarker = parent.markedPoint
+            applyMarker(parent.markedPoint, in: style, map: map)
         }
 
         if appliedInset != parent.bottomInset {
@@ -331,7 +343,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             if let raw, let id = UUID(uuidString: raw) {
                 parent?.onSelectLeg(id)
             } else {
-                parent?.onTapEmpty()
+                parent?.onTapEmpty(map.convert(point, toCoordinateFrom: map))
             }
             return
         }

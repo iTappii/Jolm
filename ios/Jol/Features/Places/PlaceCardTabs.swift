@@ -9,6 +9,8 @@ struct PlaceTabContent: View {
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
     @State private var bookingOpen = false
+    @State private var contentOpen = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: JolSpacing.md) {
@@ -21,20 +23,23 @@ struct PlaceTabContent: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("place-tab-content-\(tab.rawValue)")
+        .sheet(isPresented: $contentOpen) {
+            ContentSheet(place: place) { Task { await container.reviews.reload() } }
+        }
     }
 
     // MARK: - Overview
 
     @ViewBuilder
     private var overview: some View {
-        HStack(spacing: JolSpacing.sm) {
+        AdaptiveStack(spacing: JolSpacing.sm) {
             if let name = detail.category?.name {
                 Text(name).font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
             }
             if let open = detail.openNow {
                 Text(open ? "Open now" : "Closed")
                     .font(JolFont.caption.weight(.semibold))
-                    .foregroundStyle(open ? Color.green : JolColor.danger)
+                    .foregroundStyle(open ? JolColor.statusOpen : JolColor.danger)
                     .accessibilityIdentifier("place-open-now")
             }
         }
@@ -51,14 +56,18 @@ struct PlaceTabContent: View {
             Label { Text("Typical visit \(parts.hours) h \(parts.minutes) min").font(JolFont.callout) } icon: {
                 Image(systemName: "clock").foregroundStyle(JolColor.textSecondary)
             }
+            .foregroundStyle(JolColor.textPrimary)
         }
         hoursTable(detail.hours)
         if let site = detail.website, let url = URL(string: site), url.scheme?.hasPrefix("http") == true {
-            Button { openURL(url) } label: { Label(site, systemImage: "safari").lineLimit(1) }
+            Button { openURL(url) } label: { Label(site, systemImage: "safari").lineLimit(2) }
+                .minTapTarget()
+                .accessibilityHint(Text("Opens the website"))
                 .accessibilityIdentifier("place-website")
         }
         NavigatorButton(place: place)
         bookButton
+        addInfoButton
         CrowdSection(place: place, crowd: detail.crowd)
         eventsBlock
     }
@@ -76,6 +85,7 @@ struct PlaceTabContent: View {
                     .foregroundStyle(JolColor.onBrand)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, JolSpacing.sm)
+                    .frame(minHeight: 44)
                     .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
             }
             .buttonStyle(.plain)
@@ -89,6 +99,7 @@ struct PlaceTabContent: View {
                     .font(JolFont.callout)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, JolSpacing.sm)
+                    .frame(minHeight: 44)
                     .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
             }
             .buttonStyle(.plain)
@@ -130,7 +141,7 @@ struct PlaceTabContent: View {
     }
 
     private func priceRow(_ label: LocalizedStringKey, _ value: Int) -> some View {
-        HStack(spacing: JolSpacing.xs) {
+        AdaptiveStack(spacing: JolSpacing.xs) {
             Text(label).foregroundStyle(JolColor.textSecondary)
             Text(PlaceFormatting.tenge(value)).foregroundStyle(JolColor.textPrimary)
         }
@@ -145,15 +156,16 @@ struct PlaceTabContent: View {
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Text("Opening hours").font(JolFont.headline)
                 ForEach(0..<7, id: \.self) { day in
-                    HStack {
+                    AdaptiveStack(alignment: .firstTextBaseline) {
                         Text(Self.weekdayNames[day])
-                        Spacer()
+                        if typeSize.isAccessibilitySize == false { Spacer() }
                         if let text = PlaceFormatting.intervals(hours.first { $0.weekday == day }) {
                             Text(text)
                         } else {
                             Text("Closed").foregroundStyle(JolColor.textSecondary)
                         }
                     }
+                    .accessibilityElement(children: .combine)
                     .font(JolFont.callout.weight(day == today ? .semibold : .regular))
                     .foregroundStyle(JolColor.textPrimary)
                 }
@@ -170,13 +182,27 @@ struct PlaceTabContent: View {
     // MARK: - Reviews and photos
 
     private var reviews: some View {
-        VStack(spacing: JolSpacing.sm) {
-            Image(systemName: "text.bubble").font(.largeTitle).foregroundStyle(JolColor.textTertiary)
-            Text("No reviews yet").font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
+        PlaceReviewsView(place: place, onAdd: addInfo)
+    }
+
+    /// «Add info» (Ш-44): signed-in only; a guest meets the sign-in gate first, as with favorites.
+    private func addInfo() {
+        if container.auth.isSignedIn { contentOpen = true } else {
+            container.gate.requireAccount { contentOpen = true }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, JolSpacing.xl)
-        .accessibilityIdentifier("place-reviews-empty")
+    }
+
+    private var addInfoButton: some View {
+        Button(action: addInfo) {
+            Label("Add info", systemImage: "square.and.pencil")
+                .font(JolFont.callout.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, JolSpacing.sm)
+                .frame(minHeight: 44)
+                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("place-add-info")
     }
 
     @ViewBuilder

@@ -28,6 +28,9 @@ enum UITestPlaceActions {
                 return crowd(placeID: parts[2], action: parts[3], payload: payload, signedIn: signedIn)
             }
         }
+        if let content = UITestContent.answer(method: method, path: path, payload: payload, signedIn: signedIn) {
+            return Answer(status: content.status, headers: content.headers, body: content.body)
+        }
         if path == "/v1/bookings" || path.hasPrefix("/v1/bookings/") {
             return bookings(method: method, path: path, payload: payload, signedIn: signedIn)
         }

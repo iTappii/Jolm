@@ -22,6 +22,15 @@ struct PlacesService: Sendable {
         try await api.send(.get("v1/places/\(id.uuidString.lowercased())"))
     }
 
+    /// `GET /v1/geocode/reverse` (Ш-23c): public; 422 outside Almaty, 429 over the limit.
+    func reverse(_ point: GeoPoint) async throws -> ReverseGeocode {
+        let query = [
+            URLQueryItem(name: "lat", value: String(format: "%.6f", point.lat)),
+            URLQueryItem(name: "lon", value: String(format: "%.6f", point.lon)),
+        ]
+        return try await api.send(.get("v1/geocode/reverse", query: query))
+    }
+
     func curatedRoutes() async throws -> [CuratedRouteSummary] {
         let list: CuratedRoutesList = try await api.send(.get("v1/curated-routes"))
         return list.items

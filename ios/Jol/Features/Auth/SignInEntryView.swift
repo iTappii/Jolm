@@ -78,12 +78,13 @@ private struct DestinationStep: View {
             .submitLabel(.continue)
             .onSubmit { submit() }
             .padding(JolSpacing.md)
+            .frame(minHeight: 44)
             .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
             .accessibilityIdentifier("sign-in-destination")
         if model.channel == .phone {
             Text("Kazakhstan numbers work without a country code; for other countries start with +.")
                 .font(JolFont.caption)
-                .foregroundStyle(JolColor.textTertiary)
+                .foregroundStyle(JolColor.textSecondary)
         }
         ProblemText(problem: model.problem, secondsLeft: model.secondsUntilResend)
         Button { submit() } label: {
@@ -93,8 +94,7 @@ private struct DestinationStep: View {
             }
             .font(JolFont.headline)
             .foregroundStyle(JolColor.onBrand)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .frame(maxWidth: .infinity, minHeight: 48)
             .background(JolColor.brand.opacity(model.canSubmitDestination ? 1 : 0.4),
                         in: RoundedRectangle(cornerRadius: JolRadius.md))
         }
@@ -116,16 +116,16 @@ private struct DestinationStep: View {
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Label("Sign in with Apple", systemImage: "apple.logo")
                     .font(JolFont.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .frame(maxWidth: .infinity, minHeight: 48)
                     .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
-                    .foregroundStyle(JolColor.textTertiary)
+                    .foregroundStyle(JolColor.textSecondary)
                 Text("Sign in with Apple isn't available in this build yet. Use email or phone.")
                     .font(JolFont.caption)
-                    .foregroundStyle(JolColor.textTertiary)
+                    .foregroundStyle(JolColor.textSecondary)
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
+            .accessibilityHint(Text("Not available yet"))
             .accessibilityIdentifier("sign-in-apple-disabled")
         }
     }
@@ -143,6 +143,7 @@ private struct CodeStep: View {
             Text("Enter the code")
                 .font(JolFont.title)
                 .foregroundStyle(JolColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
             Text("We sent a 6-digit code to \(model.destination).")
                 .font(JolFont.callout)
                 .foregroundStyle(JolColor.textSecondary)
@@ -153,10 +154,15 @@ private struct CodeStep: View {
             .keyboardType(.numberPad)
             .textContentType(.oneTimeCode)
             .focused($focused)
-            .font(.system(size: 28, weight: .semibold, design: .monospaced))
+            .font(.system(.title, design: .monospaced, weight: .semibold))
+            .minimumScaleFactor(0.6)
             .multilineTextAlignment(.center)
             .padding(JolSpacing.md)
+            .frame(minHeight: 44)
             .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
+            // One element: «6-digit code», the value is what has been typed, the hint says where the code went.
+            .accessibilityLabel(Text("6-digit code"))
+            .accessibilityHint(Text("We sent a 6-digit code to \(model.destination)."))
             .accessibilityIdentifier("sign-in-code")
             .onChange(of: model.code) { _, value in
                 let digits = String(value.filter { $0.isASCII && $0.isNumber }.prefix(6))
@@ -165,9 +171,10 @@ private struct CodeStep: View {
             }
             .onAppear { focused = true }
         ProblemText(problem: model.problem, secondsLeft: model.secondsUntilResend)
-        if model.isWorking { ProgressView().frame(maxWidth: .infinity) }
-        HStack {
+        if model.isWorking { ProgressView().frame(maxWidth: .infinity).accessibilityLabel(Text("Loading")) }
+        AdaptiveStack {
             Button("Change") { model.changeDestination() }
+                .minTapTarget()
                 .accessibilityIdentifier("sign-in-change")
             Spacer()
             Button { Task { await model.resend() } } label: {
@@ -178,6 +185,7 @@ private struct CodeStep: View {
                 }
             }
             .disabled(!model.canResend)
+            .minTapTarget()
             .accessibilityIdentifier("sign-in-resend")
         }
         .font(JolFont.callout)

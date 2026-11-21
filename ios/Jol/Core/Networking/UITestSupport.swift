@@ -18,8 +18,8 @@ enum UITestSupport {
         return URLSession(configuration: configuration)
     }
 
-    private static func summary(_ id: String, _ name: String, _ category: String, _ lat: Double, _ lon: Double,
-                                ord: Int? = nil) -> String {
+    static func summary(_ id: String, _ name: String, _ category: String, _ lat: Double, _ lon: Double,
+                        ord: Int? = nil) -> String {
         let order = ord.map { ",\"ord\":\($0)" } ?? ""
         return """
         {"id":"\(id)","name":"\(name)","name_lang":"en","category":"\(category)","kind":"venue","lat":\(lat),\
@@ -180,6 +180,23 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         let path = request.url?.path ?? ""
+        if UITestExtraStub.isOffline {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+            return
+        }
+        if let extra = UITestExtraStub.answer(
+            method: request.httpMethod ?? "GET", path: path,
+            ifNoneMatch: request.value(forHTTPHeaderField: "If-None-Match"),
+            signedIn: request.value(forHTTPHeaderField: "Authorization") != nil
+        ) {
+            if path == "/v1/devices" || path == "/v1/analytics/events" {
+                // Read with `xcrun simctl spawn booted log show --predicate 'eventMessage CONTAINS "JolStub"'`.
+                let auth = request.value(forHTTPHeaderField: "Authorization") != nil
+                NSLog("JolStub %@ auth=%d body=%@", path, auth ? 1 : 0, "\(requestBody())")
+            }
+            finish(with: extra)
+            return
+        }
         if ChatStub.handles(path) { startChat(path: path) } else { startPlain(path: path) }
     }
 
@@ -193,6 +210,8 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
         ) {
             (status, body) = (answer.status, answer.body)
             headers.merge(answer.headers) { _, new in new }
+        } else if path == "/v1/geocode/reverse", let answer = UITestGeocode.answer(url: request.url) {
+            (status, body) = (answer.status, answer.body)
         } else if let fixed = Self.fixture(path: path) {
             body = fixed
         } else if path == "/v1/me/favorites" || path.hasPrefix("/v1/me/favorites/") {

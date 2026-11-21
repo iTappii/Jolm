@@ -23,20 +23,36 @@ struct GeoPoint: Codable, Equatable, Sendable {
     }
 }
 
-/// `POST /v1/directions` body (SSOT §6): from the user's point to one place.
+/// `POST /v1/directions` body (SSOT §6): from the user's point to one place, or (Ш-23c) to a tapped point that is not a
+/// place of ours. The server wants exactly one of `to_place_id` and `to`.
 struct DirectionsRequest: Encodable, Sendable {
     let from: GeoPoint
-    let toPlaceID: UUID
+    let toPlaceID: UUID?
+    let toPoint: GeoPoint?
+
+    init(from: GeoPoint, toPlaceID: UUID) {
+        self.from = from
+        self.toPlaceID = toPlaceID
+        self.toPoint = nil
+    }
+
+    init(from: GeoPoint, toPoint: GeoPoint) {
+        self.from = from
+        self.toPlaceID = nil
+        self.toPoint = toPoint
+    }
 
     enum CodingKeys: String, CodingKey {
         case from
         case toPlaceID = "to_place_id"
+        case toPoint = "to"
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(from, forKey: .from)
-        try container.encode(toPlaceID.uuidString.lowercased(), forKey: .toPlaceID)
+        try container.encodeIfPresent(toPlaceID?.uuidString.lowercased(), forKey: .toPlaceID)
+        try container.encodeIfPresent(toPoint, forKey: .toPoint)
     }
 }
 
