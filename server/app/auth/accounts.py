@@ -4,6 +4,7 @@ import logging
 from uuid import UUID
 
 from app import worker
+from app.analytics import service as analytics
 from app.auth import otp, sessions
 from app.db import execute, fetch_all
 from app.submissions import service
@@ -55,6 +56,7 @@ async def delete_account(conn, user_id: UUID) -> None:
                 # CREDENTIAL GAP: no stored token, so Apple cannot be told about the deletion.
                 log.warning("apple token not revoked: no refresh token stored")
     await _remove_submissions(conn, user_id)
+    await analytics.anonymize_user(conn, user_id)
     await execute(conn, "DELETE FROM users WHERE id = %s", (user_id,))
 
 

@@ -32,6 +32,7 @@ from fastapi import APIRouter, Query, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.analytics import service as analytics
 from app.auth import sessions
 from app.auth.api import bearer_token
 from app.config import get_settings
@@ -129,6 +130,10 @@ async def get_trip_offline(trip_id: UUID, request: Request):
         items = await store.main_items(conn, trip_id)
         legs = await store.main_legs(conn, trip_id)
         extras, hours = await store.offline_extras(conn, list({i["place_id"] for i in items}))
+        await analytics.record_server(  # Ш-50: a 200 is a download; a 304 is not
+            conn, "trip_downloaded", clock.now(), user["id"], None, trip_id,
+            {"version": trip["version"]},
+        )  # fmt: skip
     body = read.offline_json(
         trip, items, legs, extras, hours, locale, get_settings().media_base_url
     )

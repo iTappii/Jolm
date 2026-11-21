@@ -42,6 +42,7 @@ def test_db_url() -> str:
 
 
 AUTH_TABLES = (
+    "analytics_events",  # Ш-50: events reference users (SET NULL) and trips
     "bookings",  # Ш-49: bookings hang off users and places
     "place_crowd_reports",  # Ш-47: check-ins and crowd reports hang off users
     "bonus_ledger",  # Ш-46: the bonus ledger hangs off users and submissions

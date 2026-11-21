@@ -32,6 +32,7 @@ from typing import Any, Dict, List
 from uuid import UUID
 
 from app import worker
+from app.analytics import service as analytics
 from app.chat import edit_tools, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
@@ -126,6 +127,9 @@ async def build_trip(
     async with db.transaction() as conn:
         trip_id, version, _created = await trips_store.save_plan(
             conn, owner["user_id"], chat_id, plan, locale, weather_checked_at=checked
+        )
+        await analytics.record_route(  # Ш-50: the funnel does not depend on the client
+            conn, owner["user_id"], trip_id, version, len(plan.layout.days), clock.now()
         )
         trip = await trips_store.get_trip_row(conn, owner["user_id"], trip_id)
         days = await edit_tools.plan_days(conn, trip, locale)  # with the item ids (Ш-38)

@@ -97,6 +97,9 @@ MOVE_STATEMENTS = (
     "AND NOT EXISTS (SELECT 1 FROM partner_places j "
     "WHERE j.partner_id = partner_places.partner_id AND j.place_id = %(keep)s)",
     "DELETE FROM partner_places WHERE place_id = %(drop)s",
+    # analytics events (Ш-50): FK without ON DELETE CASCADE. The visit views read
+    # place_crowd_reports and trip_items, which move above.
+    "UPDATE analytics_events SET place_id = %(keep)s WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

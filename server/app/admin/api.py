@@ -2,18 +2,20 @@
 
 import secrets
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.templating import Jinja2Templates
 
+from app.analytics import service as analytics
 from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
+from app.live import clock
 from app.places.service import ALMATY_TZ
 from app.providers.storage import media_url
 from app.submissions import bonus_policy, bonuses, moderation
@@ -273,6 +275,45 @@ async def bonuses_save(request: Request, ctx: PostCtx = POST_ADMIN):
     async with db(request) as conn:
         await bonuses.save_coefficients(conn, ctx.session.admin_id, values)
     return redirect("/admin/bonuses?saved=1")
+
+
+# ---------------------------------------------------------------- analytics (Ш-50)
+
+
+def _date_or_none(raw: str) -> Optional[date]:
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        return None
+
+
+@router.get("/analytics", response_class=HTMLResponse)
+async def analytics_page(
+    request: Request,
+    session: auth.AdminSession = GET_ADMIN,
+    date_from: str = Query("", alias="from"),
+    date_to: str = Query("", alias="to"),
+):
+    start, end, lo, hi = analytics.period(
+        _date_or_none(date_from), _date_or_none(date_to), clock.local_today()
+    )
+    async with db(request) as conn:
+        funnel = await analytics.funnel(conn, lo, hi)
+        places = await analytics.place_visits_report(conn, lo, hi)
+    for row in places:
+        last = row["last_visit_at"]
+        row["last_visit"] = last.astimezone(ALMATY_TZ).strftime("%Y-%m-%d %H:%M") if last else "—"
+    return render(
+        request,
+        "analytics.html",
+        session,
+        start=start,
+        end=end,
+        funnel=funnel,
+        places=places,
+        limit=analytics.REPORT_LIMIT,
+        tolerance_min=int(analytics.VISIT_TOLERANCE.total_seconds() // 60),
+    )
 
 
 # ---------------------------------------------------------------- places

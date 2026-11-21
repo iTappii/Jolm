@@ -6,6 +6,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.admin.api import install_admin
+from app.analytics.api import make_limiters as make_analytics_limiters
+from app.analytics.api import router as analytics_router
 from app.auth.api import router as auth_router
 from app.auth.apple import router as apple_router
 from app.auth.otp_api import router as otp_router
@@ -67,6 +69,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.state.chat_limiters = make_limiters(settings)
+    app.state.analytics_limiters = make_analytics_limiters(settings)
     app.state.geocode_limiter = SlidingWindowLimiter(GEOCODE_LIMIT, 60)
     app.include_router(system_router)
     app.include_router(auth_router)
@@ -84,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(crowd_router)
     app.include_router(events_router)
     app.include_router(bookings_router)
+    app.include_router(analytics_router)
     app.include_router(dev_uploads_router)
     if settings.storage_provider == "local" and settings.app_env in ("dev", "test"):
         local = make_storage(settings)

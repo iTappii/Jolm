@@ -88,6 +88,11 @@ MESSAGES = {
         "en": "You have already reviewed this place",
         "ru": "Вы уже оставили отзыв об этом месте",
     },
+    "invalid_install_id": {
+        "en": "A valid X-Install-ID header is required",
+        "ru": "Нужен корректный заголовок X-Install-ID",
+    },
+    "payload_too_large": {"en": "Request body is too large", "ru": "Слишком большой запрос"},
     "too_far_from_place": {
         "en": "You need to be at the place to do this",
         "ru": "Для этого нужно находиться рядом с местом",

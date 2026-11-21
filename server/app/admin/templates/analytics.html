@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Аналитика{% endblock %}
+{% block content %}
+<h1>Аналитика</h1>
+<form class="toolbar" method="get" action="/admin/analytics">
+  <label>С <input type="date" name="from" value="{{ start.isoformat() }}"></label>
+  <label>По <input type="date" name="to" value="{{ end.isoformat() }}"></label>
+  <button type="submit" class="secondary">Показать</button>
+</form>
+<p class="muted">Период по дням Алматы, обе даты включительно. «Визит» — отметка «я здесь» у места,
+которое есть в маршруте этого же человека, в окне времени пункта ±{{ tolerance_min }} мин
+(только с геопозицией на момент отметки, без фонового трекинга). Данные ушедших пользователей
+в визитах не остаются: они удаляются вместе с аккаунтом.</p>
+
+<h2>Воронка</h2>
+<p class="muted">Первый шаг — устройства, остальные — аккаунты (шаг «как добраться» — аккаунт или устройство гостя).</p>
+<table>
+  <thead><tr><th>Шаг</th><th>Людей</th></tr></thead>
+  <tbody>
+    <tr><td>Запустили приложение (устройства)</td><td>{{ funnel.devices }}</td></tr>
+    <tr><td>Вошли</td><td>{{ funnel.signed_in }}</td></tr>
+    <tr><td>Построили маршрут</td><td>{{ funnel.route_created }}</td></tr>
+    <tr><td>Запустили «как добраться»</td><td>{{ funnel.directions_started }}</td></tr>
+    <tr><td>Скачали маршрут</td><td>{{ funnel.route_downloaded }}</td></tr>
+    <tr><td>Нажали «я здесь»</td><td>{{ funnel.checked_in }}</td></tr>
+    <tr><td><b>Реально пришли (визит в окне маршрута)</b></td><td><b>{{ funnel.visited }}</b></td></tr>
+  </tbody>
+</table>
+<p class="muted">Новых установок: {{ funnel.installs }}. Визитов всего: {{ funnel.visits }}.</p>
+
+<h2>Визиты по местам</h2>
+{% if places %}
+<table>
+  <thead><tr><th>Место</th><th>Визитов</th><th>Туристов</th><th>«Я здесь» всего</th><th>Показано в маршрутах</th><th>«Как добраться»</th><th>Последний визит</th></tr></thead>
+  <tbody>
+  {% for p in places %}
+    <tr>
+      <td>{{ p.name_ru or p.name_en or p.place_id }}</td>
+      <td><b>{{ p.visits }}</b></td>
+      <td>{{ p.tourists }}</td>
+      <td>{{ p.checkins }}</td>
+      <td>{{ p.shown }}</td>
+      <td>{{ p.directions }}</td>
+      <td class="muted">{{ p.last_visit }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted">Не больше {{ limit }} мест, по убыванию визитов.</p>
+{% else %}
+<p class="muted">За этот период данных нет.</p>
+{% endif %}
+{% endblock %}

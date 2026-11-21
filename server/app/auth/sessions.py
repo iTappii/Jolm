@@ -9,9 +9,11 @@ from uuid import UUID
 import jwt
 from pydantic import BaseModel
 
+from app.analytics import service as analytics
 from app.config import get_settings
 from app.db import execute, fetch_one
 from app.errors import AppError
+from app.live import clock
 
 ACCESS_SECONDS = 15 * 60
 ISSUER = "jol-api"
@@ -75,6 +77,7 @@ async def sign_in(conn, provider: str, subject: str, locale: str) -> Tokens:
     """,
         (provider, subject),
     )
+    new_user = identity is None
     if identity is None:
         user = await fetch_one(
             conn, "INSERT INTO users(locale) VALUES (%s) RETURNING id", (locale,)
@@ -97,6 +100,9 @@ async def sign_in(conn, provider: str, subject: str, locale: str) -> Tokens:
         VALUES (%s, %s, now() + interval '60 days') RETURNING id, user_id
     """,
         (user_id, digest(refresh)),
+    )
+    await analytics.record_server(
+        conn, "sign_in", clock.now(), user_id, props={"provider": provider, "new_user": new_user}
     )
     return tokens(row, refresh)
 

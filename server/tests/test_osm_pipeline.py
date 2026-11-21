@@ -205,6 +205,33 @@ def test_merge_moves_user_place_signals_to_the_survivor(sconn):
     assert len(rows) == 3 and {r["place_id"] for r in rows} == {keep}  # none lost
 
 
+def test_merge_moves_analytics_events_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: analytics_events (Ш-50) references places without cascade."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop = place("Оставить"), place("Удалить")
+    for pid in (drop, drop, keep):
+        sconn.execute(
+            "INSERT INTO analytics_events (name, source, place_id, occurred_at) "
+            "VALUES ('directions_start', 'client', %s, now())",
+            (pid,),
+        )
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    rows = q(sconn, "SELECT place_id FROM analytics_events")
+    assert len(rows) == 3 and {r["place_id"] for r in rows} == {keep}  # none lost
+
+
 def test_merge_moves_trip_change_proposals_to_the_survivor(sconn):
     """TECH_PLAN rule 8: trip_change_proposals (Ш-40) has two place columns, no cascade."""
     from merge import merge_place

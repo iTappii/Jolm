@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     guest_chat_window_sec: int = 3600
     chat_user_limit: int = 60  # messages per window per registered user
     chat_user_window_sec: int = 3600
+    # Analytics batches (Ш-50), in-process counters like the chat's: per X-Install-ID and per IP
+    analytics_install_limit: int = 120
+    analytics_ip_limit: int = 600
+    analytics_window_sec: int = 3600
     sms_provider: str = ""
     email_provider: str = "stub"
     valhalla_url: Optional[str] = None
