@@ -52,6 +52,7 @@ final class PlacesModel {
     @ObservationIgnored private var currentBounds: GeoBounds?
     @ObservationIgnored private var pinsTask: Task<Void, Never>?
     @ObservationIgnored private var detailTask: Task<Void, Never>?
+    @ObservationIgnored private var tapTask: Task<Void, Never>?
     @ObservationIgnored private var routeTask: Task<Void, Never>?
 
     init(api: APIClient, debounce: Duration = .milliseconds(350)) {
@@ -137,9 +138,42 @@ final class PlacesModel {
     }
 
     func select(_ summary: PlaceSummary) {
+        tapTask?.cancel()
         if selected?.id == summary.id, detail != .failed { return }
         selected = summary
-        loadDetail(id: summary.id)
+        if summary.tappedPoint != nil {
+            // An address or a bare point has no card data on the server: nothing to load.
+            detailTask?.cancel()
+            detail = .idle
+        } else {
+            loadDetail(id: summary.id)
+        }
+    }
+
+    /// A tap on the map that hit no pin (Ш-23c): the place there, or the address, or the bare point opens in the
+    /// card. Outside the service area (the server answers 422 there) it only closes the card, as before. When the
+    /// lookup fails (no network, limit) the bare point still opens: «Route» needs nothing but the coordinates.
+    func tapPoint(_ point: GeoPoint) {
+        tapTask?.cancel()
+        guard point.isInServiceArea else {
+            clearSelection()
+            return
+        }
+        tapTask = Task { [weak self, service] in
+            let result: ReverseGeocode
+            do {
+                result = try await service.reverse(point)
+            } catch is CancellationError {
+                return
+            } catch {
+                result = .point(point)
+            }
+            guard !Task.isCancelled, let self else { return }
+            switch result {
+            case .place(let place): select(place)
+            default: PlaceSummary.tapped(result).map { select($0) }
+            }
+        }
     }
 
     func retryDetail() {
@@ -148,6 +182,7 @@ final class PlacesModel {
     }
 
     func clearSelection() {
+        tapTask?.cancel()
         detailTask?.cancel()
         selected = nil
         detail = .idle

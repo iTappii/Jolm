@@ -12,6 +12,8 @@ struct PlaceSummary: Decodable, Identifiable, Equatable, Sendable {
     let isPublic: Bool
     let isPartner: Bool
     let popularity: Int
+    /// Set when this is a tapped address / point, not a place of ours (Ш-23c). Not part of the wire format.
+    var tappedPoint: TappedPoint?
 
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
 

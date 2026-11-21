@@ -45,7 +45,53 @@ struct PlaceCardView: View {
 
     // MARK: - Scrolling part
 
-    private func content(_ place: PlaceSummary) -> some View {
+    @ViewBuilder private func content(_ place: PlaceSummary) -> some View {
+        if let point = place.tappedPoint {
+            pointContent(place, point)
+        } else {
+            placeContent(place)
+        }
+    }
+
+    /// A tapped address or bare point (Ш-23c): what is known about it and nothing else — no photos, tabs or favorites.
+    private func pointContent(_ place: PlaceSummary, _ point: TappedPoint) -> some View {
+        HStack(alignment: .top, spacing: JolSpacing.md) {
+            Image(systemName: point.isBare ? "mappin" : "building.2")
+                .font(.title3)
+                .foregroundStyle(JolColor.brand)
+                .frame(width: 44, height: 44)
+                .background(JolColor.surface, in: Circle())
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: JolSpacing.xxs) {
+                Text(place.name)
+                    .font(JolFont.headline)
+                    .foregroundStyle(JolColor.textPrimary)
+                    .lineLimit(3)
+                    .accessibilityIdentifier("place-name")
+                    .accessibilityAddTraits(.isHeader)
+                if point.isBare {
+                    Text("Point on the map")
+                        .font(JolFont.callout)
+                        .foregroundStyle(JolColor.textSecondary)
+                        .accessibilityIdentifier("point-kind")
+                } else if let address = point.address, address != place.name {
+                    Text(address)
+                        .font(JolFont.callout)
+                        .foregroundStyle(JolColor.textSecondary)
+                        .accessibilityIdentifier("place-address")
+                }
+                Text("Not in our places yet: no photos or reviews.")
+                    .font(JolFont.caption)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .padding(.top, JolSpacing.xs)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("point-card")
+    }
+
+    private func placeContent(_ place: PlaceSummary) -> some View {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
             PlaceGallery(photos: detail?.photos ?? [], category: place.category)
             VStack(alignment: .leading, spacing: JolSpacing.xxs) {
@@ -123,19 +169,7 @@ struct PlaceCardView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("place-directions")
-                let isFavorite = container.favorites.isFavorite(place.id)
-                Button { favorite(place) } label: {
-                    Label(isFavorite ? "In favorites" : "Add to favorites",
-                          systemImage: isFavorite ? "heart.fill" : "heart")
-                        .font(JolFont.headline)
-                        .foregroundStyle(isFavorite ? JolColor.brand : JolColor.textPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, JolSpacing.md)
-                        .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-                }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(isFavorite ? .isSelected : [])
-                .accessibilityIdentifier("place-favorite")
+                if place.tappedPoint == nil { favoriteButton(place) }
             }
         }
         .padding(.horizontal, JolSpacing.lg)
@@ -143,6 +177,23 @@ struct PlaceCardView: View {
         .padding(.bottom, JolSpacing.md)
         .background(JolColor.surfaceElevated.ignoresSafeArea())
         .overlay(alignment: .top) { Divider() }
+    }
+
+    /// «Add to favorites» only for places of our base: an address has no id on the server (SSOT §11.5).
+    private func favoriteButton(_ place: PlaceSummary) -> some View {
+        let isFavorite = container.favorites.isFavorite(place.id)
+        return Button { favorite(place) } label: {
+            Label(isFavorite ? "In favorites" : "Add to favorites",
+                  systemImage: isFavorite ? "heart.fill" : "heart")
+                .font(JolFont.headline)
+                .foregroundStyle(isFavorite ? JolColor.brand : JolColor.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, JolSpacing.md)
+                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isFavorite ? .isSelected : [])
+        .accessibilityIdentifier("place-favorite")
     }
 
     /// Signed-in: toggles the favorite. Guest: the sign-in gate first (SSOT §3.2), then the place is added.

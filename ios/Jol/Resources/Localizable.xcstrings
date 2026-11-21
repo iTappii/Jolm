@@ -1693,6 +1693,16 @@
         }
       }
     },
+    "Not in our places yet: no photos or reviews." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этого места пока нет у нас: фото и отзывов нет."
+          }
+        }
+      }
+    },
     "Note for the venue (optional)" : {
       "localizations" : {
         "ru" : {
@@ -1879,6 +1889,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Места"
+          }
+        }
+      }
+    },
+    "Point on the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Точка на карте"
           }
         }
       }

@@ -191,9 +191,10 @@ final class DirectionsModel {
         origin = point
         phase = .loading
         do {
-            var endpoint = try Endpoint.post(
-                "v1/directions", json: DirectionsRequest(from: point, toPlaceID: target.id), authorized: false
-            )
+            let body = target.tappedPoint == nil
+                ? DirectionsRequest(from: point, toPlaceID: target.id)
+                : DirectionsRequest(from: point, toPoint: GeoPoint(target.coordinate))
+            var endpoint = try Endpoint.post("v1/directions", json: body, authorized: false)
             endpoint.timeout = 25
             let payload: DirectionsPayload = try await api.send(endpoint)
             guard !Task.isCancelled, self.target?.id == target.id, origin == point else { return }

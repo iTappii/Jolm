@@ -34,7 +34,8 @@ struct NavigatorButton: View {
     }
 
     private func open(_ app: Navigator.App) {
-        container.analytics.trackDirectionsStart(placeID: place.id, mode: mode())
+        // A tapped address / point (Ш-23c) has no place id on the server: the event carries none.
+        container.analytics.trackDirectionsStart(placeID: place.tappedPoint == nil ? place.id : nil, mode: mode())
         if let url = Navigator.url(for: app, name: place.name, coordinate: place.coordinate) { openURL(url) }
     }
 }
