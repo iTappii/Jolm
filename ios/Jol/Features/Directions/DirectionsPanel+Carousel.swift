@@ -132,6 +132,7 @@ extension DirectionsPanel {
             }
             .foregroundStyle(JolColor.textPrimary)
             .padding(JolSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(JolColor.surface.opacity(selected ? 1 : 0.6), in: RoundedRectangle(cornerRadius: JolRadius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: JolRadius.lg)

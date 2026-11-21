@@ -33,6 +33,7 @@ struct DirectionsPanel: View {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
                     .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .fixedSize()
                     .background(JolColor.surface, in: Circle())
                     .foregroundStyle(JolColor.textPrimary)
             }
@@ -73,12 +74,14 @@ struct DirectionsPanel: View {
             Spacer(minLength: 0)
             if model.phase != .locating {
                 if model.fallback == nil {
-                    Button("From map centre") { model.useMapCenter(mapCenter()) }
-                        .frame(minHeight: JolTarget.minimum)
+                    Button { model.useMapCenter(mapCenter()) } label: {
+                        Text("From map centre").frame(minHeight: JolTarget.minimum)
+                    }
                         .accessibilityIdentifier("directions-use-center")
                 } else {
-                    Button("From my location") { model.useCurrentLocation() }
-                        .frame(minHeight: JolTarget.minimum)
+                    Button { model.useCurrentLocation() } label: {
+                        Text("From my location").frame(minHeight: JolTarget.minimum)
+                    }
                         .accessibilityIdentifier("directions-use-location")
                 }
             }
@@ -95,10 +98,11 @@ struct DirectionsPanel: View {
                 Text("Location access is off, so directions start from the map centre. Pan the map to move the start.")
                     .accessibilityIdentifier("directions-notice-denied")
                 Spacer(minLength: 0)
-                Button("Settings") {
+                Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                } label: {
+                    Text("Settings").frame(minHeight: JolTarget.minimum)
                 }
-                .frame(minHeight: JolTarget.minimum)
                 .accessibilityIdentifier("directions-settings")
             }
             .noticeStyle()
@@ -157,8 +161,7 @@ struct DirectionsPanel: View {
     private func retryMessage(_ text: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
             Text(text).font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
-            Button("Retry") { model.retry() }
-                .frame(minHeight: JolTarget.minimum)
+            Button { model.retry() } label: { Text("Retry").frame(minHeight: JolTarget.minimum) }
                 .accessibilityIdentifier("directions-retry")
         }
         .accessibilityElement(children: .contain)

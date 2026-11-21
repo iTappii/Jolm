@@ -126,6 +126,7 @@ struct TripLegSheet: View {
             }
             .foregroundStyle(JolColor.textPrimary)
             .padding(JolSpacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(JolColor.surface.opacity(chosen ? 1 : 0.6), in: RoundedRectangle(cornerRadius: JolRadius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: JolRadius.lg).stroke(chosen ? JolColor.brand : .clear, lineWidth: 2)

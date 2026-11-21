@@ -28,8 +28,9 @@ struct CuratedRoutesSheet: View {
         case .failed:
             VStack(spacing: JolSpacing.md) {
                 Text("Couldn't load routes").foregroundStyle(JolColor.textSecondary)
-                Button("Retry") { Task { await model.loadRoutes() } }
-                    .frame(minHeight: JolTarget.minimum)
+                Button { Task { await model.loadRoutes() } } label: {
+                    Text("Retry").frame(minHeight: JolTarget.minimum)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("routes-failed")

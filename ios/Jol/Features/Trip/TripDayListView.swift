@@ -31,9 +31,9 @@ struct TripDayListView: View {
     }
 
     private func stopRow(_ item: TripDayItem, number: Int) -> some View {
-        HStack(spacing: JolSpacing.md) {
+        AdaptiveStack(spacing: JolSpacing.xs) {
             Button { onSelectPlace(item.place) } label: {
-                HStack(spacing: JolSpacing.md) {
+                AdaptiveStack(spacing: JolSpacing.md) {
                     Text("\(number)")
                         .font(JolFont.callout.weight(.bold))
                         .foregroundStyle(JolColor.onBrand)
@@ -50,7 +50,7 @@ struct TripDayListView: View {
                         }
                         stopCaption(item)
                     }
-                    Spacer(minLength: JolSpacing.xs)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .contentShape(Rectangle())
             }
@@ -76,7 +76,7 @@ struct TripDayListView: View {
     }
 
     private func stopCaption(_ item: TripDayItem) -> some View {
-        HStack(spacing: JolSpacing.xs) {
+        AdaptiveStack(spacing: JolSpacing.xs) {
             if let time = item.startTime {
                 Text(verbatim: item.endTime.map { "\(time)–\($0)" } ?? time).monospacedDigit()
             }

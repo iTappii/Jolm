@@ -17,8 +17,10 @@ struct TripMapOverlay: View {
     var body: some View {
         VStack(spacing: JolSpacing.sm) {
             topBar
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             Spacer(minLength: 0)
             attribution
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             if panelVisible { panel }
         }
         .padding(.bottom, panelVisible ? 0 : 44)
@@ -135,7 +137,7 @@ struct TripMapOverlay: View {
         .padding(.horizontal, JolSpacing.lg)
         .padding(.top, JolSpacing.md)
         .frame(maxWidth: .infinity)
-        .frame(height: panelHeight)
+        .frame(height: typeSize.isAccessibilitySize ? panelHeight / Self.panelFraction * 0.7 : panelHeight)
         .background(
             JolColor.surfaceElevated.clipShape(UnevenRoundedRectangle(
                 topLeadingRadius: JolRadius.xl, topTrailingRadius: JolRadius.xl
@@ -223,7 +225,7 @@ struct TripMapOverlay: View {
     @ViewBuilder private var warnings: some View {
         if let trip = model.trip, trip.budgetDetail?.isOver ?? trip.budget?.isOver ?? false {
             Button { budgetOpen = true } label: {
-                HStack(spacing: JolSpacing.sm) {
+                AdaptiveStack(spacing: JolSpacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill").accessibilityHidden(true)
                     overText(trip).multilineTextAlignment(.leading)
                     Spacer(minLength: 0)

@@ -152,8 +152,9 @@ struct BookingSheet: View {
                 }
             }
             if booking.status == "pending" {
-                Button("Check the status") { model.refresh() }
-                    .frame(minHeight: JolTarget.minimum)
+                Button { model.refresh() } label: {
+                    Text("Check the status").frame(minHeight: JolTarget.minimum)
+                }
                     .accessibilityIdentifier("booking-refresh")
             }
             Text("Nothing was paid. The venue confirms the details with you.")

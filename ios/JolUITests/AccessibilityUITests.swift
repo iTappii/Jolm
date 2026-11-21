@@ -16,15 +16,19 @@ final class AccessibilityUITests: XCTestCase {
             case .lightLarge:
                 ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
             case .darkLarge:
-                ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
-                 "-UIUserInterfaceStyle", "dark"]
+                ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
             case .dark:
-                ["-UIUserInterfaceStyle", "dark"]
+                []
             }
         }
+
+        var appearance: XCUIDevice.Appearance { self == .lightLarge ? .light : .dark }
     }
 
     private func launch(_ look: Look, extra: [String] = [], signedIn: Bool = true) -> XCUIApplication {
+        // The system appearance is switched on the device: the app has no override of its own.
+        XCUIDevice.shared.appearance = look.appearance
+        addTeardownBlock { XCUIDevice.shared.appearance = .light }
         let app = XCUIApplication()
         app.launchArguments = ["-JolStubAPI", "-AppleLanguages", "(en)", "-AppleLocale", "en_US", "-jol.language",
                                "system"] + look.arguments + extra
@@ -50,15 +54,16 @@ final class AccessibilityUITests: XCTestCase {
         add(attachment)
     }
 
-    /// A control a finger can hit: on screen, hittable and not smaller than 44 × 44 pt.
+    /// A control a finger can hit: on screen, hittable and 44 × 44 pt. The floor is 42: inside a sheet that is being
+    /// dragged the simulator reports 44-pt frames as 42.4 (seen on `directions-back`, a plain 44-pt frame).
     private func assertTarget(_ app: XCUIApplication, _ identifier: String,
                               file: StaticString = #filePath, line: UInt = #line) {
         let item = element(app, identifier)
         XCTAssertTrue(item.waitForExistence(timeout: 10), "\(identifier) missing", file: file, line: line)
         XCTAssertTrue(item.isHittable, "\(identifier) is not hittable", file: file, line: line)
-        XCTAssertGreaterThanOrEqual(item.frame.height, 43.5, "\(identifier) is \(item.frame.height) pt high",
+        XCTAssertGreaterThanOrEqual(item.frame.height, 42, "\(identifier) is \(item.frame.height) pt high",
                                     file: file, line: line)
-        XCTAssertGreaterThanOrEqual(item.frame.width, 43.5, "\(identifier) is \(item.frame.width) pt wide",
+        XCTAssertGreaterThanOrEqual(item.frame.width, 42, "\(identifier) is \(item.frame.width) pt wide",
                                     file: file, line: line)
     }
 
@@ -72,6 +77,14 @@ final class AccessibilityUITests: XCTestCase {
                                     file: file, line: line)
         XCTAssertLessThanOrEqual(item.frame.maxX, window.maxX + 1, "\(identifier) sticks out right",
                                  file: file, line: line)
+    }
+
+    /// Drags the panel / sheet up until the element shows (large type pushes content below the fold).
+    private func raise(_ app: XCUIApplication, _ container: String, until identifier: String) {
+        let target = element(app, identifier)
+        for _ in 0..<4 where !(target.exists && target.isHittable) {
+            element(app, container).swipeUp()
+        }
     }
 
     private func openTrip(_ app: XCUIApplication) {
@@ -106,6 +119,7 @@ final class AccessibilityUITests: XCTestCase {
             assertTarget(app, "trip-map-close")
             assertTarget(app, "trip-day-chip-1")
             assertTarget(app, "trip-budget-chip")
+            raise(app, "trip-panel", until: "trip-stop-remove-1")
             assertTarget(app, "trip-stop-remove-1")
             let budget = element(app, "trip-budget-chip").label
             XCTAssertTrue(budget.contains("Budget"), budget)
@@ -114,12 +128,13 @@ final class AccessibilityUITests: XCTestCase {
             capture("trip-map", look)
 
             let leg = element(app, "trip-leg-row")
-            if !leg.isHittable { element(app, "trip-day-list").swipeUp() }
+            raise(app, "trip-panel", until: "trip-leg-row")
             XCTAssertTrue(leg.waitForExistence(timeout: 10))
             let spoken = leg.label
             XCTAssertTrue(spoken.contains("min"), "a leg reads its time: \(spoken)")
             leg.tap()
             waitFor(app, "trip-leg-sheet")
+            raise(app, "trip-leg-sheet", until: "trip-leg-option-bus")
             assertTarget(app, "trip-leg-option-bus")
             XCTAssertTrue(element(app, "trip-leg-option-bus").label.contains("min"))
             XCTAssertTrue(element(app, "trip-leg-option-bus").isSelected)
@@ -134,7 +149,7 @@ final class AccessibilityUITests: XCTestCase {
         let app = launch(look)
         openTrip(app)
         let warning = element(app, "trip-over-budget")
-        if !warning.exists { element(app, "trip-day-list").swipeDown() }
+        raise(app, "trip-panel", until: "trip-over-budget")
         waitFor(app, "trip-over-budget")
         capture("trip-over-budget", look)
         warning.tap()
@@ -155,6 +170,7 @@ final class AccessibilityUITests: XCTestCase {
             button.tap()
             waitFor(app, "directions-panel")
             waitFor(app, "directions-page-walk")
+            raise(app, "directions-panel", until: "directions-use-center")
             assertTarget(app, "directions-back")
             assertTarget(app, "directions-chip-walk")
             assertTarget(app, "directions-use-center")
@@ -192,13 +208,14 @@ final class AccessibilityUITests: XCTestCase {
         for look in Look.allCases {
             let app = launch(look)
             openTrip(app)
+            raise(app, "trip-panel", until: "trip-stop-2")
             element(app, "trip-stop-2").tap()
             waitFor(app, "place-card")
             let book = element(app, "place-book")
             if !book.isHittable { element(app, "place-card").swipeUp() }
             book.tap()
             waitFor(app, "booking-sheet")
-            assertTarget(app, "booking-close")
+            XCTAssertTrue(element(app, "booking-close").isHittable, "the system close button")
             capture("booking-form", look)
             let submit = element(app, "booking-submit")
             for _ in 0..<4 where !submit.isHittable { element(app, "booking-sheet").swipeUp() }
@@ -225,7 +242,7 @@ final class AccessibilityUITests: XCTestCase {
             entry.tap()
             let row = app.buttons["route-row"].firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 10), app.debugDescription)
-            assertTarget(app, "routes-done")
+            XCTAssertTrue(element(app, "routes-done").isHittable, "the system «Done» button")
             capture("routes-list", look)
             row.tap()
             waitFor(app, "route-bar")
