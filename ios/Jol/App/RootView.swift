@@ -20,6 +20,12 @@ struct RootView: View {
             }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { Task { await container.devices.retryIfNeeded() } }
+                // Ш-50: what is queued leaves when the app is put away (and again when it comes back).
+                Task { await container.analytics.flush() }
+            }
+            .task {
+                container.analytics.trackLaunch()
+                await container.analytics.flush()
             }
             // The notification question comes once, when the first trip is on screen.
             .onChange(of: container.chat.tripID) { old, new in

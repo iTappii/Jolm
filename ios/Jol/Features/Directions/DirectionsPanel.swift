@@ -15,7 +15,7 @@ struct DirectionsPanel: View {
             originRow
             notice
             content
-            NavigatorButton(place: place)
+            NavigatorButton(place: place, mode: selectedMode)
                 .padding(.top, JolSpacing.xs)
         }
         .accessibilityElement(children: .contain)
@@ -23,6 +23,12 @@ struct DirectionsPanel: View {
     }
 
     var language: String { container.language.code }
+
+    /// The mode of the variant on screen: what "open in navigator" starts.
+    private var selectedMode: TransportMode? {
+        guard let page = model.currentPage, !page.variants.isEmpty else { return nil }
+        return page.variants[model.selectedVariant(of: page)].mode
+    }
 
     // MARK: - Header and origin
 

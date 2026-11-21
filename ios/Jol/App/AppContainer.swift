@@ -22,6 +22,7 @@ final class AppContainer {
     @ObservationIgnored let bookings: BookingModel
     @ObservationIgnored let offline: OfflineTripsModel
     @ObservationIgnored let devices: DeviceRegistrar
+    @ObservationIgnored let analytics: AnalyticsClient
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -30,7 +31,8 @@ final class AppContainer {
         session: URLSession = .shared,
         locator: (any LocationProviding)? = nil,
         offlineStore: OfflineTripStore = OfflineTripStore(),
-        push: any PushAuthorizing = SystemPushAuthorizing()
+        push: any PushAuthorizing = SystemPushAuthorizing(),
+        analyticsStore: AnalyticsQueueStore = AnalyticsQueueStore()
     ) {
         let auth = AuthState(tokens: tokens)
         let installID = InstallID.current(defaults: defaults)
@@ -60,6 +62,9 @@ final class AppContainer {
             api: self.api, installID: installID, language: { languageSettings.code }, defaults: defaults, push: push
         )
         JolAppDelegate.registrar = self.devices
+        self.analytics = AnalyticsClient(
+            api: self.api, store: analyticsStore, defaults: defaults, language: { languageSettings.code }
+        )
         self.tripMap = TripMapModel(api: self.api, offline: self.offline)
         self.events = EventsModel(api: self.api)
         self.crowd = CrowdModel(api: self.api, locator: locator)
