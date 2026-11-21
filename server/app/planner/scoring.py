@@ -7,6 +7,8 @@ score = W_INTEREST * interest      interest in 0..1: 1 category match, 0.5 group
       - W_CROWD * crowd * intolerance
                                    crowd 0..1 (unknown = 0), intolerance = (4 - tolerance) / 4
       + W_EVENT * event * (1 if the tourist asked for events else EVENT_UNASKED_FACTOR)
+      + favorite                   0.8 for a favourite place, 0.3 for a favourite's category
+                                   (`app.memory.affinity`, Ш-41); small next to an interest match
 Ties are broken by popularity, then by id, so the same input always gives the same order.
 """
 
@@ -49,6 +51,7 @@ class Score:
     memory: float
     crowd: float
     event: float
+    favorite: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -98,6 +101,7 @@ def score_place(
     crowd_level: Optional[float],
     crowd_tolerance: Optional[int],
     event_bonus: float,
+    favorite: float = 0.0,
 ) -> Score:
     interest = interest_match(place, profile)
     popularity = _clip01(place.popularity / 100.0)
@@ -112,8 +116,9 @@ def score_place(
         - W_MEMORY * mem
         - W_CROWD * crowd * intolerance(crowd_tolerance)
         + W_EVENT * event * event_factor
+        + favorite
     )
-    return Score(total, interest, popularity, mem, crowd, event)
+    return Score(total, interest, popularity, mem, crowd, event, favorite)
 
 
 @dataclass(frozen=True)

@@ -11,8 +11,10 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any, Dict, List, Mapping, Optional, Sequence
+from uuid import UUID
 
 from app.db import fetch_all
+from app.memory.affinity import NO_MEMORY, load_memory
 from app.planner import budget as bud
 from app.planner import hours as hrs
 from app.planner import sql
@@ -72,17 +74,24 @@ async def leg_tools(conn, router: RoutingProvider, first_day: date):
 
 
 async def build_plan(
-    db, brief: Mapping[str, Any], router: RoutingProvider, forecast: Optional[Forecast] = None
+    db,
+    brief: Mapping[str, Any],
+    router: RoutingProvider,
+    forecast: Optional[Forecast] = None,
+    user_id: Optional[UUID] = None,
 ) -> BuiltPlan:
     """Plan the whole trip for a complete brief (dates and budget set).
 
     `forecast`: the planner's weather view (`providers.weather.city_forecast`); default none.
+    `user_id`: the signed-in owner; their memory (rejected categories, favourites, Ш-41) shapes
+    the scores. None = no memory.
     """
     dates = trip_dates(brief)
     west, south, east, north = ALMATY_BBOX
     area = {"west": west, "south": south, "east": east, "north": north}
     async with db.transaction() as conn:
-        selection = await select_candidates(conn, brief)
+        memory = await load_memory(conn, user_id) if user_id else NO_MEMORY
+        selection = await select_candidates(conn, brief, memory=memory.penalties, favorites=memory)
         must = selection.must_have_places
         acts = [c.place for c in selection.activities]
         food = [c.place for c in selection.food]

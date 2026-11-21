@@ -27,9 +27,11 @@ stop has an `item_id` that the edit tools (`chat/edit_tools.py`, Ш-38) take.
 """
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 from uuid import UUID
 
+from app import worker
 from app.chat import edit_tools, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
@@ -48,6 +50,8 @@ from app.routing import FakeRouter
 from app.trips import store as trips_store
 
 log = logging.getLogger(__name__)
+
+MEMORY_NOTE_DELAY = timedelta(minutes=2)
 
 EXPLAIN = (
     "Write a short day-by-day explanation of the plan in the person's language: for each day "
@@ -107,7 +111,7 @@ async def build_trip(
     forecast = None
     if weather is not None:  # Ш-40: the real forecast shapes the plan; failure = plan without it
         forecast = await city_forecast(weather, trip_dates(brief))
-    plan = await build_plan(db, brief, router or FakeRouter(), forecast)
+    plan = await build_plan(db, brief, router or FakeRouter(), forecast, owner["user_id"])
     checked = None if forecast is None or isinstance(forecast, UnknownForecast) else clock.now()
     async with db.transaction() as conn:
         trip_id, version, _created = await trips_store.save_plan(
@@ -115,6 +119,13 @@ async def build_trip(
         )
         trip = await trips_store.get_trip_row(conn, owner["user_id"], trip_id)
         days = await edit_tools.plan_days(conn, trip, locale)  # with the item ids (Ш-38)
+        await worker.enqueue(  # Ш-41: the model writes a memory note about this chat, once the
+            conn,  # assistant's explanation of the plan has been saved (hence the delay)
+            "memory.note",
+            {"chat_id": str(chat_id), "trip_id": str(trip_id)},
+            run_at=datetime.now(timezone.utc) + MEMORY_NOTE_DELAY,
+            dedupe_key="memory.note:%s:v%s" % (chat_id, version),
+        )
 
     budget = budget_json(plan, locale)
     warnings = warnings_json(plan)

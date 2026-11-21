@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     open_meteo_url: str = "https://api.open-meteo.com"
     # Commercial use of Open-Meteo needs the paid plan (Ш-39); empty = the free, non-commercial API.
     open_meteo_api_key: SecretStr = SecretStr("")
+    # Base URL of the photo storage (Ш-44): photo previews in the offline trip (Ш-42) are
+    # `<media_base_url>/<storage_key>`; empty = no photo URLs yet (they are null).
+    media_base_url: str = ""
 
 
 @lru_cache

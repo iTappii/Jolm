@@ -98,6 +98,7 @@ SCHEDULES: List[Schedule] = [
     Schedule("jobs.cleanup", interval_sec=86400),
     Schedule("weather.scan", interval_sec=3600),  # Ш-40: trips due for a forecast re-check
     Schedule("mountain.scan", interval_sec=900),  # Ш-40: mountain mornings (SSOT §7.2)
+    Schedule("memory.scan", interval_sec=3600),  # Ш-41: idle chats -> memory notes
 ]
 
 
@@ -232,8 +233,10 @@ async def _main() -> None:
         log.info("worker stopped")
 
 
-# Live-plan handlers (Ш-40) register themselves on import; this must stay the last import.
+# Live-plan (Ш-40) and memory (Ш-41) handlers register themselves on import; these must stay
+# the last imports.
 import app.live.jobs  # noqa: E402,F401
+import app.memory.jobs  # noqa: E402,F401
 
 if __name__ == "__main__":
     # run the module's normal copy: `python -m app.worker` executes this file as `__main__`,

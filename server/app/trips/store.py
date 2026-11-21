@@ -292,6 +292,29 @@ async def main_legs(conn, trip_id: UUID) -> List[dict]:
     )
 
 
+async def offline_extras(conn, place_ids: List[UUID]) -> Tuple[Dict[UUID, dict], Dict[UUID, list]]:
+    """Address columns and opening hours of the plan's places, for the offline copy (Ш-42)."""
+    if not place_ids:
+        return {}, {}
+    places = await fetch_all(
+        conn,
+        "SELECT id, name_kk, address_ru, address_en FROM places WHERE id = ANY(%s)",
+        (place_ids,),
+    )
+    hours = await fetch_all(
+        conn,
+        "SELECT place_id, weekday, opens, closes FROM place_hours "
+        "WHERE place_id = ANY(%s) ORDER BY place_id, weekday, opens",
+        (place_ids,),
+    )
+    by_hours: Dict[UUID, list] = {}
+    for row in hours:
+        by_hours.setdefault(row["place_id"], []).append(
+            (row["weekday"], row["opens"], row["closes"])
+        )
+    return {row["id"]: row for row in places}, by_hours
+
+
 async def get_trip_row(conn, user_id: UUID, trip_id: UUID, lock: bool = False) -> Optional[dict]:
     """The user's trip (foreign and missing look the same: None); `lock` = FOR UPDATE."""
     return await fetch_one(

@@ -29,7 +29,9 @@ assistant message; the lease also expires on its own after LEASE_SEC, so a crash
 that never started cannot lock a chat for good. Refusals (401/404/409/429/503) do not hold or
 consume anything: the chat_full check comes first, then the lease, then the rate limit.
 The brief reaches the model as a separate `<trip_brief_data>` message, never inside the system
-prompt, so words typed by the tourist are not promoted to instructions.
+prompt, so words typed by the tourist are not promoted to instructions. Memory (Ш-41: notes of
+earlier chats, rejected and favourite categories) comes the same way, as a `<user_memory_data>`
+message before it, and only when there is something to say.
 """
 
 import asyncio
@@ -59,6 +61,8 @@ from app.chat.ratelimit import acquire
 from app.chat.sse import format_event, sse_response
 from app.config import get_settings
 from app.errors import AppError
+from app.memory import affinity
+from app.memory.notes import latest_notes, memory_data_block
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
 from app.routing import FakeRouter
 
@@ -195,11 +199,15 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         await store.add_user_message(conn, chat_id, payload.content)
         history = _trim_history(await store.recent_history(conn, chat_id, HISTORY_MESSAGES))
         brief = await store.get_brief(conn, chat_id)
+        memory = await affinity.load_memory(conn, user["id"])
+        memory_block = memory_data_block(await latest_notes(conn, user["id"]), memory)
 
     locale = chat["locale"]
     prompt = load_prompt(TRIP_BRIEF, locale)
     system = prompt.render(today_almaty())  # static per prompt version; no user text in it
     history.insert(0, Message(role="user", content=brief_data_block(brief)))
+    if memory_block is not None:  # Ш-41: data for the model, like the brief, never in `system`
+        history.insert(0, Message(role="user", content=memory_block))
     record = TurnRecord()
 
     router = getattr(request.app.state, "routing_provider", None) or FakeRouter()

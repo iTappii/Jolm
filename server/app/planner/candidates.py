@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Mapping, Optional, Set
 from uuid import UUID
 
 from app.db import fetch_all
+from app.memory.affinity import W_FAVORITE_CATEGORY, W_FAVORITE_PLACE, Memory
 from app.places import service
 from app.planner import scoring, sql
 from app.planner.area import ALMATY_BBOX
@@ -131,16 +132,21 @@ async def select_candidates(
     conn,
     brief: Mapping[str, Any],
     memory: Optional[Mapping[str, float]] = None,
+    favorites: Optional[Memory] = None,
     crowd: Optional[CrowdSource] = None,
     event_bonus: EventBonus = no_event_bonus,
 ) -> Selection:
     """Must-have places plus scored candidate pools for a brief with dates.
 
-    `memory`: category slug -> penalty 0..1 (Ф12, empty for now). `crowd`: Ф15, unknown for
+    `memory`: category slug -> penalty 0..1 (Ш-41, `memory.affinity`; none for a guest);
+    `favorites`: the person's favourite places/categories for a small bonus (same source;
+    only its favourite fields are read here). `crowd`: Ф15, unknown for
     now. `event_bonus`: Ф16, zero for now.
     """
     days = trip_days(brief)
     memory = memory or {}
+    fav_places = favorites.favorite_places if favorites else set()
+    fav_categories = favorites.favorite_categories if favorites else set()
     crowd = crowd or UnknownCrowd()
     selection = Selection(days=days, pool=scoring.pool_sizes(days, brief.get("pace")))
 
@@ -169,6 +175,9 @@ async def select_candidates(
             crowd.level(place.id),
             brief.get("crowd_tolerance"),
             event_bonus(place, start, end),
+            W_FAVORITE_PLACE
+            if place.id in fav_places
+            else (W_FAVORITE_CATEGORY if place.category in fav_categories else 0.0),
         )
         (food if place.is_food else activities).append(scoring.Scored(place, score))
 

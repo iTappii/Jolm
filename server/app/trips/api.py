@@ -2,6 +2,7 @@
 
     GET  /trips?limit=&before=                       -> {"items": [trip summary]}     (Ш-37)
     GET  /trips/{id}                                 -> the whole plan                (Ш-37)
+    GET  /trips/{id}/offline                         -> compact copy for offline use  (Ш-42)
     POST /trips/{id}/legs/{leg_id}/mode  {"mode"}    -> chosen transport of a leg     (Ш-37)
     POST /trips/{id}/items/{item_id}/remove {"force"?}  -> edit result                (Ш-38)
     POST /trips/{id}/items/{item_id}/replace {...}      -> edit result                (Ш-38)
@@ -27,11 +28,13 @@ from datetime import datetime, timedelta
 from typing import Any, Literal, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.auth import sessions
 from app.auth.api import bearer_token
+from app.config import get_settings
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.live import clock
@@ -95,6 +98,37 @@ async def get_trip(trip_id: UUID, request: Request):
             variants[kind] = await store.variant_items(conn, trip_id, kind)
         lodging = await store.lodging_options(conn, trip_id)
     return read.trip_json(trip, items, legs, variants, lodging, locale)
+
+
+def etag_matches(header: Optional[str], etag: str) -> bool:
+    """`If-None-Match`: `*` or any listed entity tag equals ours (weak comparison)."""
+    if not header:
+        return False
+    wanted = etag.removeprefix("W/")
+    return any(tag.strip() in ("*", wanted) or tag.strip().removeprefix("W/") == wanted
+               for tag in header.split(","))  # fmt: skip
+
+
+@router.get("/trips/{trip_id}/offline")
+async def get_trip_offline(trip_id: UUID, request: Request):
+    access = bearer_token(request)
+    locale = _locale(request)
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        trip = await store.get_trip_row(conn, user["id"], trip_id)
+        if trip is None:
+            raise AppError(404, "not_found")
+        etag = '"v%d-%s"' % (trip["version"], locale)
+        headers = {"ETag": etag, "Cache-Control": "private, no-cache", "Vary": "Accept-Language"}
+        if etag_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers=headers)
+        items = await store.main_items(conn, trip_id)
+        legs = await store.main_legs(conn, trip_id)
+        extras, hours = await store.offline_extras(conn, list({i["place_id"] for i in items}))
+    body = read.offline_json(
+        trip, items, legs, extras, hours, locale, get_settings().media_base_url
+    )
+    return JSONResponse(body, headers=headers)
 
 
 @router.post("/trips/{trip_id}/legs/{leg_id}/mode")

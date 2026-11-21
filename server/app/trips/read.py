@@ -221,3 +221,98 @@ def summary_json(row: Dict[str, Any]) -> Dict[str, Any]:
         },
         "updated_at": local(row["updated_at"]),
     }
+
+
+# --- offline copy (Ш-42) ---------------------------------------------------------------------
+def chosen_option(leg: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """The stored option the leg's chosen mode points at (its best path variant), or None."""
+    mode = leg["chosen_mode"]
+    fits = [o for o in leg["options"] or [] if o.get("mode") == mode]
+    fits.sort(key=lambda o: (o.get("variant", 0), not o.get("recommended", False)))
+    return fits[0] if fits else None
+
+
+def offline_place(
+    row: Dict[str, Any],
+    extra: Optional[Dict[str, Any]],
+    hours: List[Any],
+    locale: str,
+    media_base_url: str,
+) -> Dict[str, Any]:
+    out = place_ref(row, locale)
+    del out["id"]  # the key of `places` is the id
+    order = ("ru", "en") if locale == "ru" else ("en", "ru")
+    extra = extra or {}
+    address, _ = service.pick_text(extra, "address", locale, order)
+    key, base = row["photo_key"], media_base_url.strip().rstrip("/")
+    out.update(
+        names={"ru": row["name_ru"], "en": row["name_en"], "kk": extra.get("name_kk")},
+        category_name=row["category_name_ru" if locale == "ru" else "category_name_en"],
+        address=address,
+        hours=service.group_hours(hours),
+        photo_url="%s/%s" % (base, key.lstrip("/")) if key and base else None,
+    )
+    return out
+
+
+def offline_json(
+    trip: Dict[str, Any],
+    items: List[Dict[str, Any]],
+    legs: List[Dict[str, Any]],
+    extras: Dict[Any, Dict[str, Any]],
+    hours: Dict[Any, List[Any]],
+    locale: str,
+    media_base_url: str = "",
+) -> Dict[str, Any]:
+    """Everything the app needs to show the plan with no network: times by day, the places
+    (once each, keyed by id) and every leg's chosen mode with its path (polyline, precision 6)."""
+    places: Dict[str, Any] = {}
+    for row in items:
+        key = str(row["place_id"])
+        if key not in places:
+            places[key] = offline_place(
+                row, extras.get(row["place_id"]), hours.get(row["place_id"], []), locale,
+                media_base_url,
+            )  # fmt: skip
+    days = []
+    for day in days_json(trip, items, legs, locale):
+        day_items = [
+            {
+                "id": i["id"], "ord": i["ord"], "kind": i["kind"], "meal": i["meal"],
+                "place_id": i["place"]["id"], "starts_at": i["starts_at"], "ends_at": i["ends_at"],
+                "visit_min": i["visit_min"], "must_have": i["must_have"],
+                "est_cost_kzt": i["est_cost_kzt"],
+            }
+            for i in day["items"]
+        ]  # fmt: skip
+        days.append({"date": day["date"], "items": day_items, "legs": []})
+    legs_by_day: Dict[str, List[Dict[str, Any]]] = {d["date"]: d["legs"] for d in days}
+    for row in legs:
+        option = chosen_option(row)
+        legs_by_day[row["day"].isoformat()].append(
+            {
+                "id": str(row["id"]),
+                "from_item_id": str(row["from_item_id"]) if row["from_item_id"] else None,
+                "to_item_id": str(row["to_item_id"]),
+                "depart_at": local(row["depart_at"]),
+                "travel_s": row["travel_s"],
+                "estimated": row["estimated"],
+                "mode": row["chosen_mode"],
+                "cost_kzt": row["cost_kzt"],
+                "distance_m": option.get("distance_m") if option else None,
+                "geometry": option.get("geometry") if option else None,
+            }
+        )
+    return {
+        "trip_id": str(trip["id"]),
+        "version": trip["version"],
+        "locale": locale,
+        "timezone": "Asia/Almaty",
+        "geometry_encoding": "polyline6",
+        "start_date": trip["start_date"].isoformat(),
+        "end_date": trip["end_date"].isoformat(),
+        "budget_kzt": trip["budget_kzt"],
+        "total_cost_kzt": trip["total_cost_kzt"],
+        "days": days,
+        "places": places,
+    }

@@ -195,9 +195,15 @@ async def test_delete_removes_trips_with_items_legs_and_lodging_but_not_places(
             "VALUES (%s, %s, 'museum', 'removed', %s)",
             (user["id"], place, trip),
         )
+        await conn.execute(  # LLM memory note (Ш-41), tied to the user, chat and trip
+            "INSERT INTO user_memory_notes (user_id, chat_id, trip_id, note) "
+            "VALUES (%s, %s, %s, 'Likes quiet museums')",
+            (user["id"], chat["id"], trip),
+        )
     for table in ("trips", "trip_items", "trip_legs", "trip_lodging_options"):
         assert await count(conn, table) in (2, 4), table
     assert await count(conn, "user_place_signals") == 2
+    assert await count(conn, "user_memory_notes") == 2
 
     assert (await client.delete("/v1/me", headers=auth(tokens))).status_code == 204
 
@@ -206,6 +212,7 @@ async def test_delete_removes_trips_with_items_legs_and_lodging_but_not_places(
     assert await count(conn, "trip_legs") == 1
     assert await count(conn, "trip_lodging_options") == 1
     assert await count(conn, "user_place_signals") == 1  # only the other user's signal is left
+    assert await count(conn, "user_memory_notes") == 1  # likewise the notes
     assert await count(conn, "places") == 1  # the place itself is never deleted with a user
 
 
