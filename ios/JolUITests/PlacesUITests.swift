@@ -4,10 +4,12 @@ import XCTest
 @MainActor
 final class PlacesUITests: XCTestCase {
     private func launch(language: String = "en", dark: Bool = false) -> XCUIApplication {
+        // The app has no theme override: the dark theme is the device's (a launch argument is ignored).
+        XCUIDevice.shared.appearance = dark ? .dark : .light
+        addTeardownBlock { XCUIDevice.shared.appearance = .light }
         let app = XCUIApplication()
         app.launchArguments = ["-JolStubAPI", "-AppleLanguages", "(\(language))",
                                "-AppleLocale", language == "ru" ? "ru_RU" : "en_US", "-jol.language", "system"]
-        if dark { app.launchArguments += ["-UIUserInterfaceStyle", "dark"] }
         app.launch()
         return app
     }

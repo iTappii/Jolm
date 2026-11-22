@@ -20,8 +20,9 @@ struct SidebarPanel: View {
     var chats: ChatModel.Load<[ChatSummary]>?
     var onOpenChat: (UUID) -> Void = { _ in }
     var onRetryChats: () -> Void = {}
-    private let width: CGFloat = 300
+    private var width: CGFloat { typeSize.isAccessibilitySize ? 340 : 300 }
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -49,30 +50,32 @@ struct SidebarPanel: View {
         case .failed:
             Button("Couldn't load trips. Try again.", action: onRetryTrips)
                 .font(JolFont.callout)
+                .frame(minHeight: JolTarget.minimum)
                 .accessibilityIdentifier("sidebar-trips-retry")
         case .loaded(let items) where !items.isEmpty:
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
                 Text("My trips").font(JolFont.callout.weight(.semibold)).foregroundStyle(JolColor.textSecondary)
+                    .accessibilityAddTraits(.isHeader)
                 ForEach(items.prefix(5)) { trip in
                     HStack(spacing: JolSpacing.xs) {
                     Button {
                         onOpenTrip(trip.id)
                         isOpen = false
                     } label: {
-                        HStack(spacing: JolSpacing.sm) {
-                            Image(systemName: "map")
-                            let dates = BriefFormatting.dates(start: trip.startDate, end: trip.endDate, locale: locale)
-                            Text(verbatim: dates ?? "…")
-                            Spacer(minLength: 0)
-                            if let days = trip.days { Text("\(days) days").foregroundStyle(JolColor.textSecondary) }
+                        HStack(alignment: typeSize.isAccessibilitySize ? .top : .firstTextBaseline,
+                               spacing: JolSpacing.sm) {
+                            Image(systemName: "map").accessibilityHidden(true)
+                            tripText(trip)
                         }
                         .font(JolFont.body)
                         .foregroundStyle(JolColor.textPrimary)
                         .padding(.vertical, JolSpacing.sm)
                         .padding(.horizontal, JolSpacing.md)
+                        .frame(maxWidth: .infinity, minHeight: JolTarget.minimum, alignment: .leading)
                         .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("sidebar-trip-row")
                     downloadButton(trip.id)
                     }
@@ -103,7 +106,8 @@ struct SidebarPanel: View {
                     }
                 }
                 .font(.title3)
-                .frame(width: 40, height: 40)
+                .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                .contentShape(Rectangle())
                 .foregroundStyle(JolColor.textPrimary)
             }
             .buttonStyle(.plain)
@@ -111,6 +115,143 @@ struct SidebarPanel: View {
             .accessibilityLabel(state == .none ? Text("Download route") : state == .saved
                                 ? Text("Route downloaded") : Text("Downloading the route…"))
             .accessibilityIdentifier("sidebar-trip-download")
+        }
+    }
+
+    private var panel: some View {
+        VStack(alignment: .leading, spacing: JolSpacing.lg) {
+            header
+            // At large type the buttons, trips and chats scroll together, so nothing is pushed off the screen.
+            if typeSize.isAccessibilitySize {
+                ScrollView { content }
+            } else {
+                content.frame(maxHeight: .infinity, alignment: .top)
+            }
+        }
+        .padding(JolSpacing.lg)
+        .padding(.top, JolSpacing.xl)
+        .frame(width: width)
+        .frame(maxHeight: .infinity)
+        .background(JolColor.surfaceElevated.ignoresSafeArea())
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    if value.translation.width < -40 { isOpen = false }
+                }
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .accessibilityIdentifier("sidebar-panel")
+    }
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            Text("Recent chats")
+                .font(JolFont.title)
+                .foregroundStyle(JolColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: JolSpacing.sm)
+            Button { isOpen = false } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .background(JolColor.surface, in: Circle())
+                    .foregroundStyle(JolColor.textPrimary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("Close"))
+            .accessibilityIdentifier("sidebar-close")
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: JolSpacing.lg) {
+            Button {
+                onNewChat()
+                isOpen = false
+            } label: {
+                Label("New chat", systemImage: "square.and.pencil")
+                    .font(JolFont.headline)
+                    .foregroundStyle(JolColor.onBrand)
+                    .frame(maxWidth: .infinity, minHeight: JolTarget.minimum)
+                    .padding(.vertical, JolSpacing.xs)
+                    .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("sidebar-new-chat")
+            navigationRow(
+                "Ready-made routes", symbol: "point.topleft.down.curvedto.point.bottomright.up",
+                identifier: "sidebar-routes", action: onOpenRoutes
+            )
+            navigationRow("Favorites", symbol: "heart", identifier: "sidebar-favorites", action: onOpenFavorites)
+            tripsSection
+            recentChats
+        }
+    }
+
+    private func navigationRow(
+        _ title: LocalizedStringKey, symbol: String, identifier: String, action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            action()
+            isOpen = false
+        } label: {
+            Label(title, systemImage: symbol)
+                .font(JolFont.headline)
+                .foregroundStyle(JolColor.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: JolTarget.minimum, alignment: .leading)
+                .padding(.vertical, JolSpacing.xs)
+                .padding(.horizontal, JolSpacing.md)
+                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+    }
+}
+
+// The list of recent chats and the text of a trip row.
+extension SidebarPanel {
+    /// Dates and length of a trip: side by side, one under the other at large type.
+    @ViewBuilder private func tripText(_ trip: TripSummary) -> some View {
+        let dates = BriefFormatting.dates(start: trip.startDate, end: trip.endDate, locale: locale)
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: JolSpacing.xxs) {
+                Text(verbatim: dates ?? "…")
+                if let days = trip.days { Text("\(days) days").foregroundStyle(JolColor.textSecondary) }
+            }
+        } else {
+            Text(verbatim: dates ?? "…")
+            Spacer(minLength: 0)
+            if let days = trip.days { Text("\(days) days").foregroundStyle(JolColor.textSecondary) }
+        }
+    }
+
+    private func chatRows(_ items: [ChatSummary]) -> some View {
+        LazyVStack(alignment: .leading, spacing: JolSpacing.xs) {
+            ForEach(items) { item in
+                Button {
+                    onOpenChat(item.id)
+                    isOpen = false
+                } label: {
+                    Group {
+                        if let title = item.displayTitle {
+                            Text(verbatim: title)
+                        } else {
+                            Text("New chat")
+                        }
+                    }
+                    .font(JolFont.body)
+                    .foregroundStyle(JolColor.textPrimary)
+                    .lineLimit(typeSize.isAccessibilitySize ? 4 : 2)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, minHeight: JolTarget.minimum, alignment: .leading)
+                    .padding(.vertical, JolSpacing.xs)
+                    .padding(.horizontal, JolSpacing.md)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("sidebar-chat-row")
+            }
         }
     }
 
@@ -126,38 +267,16 @@ struct SidebarPanel: View {
                     .font(JolFont.callout)
                     .foregroundStyle(JolColor.textSecondary)
                 Button("Try again", action: onRetryChats)
+                    .frame(minHeight: JolTarget.minimum)
                     .accessibilityIdentifier("sidebar-chats-retry")
             }
         case .loaded(let items) where !items.isEmpty:
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: JolSpacing.xs) {
-                    ForEach(items) { item in
-                        Button {
-                            onOpenChat(item.id)
-                            isOpen = false
-                        } label: {
-                            Group {
-                                if let title = item.displayTitle {
-                                    Text(verbatim: title)
-                                } else {
-                                    Text("New chat")
-                                }
-                            }
-                            .font(JolFont.body)
-                            .foregroundStyle(JolColor.textPrimary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, JolSpacing.sm)
-                            .padding(.horizontal, JolSpacing.md)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("sidebar-chat-row")
-                    }
-                }
+            // At large type the whole panel scrolls (see `panel`); otherwise the list scrolls under the buttons.
+            if typeSize.isAccessibilitySize {
+                chatRows(items).accessibilityIdentifier("sidebar-chats")
+            } else {
+                ScrollView { chatRows(items) }.accessibilityIdentifier("sidebar-chats")
             }
-            .accessibilityIdentifier("sidebar-chats")
         case nil:
             // A guest chat has no memory and no history (SSOT §3.1): say so instead of "no chats yet".
             Button(action: onSignIn) {
@@ -175,84 +294,5 @@ struct SidebarPanel: View {
                 .foregroundStyle(JolColor.textSecondary)
                 .accessibilityIdentifier("sidebar-empty")
         }
-    }
-
-    private var panel: some View {
-        VStack(alignment: .leading, spacing: JolSpacing.lg) {
-            HStack {
-                Text("Recent chats")
-                    .font(JolFont.title)
-                    .foregroundStyle(JolColor.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button { isOpen = false } label: {
-                    Image(systemName: "xmark")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 36, height: 36)
-                        .background(JolColor.surface, in: Circle())
-                        .foregroundStyle(JolColor.textPrimary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("Close"))
-                .accessibilityIdentifier("sidebar-close")
-            }
-            Button {
-                onNewChat()
-                isOpen = false
-            } label: {
-                Label("New chat", systemImage: "square.and.pencil")
-                    .font(JolFont.headline)
-                    .foregroundStyle(JolColor.onBrand)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, JolSpacing.md)
-                    .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("sidebar-new-chat")
-            Button {
-                onOpenRoutes()
-                isOpen = false
-            } label: {
-                Label("Ready-made routes", systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                    .font(JolFont.headline)
-                    .foregroundStyle(JolColor.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, JolSpacing.md)
-                    .padding(.horizontal, JolSpacing.md)
-                    .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("sidebar-routes")
-            Button {
-                onOpenFavorites()
-                isOpen = false
-            } label: {
-                Label("Favorites", systemImage: "heart")
-                    .font(JolFont.headline)
-                    .foregroundStyle(JolColor.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, JolSpacing.md)
-                    .padding(.horizontal, JolSpacing.md)
-                    .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("sidebar-favorites")
-            tripsSection
-            recentChats
-            Spacer()
-        }
-        .padding(JolSpacing.lg)
-        .padding(.top, JolSpacing.xl)
-        .frame(width: width)
-        .frame(maxHeight: .infinity)
-        .background(JolColor.surfaceElevated.ignoresSafeArea())
-        .gesture(
-            DragGesture(minimumDistance: 20)
-                .onEnded { value in
-                    if value.translation.width < -40 { isOpen = false }
-                }
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("sidebar-panel")
     }
 }

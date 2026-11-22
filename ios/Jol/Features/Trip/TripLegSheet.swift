@@ -69,6 +69,7 @@ struct TripLegSheet: View {
         switch problem {
         case .network: L10n.string("No connection. Try again.", language: language)
         case .outdated: L10n.string("The plan has changed, so it was reloaded.", language: language)
+        case .noReplacement: L10n.string("No other place fits this day.", language: language)
         case .server(let message): message
         }
     }

@@ -13,6 +13,30 @@ enum TripStub {
     static let legOne = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb02"
     static let legTwo = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb04"
 
+    /// Places a stop can be replaced with (Ш-55): id, name, category, offset from the centre.
+    static let galleryID = "33333333-3333-4333-8333-000000000001"
+    static let parkID = "33333333-3333-4333-8333-000000000002"
+    static let closedID = "33333333-3333-4333-8333-000000000003"
+    private struct Candidate {
+        let id: String
+        let name: String
+        let category: String
+        let dLat: Double
+        let dLon: Double
+        let price: Int?
+        let meters: Int
+    }
+
+    private static let candidates = [
+        Candidate(id: galleryID, name: "Fixture Gallery", category: "museum", dLat: 0.004, dLon: -0.003,
+                  price: 2000, meters: 850),
+        Candidate(id: parkID, name: "Fixture Park", category: "park", dLat: -0.006, dLon: 0.005, price: nil,
+                  meters: 1400),
+        Candidate(id: closedID, name: "Fixture Closed Place", category: "museum", dLat: 0.002, dLon: 0.002,
+                  price: 500, meters: 300),
+    ]
+
+    private nonisolated(unsafe) static var replaced: [String: String] = [:]
     private nonisolated(unsafe) static var removed: Set<String> = []
     private nonisolated(unsafe) static var modes: [String: String] = [:]
     private nonisolated(unsafe) static var choice: String?
@@ -32,28 +56,67 @@ enum TripStub {
             version += 1
             return ChatStub.Answer(body: "{\"trip_id\":\"\(id)\",\"version\":\(version),\"budget\":{}}")
         case ("POST", 6) where parts[3] == "legs" && parts[5] == "mode":
-            let mode = (body["mode"] as? String) ?? "walk"
-            guard ["walk", "bus", "taxi"].contains(mode) else { return error(422, "validation_error") }
-            modes[parts[4]] = mode
-            version += 1
-            let late = mode == "walk" ? 900 : 0
-            return ChatStub.Answer(body: """
-            {"trip_id":"\(id)","version":\(version),"leg":\(leg(parts[4])),"arrives_at":"2026-12-05T12:15:00+05:00",\
-            "late_by_s":\(late),"changed_days":["2026-12-05"],"budget":\(summary())}
-            """)
+            return setMode(id: id, legID: parts[4], body: body)
         case ("POST", 6) where parts[3] == "items" && parts[5] == "remove":
-            if parts[4] == museumItem, (body["force"] as? Bool) != true {
-                return error(409, "must_have", "This place is a must-have of your trip.")
-            }
-            removed.insert(parts[4])
-            version += 1
-            return ChatStub.Answer(body: """
-            {"trip_id":"\(id)","version":\(version),"action":"remove","changed_days":["2026-12-05"],\
-            "budget":\(summary()),"dropped":[]}
-            """)
+            return remove(id: id, itemID: parts[4], body: body)
+        case ("GET", 6) where parts[3] == "items" && parts[5] == "alternatives":
+            return alternatives()
+        case ("POST", 6) where parts[3] == "items" && parts[5] == "replace":
+            return replace(id: id, itemID: parts[4], body: body)
         default:
             return nil
         }
+    }
+
+    private static func setMode(id: String, legID: String, body: [String: Any]) -> ChatStub.Answer {
+        let mode = (body["mode"] as? String) ?? "walk"
+        guard ["walk", "bus", "taxi"].contains(mode) else { return error(422, "validation_error") }
+        modes[legID] = mode
+        version += 1
+        let late = mode == "walk" ? 900 : 0
+        return ChatStub.Answer(body: """
+        {"trip_id":"\(id)","version":\(version),"leg":\(leg(legID)),"arrives_at":"2026-12-05T12:15:00+05:00",\
+        "late_by_s":\(late),"changed_days":["2026-12-05"],"budget":\(summary())}
+        """)
+    }
+
+    private static func remove(id: String, itemID: String, body: [String: Any]) -> ChatStub.Answer {
+        if itemID == museumItem, (body["force"] as? Bool) != true {
+            return error(409, "must_have", "This place is a must-have of your trip.")
+        }
+        removed.insert(itemID)
+        version += 1
+        return ChatStub.Answer(body: """
+        {"trip_id":"\(id)","version":\(version),"action":"remove","changed_days":["2026-12-05"],\
+        "budget":\(summary()),"dropped":[]}
+        """)
+    }
+
+    private static func alternatives() -> ChatStub.Answer {
+        let items = candidates.map { candidate in
+            "{\"id\":\"\(candidate.id)\",\"name\":\"\(candidate.name)\",\"category\":\"\(candidate.category)\","
+                + "\"lat\":\(AlmatyCamera.center.latitude + candidate.dLat),"
+                + "\"lon\":\(AlmatyCamera.center.longitude + candidate.dLon),"
+                + "\"price_kzt\":\(candidate.price.map(String.init) ?? "null"),\"distance_m\":\(candidate.meters)}"
+        }
+        return ChatStub.Answer(body: "{\"items\":[\(items.joined(separator: ","))]}")
+    }
+
+    /// The must-have museum needs `force`; the "closed" candidate never fits (409 `no_replacement`).
+    private static func replace(id: String, itemID: String, body: [String: Any]) -> ChatStub.Answer {
+        let target = (body["place_id"] as? String) ?? ""
+        if itemID == museumItem, (body["force"] as? Bool) != true {
+            return error(409, "must_have", "This place is a must-have of your trip.")
+        }
+        guard target != closedID else { return error(409, "no_replacement", "Nothing fits.") }
+        guard candidates.contains(where: { $0.id == target }) else { return error(422, "validation_error") }
+        replaced[itemID] = target
+        version += 1
+        return ChatStub.Answer(body: """
+        {"trip_id":"\(id)","version":\(version),"action":"replace","changed_days":["2026-12-05"],\
+        "budget":\(summary()),"replaced":{"item_id":"\(itemID)"},"replacement":{"item_id":"\(itemID)"},\
+        "dropped":[]}
+        """)
     }
 
     private static func error(_ status: Int, _ code: String, _ message: String = "stub") -> ChatStub.Answer {
@@ -131,10 +194,18 @@ enum TripStub {
     static func json(id: String) -> String {
         let museum = place(UITestSupport.centerPlaceID, "Fixture Museum", "museum", 0, 0)
         let cafe = place(UITestSupport.secondPlaceID, "Fixture Cafe", "coffee", 0.01, 0.012)
-        let dayOne = [item(museumItem, 1, museum, "09:30", day: "2026-12-05", must: true),
-                      item(cafeItem, 2, cafe, "12:00", day: "2026-12-05", meal: "lunch")]
-        let dayTwo = [item(dayTwoCafeItem, 1, cafe, "10:00", day: "2026-12-06"),
-                      item(dayTwoMuseumItem, 2, museum, "14:00", day: "2026-12-06")]
+        let dayOne = [swapped(item(museumItem, 1, museum, "09:30", day: "2026-12-05", must: true), museum, museumItem),
+                      swapped(item(cafeItem, 2, cafe, "12:00", day: "2026-12-05", meal: "lunch"), cafe, cafeItem)]
+        let dayTwo = [swapped(item(dayTwoCafeItem, 1, cafe, "10:00", day: "2026-12-06"), cafe, dayTwoCafeItem),
+                      swapped(item(dayTwoMuseumItem, 2, museum, "14:00", day: "2026-12-06"), museum,
+                              dayTwoMuseumItem)]
+        func swapped(_ item: String, _ original: String, _ itemID: String) -> String {
+            guard let target = replaced[itemID], let new = candidates.first(where: { $0.id == target }) else {
+                return item
+            }
+            let replacement = place(new.id, new.name, new.category, new.dLat, new.dLon)
+            return item.replacingOccurrences(of: original, with: replacement)
+        }
         func shown(_ items: [String], _ ids: [String]) -> String {
             zip(items, ids).filter { !removed.contains($0.1) }.map(\.0).joined(separator: ",")
         }

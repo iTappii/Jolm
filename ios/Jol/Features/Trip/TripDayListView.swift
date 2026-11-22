@@ -5,10 +5,20 @@ import SwiftUI
 struct TripDayListView: View {
     let model: TripMapModel
     let day: TripDay
+    /// Position of the day in the trip: the colour of its badges, and (in the "All days" list) the identifiers.
+    var dayIndex: Int?
+    /// "All days" lists every day, so the row identifiers carry the day number.
+    var identifiesDay = false
     let onSelectPlace: (TripPlace) -> Void
     @Environment(\.locale) private var locale
     @Environment(AppContainer.self) private var container
     @ScaledMetric(relativeTo: .callout) private var badgeSize: CGFloat = 28
+
+    private var shownIndex: Int { dayIndex ?? model.dayIndex }
+
+    private func suffix(_ number: Int) -> String {
+        identifiesDay ? "d\(shownIndex + 1)-\(number)" : "\(number)"
+    }
 
     var body: some View {
         dayList(day)
@@ -38,7 +48,7 @@ struct TripDayListView: View {
                         .font(JolFont.callout.weight(.bold))
                         .foregroundStyle(JolColor.onBrand)
                         .frame(width: badgeSize, height: badgeSize)
-                        .background(Color(model.dayColor), in: Circle())
+                        .background(Color(TripMapModel.dayColor(shownIndex)), in: Circle())
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: JolSpacing.xxs) {
                         HStack(spacing: JolSpacing.xs) {
@@ -58,23 +68,40 @@ struct TripDayListView: View {
             .foregroundStyle(JolColor.textPrimary)
             .accessibilityElement(children: .combine)
             .accessibilityHint(Text("Opens the place card"))
-            .accessibilityIdentifier("trip-stop-\(number)")
-            if !model.isSavedCopy {
-                Button { model.remove(item) } label: {
-                    Image(systemName: "minus.circle")
-                        .font(.title3)
-                        .foregroundStyle(JolColor.textTertiary)
-                        .frame(width: JolTarget.minimum, height: JolTarget.minimum)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isWorking)
-                .accessibilityLabel(Text("Remove from the route"))
-                .accessibilityValue(Text(verbatim: item.place.name))
-                .accessibilityIdentifier("trip-stop-remove-\(number)")
-            }
+            .accessibilityIdentifier("trip-stop-\(suffix(number))")
+            if !model.isSavedCopy { actionButtons(item, number: number) }
         }
         .padding(.vertical, JolSpacing.xs)
+    }
+
+    /// Replace and remove, 44 pt each; they sit next to the stop (side by side, below it at large type).
+    private func actionButtons(_ item: TripDayItem, number: Int) -> some View {
+        HStack(spacing: 0) {
+            Button { model.beginReplace(item) } label: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.title3)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isWorking)
+            .accessibilityLabel(Text("Replace this place"))
+            .accessibilityValue(Text(verbatim: item.place.name))
+            .accessibilityIdentifier("trip-stop-replace-\(suffix(number))")
+            Button { model.remove(item) } label: {
+                Image(systemName: "minus.circle")
+                    .font(.title3)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .frame(width: JolTarget.minimum, height: JolTarget.minimum)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isWorking)
+            .accessibilityLabel(Text("Remove from the route"))
+            .accessibilityValue(Text(verbatim: item.place.name))
+            .accessibilityIdentifier("trip-stop-remove-\(suffix(number))")
+        }
     }
 
     private func stopCaption(_ item: TripDayItem) -> some View {

@@ -3919,16 +3919,6 @@
         }
       }
     },
-    "Loading" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Загрузка"
-          }
-        }
-      }
-    },
     "Page %lld of %lld" : {
       "localizations" : {
         "ru" : {
@@ -3985,6 +3975,246 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Показывает этот путь на карте"
+          }
+        }
+      }
+    },
+    "All days" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Все дни"
+          }
+        }
+      }
+    },
+    "Replace this place" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменить место"
+          }
+        }
+      }
+    },
+    "Instead of %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вместо «%@»"
+          }
+        }
+      }
+    },
+    "Replace a must-have?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменить то, что вы просили?"
+          }
+        }
+      }
+    },
+    "%@ is something you asked for. Replace it anyway?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%@» — это то, что вы просили. Всё равно заменить?"
+          }
+        }
+      }
+    },
+    "Replace anyway" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всё равно заменить"
+          }
+        }
+      }
+    },
+    "Couldn't load the places." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить места."
+          }
+        }
+      }
+    },
+    "No similar places nearby." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Похожих мест рядом нет."
+          }
+        }
+      }
+    },
+    "Replaces the stop with this place" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменяет остановку этим местом"
+          }
+        }
+      }
+    },
+    "No other place fits this day." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В этот день другое место не подходит."
+          }
+        }
+      }
+    },
+    "My bookings" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мои брони"
+          }
+        }
+      }
+    },
+    "Booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бронь"
+          }
+        }
+      }
+    },
+    "No bookings yet. Book a table, a room or tickets from a place's card." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Броней пока нет. Забронируйте столик, номер или билеты в карточке места."
+          }
+        }
+      }
+    },
+    "Couldn't load your bookings." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить брони."
+          }
+        }
+      }
+    },
+    "This booking is no longer in your list." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этой брони больше нет в списке."
+          }
+        }
+      }
+    },
+    "Cancel booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить бронь"
+          }
+        }
+      }
+    },
+    "Cancelling…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменяем…"
+          }
+        }
+      }
+    },
+    "Cancel this booking?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить эту бронь?"
+          }
+        }
+      }
+    },
+    "Keep booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставить бронь"
+          }
+        }
+      }
+    },
+    "The venue will be told that you are not coming." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заведение узнает, что вы не придёте."
+          }
+        }
+      }
+    },
+    "This booking can't be cancelled any more: it is already cancelled or over. Contact the venue." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эту бронь уже нельзя отменить: она отменена или прошла. Свяжитесь с заведением."
+          }
+        }
+      }
+    },
+    "No connection. Your booking was not cancelled. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет соединения. Бронь не отменена. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "Couldn't cancel the booking. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось отменить бронь. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "Deleting the account…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаляем аккаунт…"
           }
         }
       }

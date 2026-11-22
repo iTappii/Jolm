@@ -38,4 +38,19 @@ struct TripService: Sendable {
             "v1/trips/\(Self.path(tripID))/items/\(Self.path(itemID))/remove", json: ["force": force]
         ))
     }
+
+    func alternatives(tripID: UUID, itemID: UUID) async throws -> [TripAlternative] {
+        let answer: TripAlternatives = try await api.send(.get(
+            "v1/trips/\(Self.path(tripID))/items/\(Self.path(itemID))/alternatives"
+        ))
+        return answer.items
+    }
+
+    /// The answer carries the new version and the days that changed, like a removal (`ItemRemoval` reads both).
+    func replace(tripID: UUID, itemID: UUID, with placeID: UUID, force: Bool) async throws -> ItemRemoval {
+        try await api.send(Endpoint.post(
+            "v1/trips/\(Self.path(tripID))/items/\(Self.path(itemID))/replace",
+            json: ItemReplacement(placeID: placeID, force: force)
+        ))
+    }
 }

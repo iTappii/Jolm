@@ -77,6 +77,10 @@ final class AppContainer {
         BonusModel(api: api, auth: auth)
     }
 
+    func makeBookingsModel() -> MyBookingsModel {
+        MyBookingsModel(api: api, auth: auth)
+    }
+
     func makeProfileModel() -> ProfileModel {
         ProfileModel(service: AuthService(api: api, tokens: tokens), auth: auth)
     }
