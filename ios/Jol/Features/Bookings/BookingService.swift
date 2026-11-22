@@ -15,4 +15,16 @@ struct BookingService: Sendable {
     func booking(id: UUID) async throws -> Booking {
         try await api.send(.get("v1/bookings/\(id.uuidString.lowercased())"))
     }
+
+    func list(cursor: String?) async throws -> BookingPage {
+        var query = [URLQueryItem(name: "limit", value: "20")]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        return try await api.send(.get("v1/bookings", query: query))
+    }
+
+    /// `POST /v1/bookings/{id}/cancel` → the booking with status `cancelled`; 409 `not_cancellable` when it is
+    /// already cancelled or over.
+    func cancel(id: UUID) async throws -> Booking {
+        try await api.send(.post("v1/bookings/\(id.uuidString.lowercased())/cancel"))
+    }
 }

@@ -71,11 +71,27 @@ struct Booking: Decodable, Equatable, Identifiable, Sendable {
     let startsAt: String?
     let endsAt: String?
     let note: String?
+    let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id, place, kind, status, note
         case partySize = "party_size"
         case startsAt = "starts_at"
         case endsAt = "ends_at"
+        case createdAt = "created_at"
+    }
+
+    /// The person can still ask to cancel it (the server has the last word: 409 `not_cancellable`).
+    var canCancel: Bool { status == "pending" || status == "confirmed" }
+}
+
+/// `GET /v1/bookings`: newest first, `next_cursor` for the next page.
+struct BookingPage: Decodable, Equatable, Sendable {
+    let items: [Booking]
+    let nextCursor: String?
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case nextCursor = "next_cursor"
     }
 }

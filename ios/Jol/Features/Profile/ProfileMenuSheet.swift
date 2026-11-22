@@ -6,7 +6,10 @@ struct ProfileMenuSheet: View {
     @Environment(AppContainer.self) private var container
 
     var body: some View {
-        ProfileMenuContent(model: container.makeProfileModel(), bonuses: container.makeBonusModel())
+        ProfileMenuContent(
+            model: container.makeProfileModel(), bonuses: container.makeBonusModel(),
+            bookings: container.makeBookingsModel()
+        )
     }
 }
 
@@ -15,18 +18,23 @@ private struct ProfileMenuContent: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: ProfileModel
     @State private var bonuses: BonusModel
+    @State private var bookings: MyBookingsModel
     @State private var confirmDelete = false
 
-    init(model: ProfileModel, bonuses: BonusModel) {
+    init(model: ProfileModel, bonuses: BonusModel, bookings: MyBookingsModel) {
         _model = State(initialValue: model)
         _bonuses = State(initialValue: bonuses)
+        _bookings = State(initialValue: bookings)
     }
 
     var body: some View {
         NavigationStack {
             List {
                 accountSection
-                if container.auth.isSignedIn { bonusSection }
+                if container.auth.isSignedIn {
+                    bonusSection
+                    bookingsSection
+                }
                 Section {
                     NavigationLink { SettingsScreen() } label: {
                         Label("Settings", systemImage: "gearshape")
@@ -103,7 +111,8 @@ private struct ProfileMenuContent: View {
                 HStack(spacing: JolSpacing.md) {
                     Image(systemName: "person.crop.circle.fill")
                         .font(.largeTitle)
-                        .foregroundStyle(JolColor.brand)
+                        .foregroundStyle(JolColor.brandText)
+                        .accessibilityHidden(true)
                     if let identity = model.me?.identity {
                         Text(verbatim: identity)
                             .accessibilityIdentifier("profile-identity")
@@ -112,12 +121,14 @@ private struct ProfileMenuContent: View {
                             .accessibilityIdentifier("profile-identity")
                     }
                 }
+                .frame(minHeight: JolTarget.minimum)
+                .accessibilityElement(children: .combine)
             } else {
                 NavigationLink {
                     SignInEntryView(onSignedIn: { dismiss() })
                 } label: {
                     Label("Sign in", systemImage: "person.crop.circle.badge.plus")
-                        .foregroundStyle(JolColor.brand)
+                        .foregroundStyle(JolColor.brandText)
                 }
                 .accessibilityIdentifier("profile-sign-in")
             }
@@ -141,6 +152,16 @@ private struct ProfileMenuContent: View {
         }
     }
 
+    /// «My bookings» (Ш-55): requests to venues and their status; signed-in only.
+    private var bookingsSection: some View {
+        Section {
+            NavigationLink { MyBookingsScreen(model: bookings) } label: {
+                Label("My bookings", systemImage: "calendar.badge.clock")
+            }
+            .accessibilityIdentifier("profile-bookings")
+        }
+    }
+
     private var dangerSection: some View {
         Section {
             Button {
@@ -160,6 +181,14 @@ private struct ProfileMenuContent: View {
             }
             .disabled(model.isSigningOut || model.deleteState == .deleting)
             .accessibilityIdentifier("profile-delete-account")
+            if model.deleteState == .deleting {
+                HStack(spacing: JolSpacing.sm) {
+                    ProgressView()
+                    Text("Deleting the account…").foregroundStyle(JolColor.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("profile-deleting")
+            }
         }
     }
 }
