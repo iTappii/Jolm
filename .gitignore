@@ -23,6 +23,21 @@ venv/
 .env
 .env.*
 !.env.example
+*.pem
+*.p8
+*.p12
+*.key
+*.mobileprovision
+.claude/settings.local.json
+
+# Database dumps / backups
+*.dump
+*.dump.sha256
+*.sql.gz
+*.backup
+
+# Claude Code local worktrees
+.claude/worktrees/
 
 # graphify
 graphify-out/cache/
