@@ -130,3 +130,12 @@ secrets-generate: venv
 .PHONY: llm-smoke
 llm-smoke: venv
 	cd server && ../$(PY) -m app.providers.llm.smoke
+
+# Ш-55: local S3-compatible storage for place photos (dev only); see docs/photos.md
+.PHONY: minio-up minio-down
+minio-up: .env
+	$(COMPOSE) --profile minio up -d --wait minio
+	$(COMPOSE) --profile minio up minio-init
+
+minio-down:
+	$(COMPOSE) --profile minio stop minio

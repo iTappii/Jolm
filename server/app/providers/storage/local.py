@@ -63,6 +63,9 @@ class LocalStorage:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
 
+    async def put(self, key: str, content_type: str, data: bytes) -> None:
+        self.write(key, data)
+
     async def read(self, key: str, max_bytes: int) -> Optional[bytes]:
         target = self.path(key)
         if not target.is_file():

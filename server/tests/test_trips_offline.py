@@ -1,5 +1,7 @@
 """Ш-42 (server): GET /v1/trips/{id}/offline."""
 
+import re
+
 from app.config import get_settings
 from tests.test_chat import sign_in
 from tests.test_trips_read import built, get
@@ -16,7 +18,7 @@ async def test_offline_copy_has_times_places_and_leg_paths(chat_env, conn):
     response = await offline(chat_env, headers, ready["trip_id"], "en")
     assert response.status_code == 200, response.text
     body = response.json()
-    assert response.headers["etag"] == '"v1-en"'
+    assert re.fullmatch(r'"v1-en-[0-9a-f]{12}"', response.headers["etag"])
     assert response.headers["cache-control"] == "private, no-cache"
     assert set(body) == {
         "trip_id", "version", "locale", "timezone", "geometry_encoding", "start_date",
@@ -98,7 +100,7 @@ async def test_etag_gives_304_until_the_version_changes(chat_env, conn):
     assert stale.status_code == 200
     # another language is another representation
     ru = await offline(chat_env, headers, tid, "ru", **{"If-None-Match": etag})
-    assert ru.status_code == 200 and ru.headers["etag"] == '"v1-ru"'
+    assert ru.status_code == 200 and ru.headers["etag"].startswith('"v1-ru-')
     # an edit bumps the version: the old tag no longer matches
     trip = (await get(chat_env, headers, tid)).json()
     leg = next(leg for d in trip["days"] for leg in d["legs"] if len(leg["options"]) > 1)
@@ -110,12 +112,52 @@ async def test_etag_gives_304_until_the_version_changes(chat_env, conn):
     )
     assert edit.status_code == 200
     after = await offline(chat_env, headers, tid, "en", **{"If-None-Match": etag})
-    assert after.status_code == 200 and after.headers["etag"] == '"v2-en"'
+    assert after.status_code == 200 and after.headers["etag"].startswith('"v2-en-')
     assert after.json()["version"] == 2
     changed = next(
         item for d in after.json()["days"] for item in d["legs"] if item["id"] == leg["id"]
     )
     assert changed["mode"] == other["mode"]
+
+
+async def test_etag_changes_when_a_place_of_the_trip_changes(chat_env, conn):
+    """Ш-55 (Ш-42): editing a place's data makes the offline copy stale, the version stays."""
+    headers, chat, ready = await built(chat_env, conn)
+    tid = ready["trip_id"]
+    first = await offline(chat_env, headers, tid, "en")
+    etag = first.headers["etag"]
+    same = await offline(chat_env, headers, tid, "en", **{"If-None-Match": etag})
+    assert same.status_code == 304  # nothing changed: still fresh
+
+    body = first.json()
+    pid = next(iter(body["places"]))
+    edits = [
+        "UPDATE places SET name_en = 'Renamed place' WHERE id = %s",
+        "UPDATE places SET address_en = 'New street 1' WHERE id = %s",
+        "UPDATE places SET geom = ST_SetSRID(ST_MakePoint(76.95, 43.25), 4326)::geography "
+        "WHERE id = %s",
+        "INSERT INTO place_hours (place_id, weekday, opens, closes) "
+        "VALUES (%s, 6, '03:00', '04:00')",
+    ]
+    seen = {etag}
+    for statement in edits:
+        await conn.execute(statement, (pid,))
+        again = await offline(chat_env, headers, tid, "en", **{"If-None-Match": etag})
+        assert again.status_code == 200, statement
+        assert again.json()["version"] == 1
+        assert again.headers["etag"] not in seen, statement
+        etag = again.headers["etag"]
+        seen.add(etag)
+    assert (await offline(chat_env, headers, tid, "en")).json()["places"][pid]["name"]
+
+    # a place that is not in this trip does not matter
+    other = await conn.execute(
+        "INSERT INTO places (name_en, geom) VALUES ('Elsewhere', "
+        "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography)"
+    )
+    assert other is not None
+    unchanged = await offline(chat_env, headers, tid, "en", **{"If-None-Match": etag})
+    assert unchanged.status_code == 304
 
 
 async def test_offline_requires_auth_and_hides_foreign_and_unknown_trips(chat_env, conn):

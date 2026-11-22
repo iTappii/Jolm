@@ -1,11 +1,12 @@
 """Admin panel routes: server-rendered HTML (Jinja2 + htmx). Everything under /admin."""
 
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -18,14 +19,17 @@ from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
 from app.live import clock
 from app.places.service import ALMATY_TZ
-from app.providers.storage import media_url
+from app.providers.storage import StorageError, make_storage, media_url
 from app.submissions import bonus_policy, bonuses, moderation
+from app.submissions.service import EXTENSIONS, MAX_IMAGE_BYTES, sniff_image
 
 from . import auth, service, sql
 
 BASE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE / "templates"))
 router = APIRouter(prefix="/admin", include_in_schema=False)
+log = logging.getLogger("app.admin")
+MAX_UPLOAD_BYTES = MAX_IMAGE_BYTES  # same limit as the app's photo uploads
 
 KZT_SUFFIX = " ₸"
 
@@ -417,10 +421,37 @@ async def place_save(request: Request, place_id: str, ctx: PostCtx = POST_ADMIN)
     return redirect(f"/admin/places/{place_id}?saved={'1' if marks else 'nochange'}")
 
 
+async def _admin_upload(request: Request, place_id: str, upload: Any):
+    """Store an uploaded image in the object storage; (storage key, error text). Ш-55."""
+    data = await upload.read()
+    if not data:
+        return None, "Файл пустой"
+    if len(data) > MAX_UPLOAD_BYTES:
+        return None, "Файл больше %d МБ" % (MAX_UPLOAD_BYTES // (1024 * 1024))
+    content_type = sniff_image(data)  # the declared type and the file name are never trusted
+    if content_type is None:
+        return None, "Нужен файл JPEG, PNG или WebP"
+    storage = getattr(request.app.state, "storage", None) or make_storage()
+    if storage is None:
+        return None, "Хранилище фото не настроено (STORAGE_PROVIDER, см. docs/photos.md)"
+    key = "places/%s/%s.%s" % (place_id, uuid4().hex, EXTENSIONS[content_type])
+    try:
+        await storage.put(key, content_type, data)
+    except StorageError:
+        log.exception("admin photo upload failed")
+        return None, "Не удалось сохранить файл в хранилище"
+    return key, None
+
+
 @router.post("/places/{place_id}/photos")
 async def place_photo_add(request: Request, place_id: str, ctx: PostCtx = POST_ADMIN):
+    """Add a photo: an uploaded file (`photo`) or, as before, an existing storage key/https URL."""
     place_id = need_uuid(place_id)
-    key, err = service.validate_storage_key(ctx.form.get("storage_key"))
+    upload = (await request.form()).get("photo")  # cached by the CSRF check in POST_ADMIN
+    if upload is not None and not isinstance(upload, str) and getattr(upload, "filename", ""):
+        key, err = await _admin_upload(request, place_id, upload)
+    else:
+        key, err = service.validate_storage_key(ctx.form.get("storage_key"))
     async with db(request) as conn:
         place = await service.get_place(conn, place_id)
         if place is None:

@@ -295,7 +295,7 @@ async def save_place(
 
 
 def validate_storage_key(raw: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
-    # TODO(Ш-44): real upload to S3; for now the admin pastes a storage key or an https URL.
+    # The admin can also upload a file (api.place_photo_add, Ш-55); this is the paste-a-key path.
     value, err = clean_text(raw, 500)
     if err or value is None:
         return None, err or "Укажите ключ в хранилище или URL"

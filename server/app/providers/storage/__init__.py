@@ -42,6 +42,9 @@ class StorageProvider(Protocol):
     ) -> PresignedPut:
         """Presigned URL for one PUT of exactly `size_bytes` with this content type."""
 
+    async def put(self, key: str, content_type: str, data: bytes) -> None:
+        """Store `data` from the server itself (admin uploads, Ш-55); `StorageError` on failure."""
+
     async def read(self, key: str, max_bytes: int) -> Optional[bytes]:
         """The whole object, None when it does not exist; `ObjectTooLarge` above `max_bytes`."""
 

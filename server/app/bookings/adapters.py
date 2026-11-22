@@ -73,6 +73,10 @@ class PartnerAdapter(Protocol):
 
     async def status(self, external_ref: str) -> str: ...
 
+    # Optional (Ш-55): ask the partner to cancel; returns the booking's status afterwards
+    # ("cancelled" when it worked). An adapter without it is cancelled on our side only.
+    # async def cancel(self, external_ref: str) -> str: ...
+
 
 STUB_MAX_PARTY = 10
 STUB_LIMITS = {
@@ -108,6 +112,9 @@ class StubAdapter:
 
     async def status(self, external_ref: str) -> str:
         return "confirmed"
+
+    async def cancel(self, external_ref: str) -> str:
+        return "cancelled"
 
 
 _ADAPTERS: Dict[str, PartnerAdapter] = {"stub": StubAdapter()}
