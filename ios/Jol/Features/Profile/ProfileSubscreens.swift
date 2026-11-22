@@ -18,9 +18,11 @@ struct LanguageScreen: View {
                         }
                         Spacer()
                         if container.language.selection == option {
-                            Image(systemName: "checkmark").foregroundStyle(JolColor.brand)
+                            Image(systemName: "checkmark").foregroundStyle(JolColor.brandText)
+                                .accessibilityHidden(true)
                         }
                     }
+                    .frame(minHeight: JolTarget.minimum)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

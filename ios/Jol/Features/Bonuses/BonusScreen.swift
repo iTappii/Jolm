@@ -23,7 +23,7 @@ struct BonusScreen: View {
                 if let balance = model.balance {
                     Text(verbatim: balance.formatted(.number.locale(locale)))
                         .font(JolFont.largeTitle)
-                        .foregroundStyle(JolColor.brand)
+                        .foregroundStyle(JolColor.brandText)
                         .accessibilityIdentifier("bonus-balance")
                 } else if model.phase == .failed {
                     Text("Couldn't load your bonuses.").foregroundStyle(JolColor.textSecondary)
