@@ -51,3 +51,6 @@ data/*.osm.pbf
 
 # OSM import cache (Geofabrik extract)
 data/osm/cache/
+
+# Open place datasets (Overture, Foursquare OS Places) — Ш-58
+data/places/cache/
