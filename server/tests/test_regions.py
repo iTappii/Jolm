@@ -62,11 +62,11 @@ def test_default_region_is_the_seed_until_loaded():
 
 async def test_database_row_equals_the_seed(conn):
     loaded = await regions.load_regions(conn)
-    assert loaded == [ALMATY]
+    assert loaded[0] == ALMATY  # the default region comes first; Kazakhstan (Ш-58) follows
 
 
 async def test_refresh_fills_the_cache_and_keeps_the_seed_when_empty(conn):
-    assert [r.id for r in await regions.refresh(conn)] == ["almaty"]
+    assert [r.id for r in await regions.refresh(conn)] == ["almaty", "kazakhstan"]
     assert regions.default_region() == ALMATY
     await conn.execute("DELETE FROM regions")
     assert await regions.refresh(conn) == []
@@ -77,7 +77,10 @@ async def test_region_for_point_inside_and_outside(conn):
     for lat, lon in ((43.2389, 76.9455), (43.05, 77.05), (42.95, 76.70)):  # centre, Medeu, a corner
         found = await regions.region_for_point(conn, lat, lon)
         assert found is not None and found.id == "almaty"
-    for lat, lon in ((51.13, 71.43), (43.2389, 77.4), (42.9, 76.9)):  # Astana, east, south
+    for lat, lon in ((51.13, 71.43), (43.2389, 77.4), (43.3, 68.27)):  # Astana, east, Turkestan
+        found = await regions.region_for_point(conn, lat, lon)  # the country region (Ш-58)
+        assert found is not None and found.id == "kazakhstan"
+    for lat, lon in ((55.75, 37.62), (41.3, 69.2)):  # Moscow, Tashkent: outside every region
         assert await regions.region_for_point(conn, lat, lon) is None
     assert ALMATY.contains(43.2389, 76.9455) and not ALMATY.contains(51.13, 71.43)
 
@@ -122,6 +125,17 @@ async def test_regions_endpoint_has_the_agreed_shape(client):
                 "camera": {"zoom": 11.0},
                 "bbox": [76.7, 42.95, 77.3, 43.45],
                 "is_default": True,
-            }
+            },
+            {
+                "id": "kazakhstan",
+                "name": {"ru": "Казахстан", "en": "Kazakhstan"},
+                "timezone": "Asia/Almaty",
+                "currency": "KZT",
+                "languages": ["ru", "en"],
+                "centre": {"lat": 48.0196, "lon": 66.9237},
+                "camera": {"zoom": 4.5},
+                "bbox": [46.4932, 40.5687, 87.3156, 55.4431],
+                "is_default": False,
+            },
         ]
     }

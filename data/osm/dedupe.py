@@ -44,7 +44,8 @@ CLASS_GROUP = {
 
 NAME_KEYS = ("name", "name:ru", "name:en", "name:kk", "int_name", "alt_name", "official_name")
 MERGE_TAG_PREFIXES = (
-    "name", "addr:", "opening_hours", "website", "contact:website", "ele", "cuisine",
+    "name", "addr:", "opening_hours", "website", "contact:website", "phone", "contact:phone", "ele",
+    "cuisine",
 )  # fmt: skip
 _PRIORITY = {"relation": 0, "way": 1, "node": 2}
 

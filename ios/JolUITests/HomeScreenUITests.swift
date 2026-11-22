@@ -86,7 +86,9 @@ final class HomeScreenUITests: XCTestCase {
             XCTAssertTrue(element(app, screen).waitForExistence(timeout: 5), "\(row) opens")
             if screen == "about-screen" {
                 XCTAssertTrue(element(app, "about-version").exists)
-                for identifier in ["about-osm", "about-open-meteo", "about-privacy"] {
+                let identifiers = ["about-osm", "about-overture", "about-foursquare", "about-open-meteo",
+                                   "about-privacy"]
+                for identifier in identifiers {
                     XCTAssertTrue(element(app, identifier).exists, "\(identifier) is on the About screen")
                 }
             }

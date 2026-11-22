@@ -163,7 +163,7 @@ async def _upsert(conn, rec, hours):
     """upsert_place is written for sync psycopg connections; run the same SQL on the async one."""
     from upsert import DELETE_HOURS, HOURS_FIELD, INSERT_HOURS
 
-    cur = await conn.execute(UPSERT_PLACE, rec)
+    cur = await conn.execute(UPSERT_PLACE, {"phone": None, **rec})
     row = await cur.fetchone()
     if hours and HOURS_FIELD not in (row["manual_override"] or []):
         await conn.execute(DELETE_HOURS, (row["id"],))
