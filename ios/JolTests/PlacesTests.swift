@@ -182,7 +182,7 @@ final class PlacesTests: XCTestCase {
     }
 
     func testNavigatorURLs() {
-        let coordinate = Region.current.center
+        let coordinate = Region.builtIn.center // not `current`: the app host may have a cached server region
         let apple = Navigator.url(for: .appleMaps, name: "Cafe & Bar", coordinate: coordinate)?.absoluteString
         XCTAssertTrue(apple?.hasPrefix("https://maps.apple.com/?daddr=43.238000,76.945000") == true, apple ?? "")
         XCTAssertTrue(apple?.contains("Cafe") == true)
