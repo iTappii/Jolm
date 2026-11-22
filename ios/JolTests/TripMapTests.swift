@@ -145,7 +145,11 @@ final class TripMapTests: XCTestCase {
         model.confirmRemoval()
         await wait { model.editRevision == 1 }
         XCTAssertNil(model.pendingRemoval)
-        let posts = StubURLProtocol.requests.filter { $0.httpMethod == "POST" }
+        // Only this test's removals: a late request of an earlier test can land in the shared stub's record.
+        let removePath = "/items/\(item.id.uuidString.lowercased())/remove"
+        let posts = StubURLProtocol.requests.filter {
+            $0.httpMethod == "POST" && ($0.url?.path ?? "").lowercased().hasSuffix(removePath)
+        }
         XCTAssertEqual(try posts.map { try Self.body(of: $0)["force"] as? Bool }, [false, true])
     }
 
