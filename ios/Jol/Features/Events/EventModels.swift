@@ -59,12 +59,12 @@ struct EventItem: Decodable, Equatable, Identifiable, Sendable {
         return "Ad"
     }
 
-    /// "5 Dec, 19:00" / "5 Dec, 19:00–22:00" in the server's local (Almaty) time.
+    /// "5 Dec, 19:00" / "5 Dec, 19:00–22:00" in the server's local (region) time.
     func whenText(locale: Locale) -> String? {
         guard let start = startsAt.flatMap(DirectionOption.parseDate) else { return nil }
         let formatter = DateFormatter()
         formatter.locale = locale
-        formatter.timeZone = PlaceFormatting.almaty
+        formatter.timeZone = Region.current.timeZone
         formatter.setLocalizedDateFormatFromTemplate("d MMM")
         var text = formatter.string(from: start)
         formatter.setLocalizedDateFormatFromTemplate("HH:mm")

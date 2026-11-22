@@ -84,7 +84,7 @@ struct BookingSheet: View {
                 TextField("Note for the venue (optional)", text: $note)
                     .accessibilityIdentifier("booking-note")
             }
-            .environment(\.timeZone, PlaceFormatting.almaty)
+            .environment(\.timeZone, Region.current.timeZone)
             Section {
                 if case .failed(let failure) = model.state {
                     Text(Self.failureText(failure))
@@ -225,11 +225,11 @@ struct BookingSheet: View {
         }
     }
 
-    // MARK: - Dates (Almaty)
+    // MARK: - Dates (region)
 
     private static var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = PlaceFormatting.almaty
+        calendar.timeZone = Region.current.timeZone
         return calendar
     }
 
@@ -242,10 +242,10 @@ struct BookingSheet: View {
         calendar.date(bySettingHour: hour, minute: 0, second: 0, of: date) ?? date
     }
 
-    /// ISO time with the Almaty offset (`2026-12-05T19:00:00+05:00`).
+    /// ISO time with the region's offset (`2026-12-05T19:00:00+05:00`).
     static func iso(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
-        formatter.timeZone = PlaceFormatting.almaty
+        formatter.timeZone = Region.current.timeZone
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.string(from: date)
     }

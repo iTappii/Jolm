@@ -95,8 +95,8 @@ enum TripStub {
     private static func alternatives() -> ChatStub.Answer {
         let items = candidates.map { candidate in
             "{\"id\":\"\(candidate.id)\",\"name\":\"\(candidate.name)\",\"category\":\"\(candidate.category)\","
-                + "\"lat\":\(AlmatyCamera.center.latitude + candidate.dLat),"
-                + "\"lon\":\(AlmatyCamera.center.longitude + candidate.dLon),"
+                + "\"lat\":\(Region.current.center.latitude + candidate.dLat),"
+                + "\"lon\":\(Region.current.center.longitude + candidate.dLon),"
                 + "\"price_kzt\":\(candidate.price.map(String.init) ?? "null"),\"distance_m\":\(candidate.meters)}"
         }
         return ChatStub.Answer(body: "{\"items\":[\(items.joined(separator: ","))]}")
@@ -137,8 +137,8 @@ enum TripStub {
     private static func place(_ pid: String, _ name: String, _ category: String, _ dLat: Double, _ dLon: Double)
         -> String {
         "{\"id\":\"\(pid)\",\"name\":\"\(name)\",\"name_lang\":\"en\",\"category\":\"\(category)\","
-            + "\"category_name\":\"\(category.capitalized)\",\"lat\":\(AlmatyCamera.center.latitude + dLat),"
-            + "\"lon\":\(AlmatyCamera.center.longitude + dLon),\"photo\":null}"
+            + "\"category_name\":\"\(category.capitalized)\",\"lat\":\(Region.current.center.latitude + dLat),"
+            + "\"lon\":\(Region.current.center.longitude + dLon),\"photo\":null}"
     }
 
     private static func item(_ id: String, _ order: Int, _ place: String, _ time: String, day: String,

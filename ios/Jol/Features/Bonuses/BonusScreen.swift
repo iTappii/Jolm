@@ -32,7 +32,7 @@ struct BonusScreen: View {
                 } else {
                     ProgressView().accessibilityIdentifier("bonus-loading")
                 }
-                Text("1 bonus ≈ 1 ₸")
+                Text("1 bonus ≈ 1 \(Region.current.currencySymbol)")
                     .font(JolFont.callout)
                     .foregroundStyle(JolColor.textSecondary)
                     .accessibilityIdentifier("bonus-rate")

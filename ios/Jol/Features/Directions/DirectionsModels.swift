@@ -17,10 +17,8 @@ struct GeoPoint: Codable, Equatable, Sendable {
         self.init(lat: coordinate.latitude, lon: coordinate.longitude)
     }
 
-    /// The area the server routes in (`server/app/routing/schemas.py`: `AlmatyPoint`).
-    var isInServiceArea: Bool {
-        (43.0...43.45).contains(lat) && (76.70...77.20).contains(lon)
-    }
+    /// The area the server routes in: the current region's box.
+    var isInServiceArea: Bool { Region.current.contains(lat: lat, lon: lon) }
 }
 
 /// `POST /v1/directions` body (SSOT §6): from the user's point to one place, or (Ш-23c) to a tapped point that is not a

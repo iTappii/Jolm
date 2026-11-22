@@ -1,5 +1,5 @@
-@testable import Jol
 import CoreLocation
+@testable import Jol
 import XCTest
 
 /// Ш-63: the camera maths for the live route and the trip map.

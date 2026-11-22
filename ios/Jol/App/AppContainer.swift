@@ -24,6 +24,7 @@ final class AppContainer {
     @ObservationIgnored let devices: DeviceRegistrar
     @ObservationIgnored let analytics: AnalyticsClient
     @ObservationIgnored let reviews: ReviewsModel
+    @ObservationIgnored let regions: RegionModel
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -52,6 +53,7 @@ final class AppContainer {
             language: { LanguageSettings.acceptLanguage(defaults: languageDefaults) },
             onSessionCleared: { Task { @MainActor in auth.refresh() } }
         )
+        self.regions = RegionModel(api: self.api, defaults: defaults)
         self.places = PlacesModel(api: self.api)
         self.gate = AccountGate(auth: auth)
         self.favorites = FavoritesModel(api: self.api)

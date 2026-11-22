@@ -76,7 +76,8 @@ extension MapCoordinator {
         parent?.projection?.invalidateSoon()
         guard let route, !route.isEmpty else { return }
         var coordinates = route.coordinates
-        if case .center(let center, let zoom) = CameraFit.plan(for: coordinates, singleZoom: CameraFit.liveSingleStopZoom) {
+        let single = CameraFit.liveSingleStopZoom
+        if case .center(let center, let zoom) = CameraFit.plan(for: coordinates, singleZoom: single) {
             map.setCenter(center, zoomLevel: zoom, animated: true)
             return
         }

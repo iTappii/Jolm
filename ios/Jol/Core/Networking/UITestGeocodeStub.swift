@@ -24,8 +24,8 @@ enum UITestGeocode {
               let lat = items.first(where: { $0.name == "lat" })?.value.flatMap(Double.init),
               let lon = items.first(where: { $0.name == "lon" })?.value.flatMap(Double.init) else { return nil }
         let tapped = CLLocation(latitude: lat, longitude: lon)
-        let centerLat = AlmatyCamera.center.latitude
-        let centerLon = AlmatyCamera.center.longitude
+        let centerLat = Region.current.center.latitude
+        let centerLon = Region.current.center.longitude
         let places = [
             (UITestSupport.centerPlaceID, "Fixture Museum", "museum", centerLat, centerLon),
             (UITestSupport.secondPlaceID, "Fixture Cafe", "coffee", centerLat + 0.01, centerLon + 0.012),

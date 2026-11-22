@@ -259,12 +259,12 @@
         }
       }
     },
-    "1 bonus ≈ 1 ₸" : {
+    "1 bonus ≈ 1 %@" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "1 бонус ≈ 1 ₸"
+            "value" : "1 бонус ≈ 1 %@"
           }
         }
       }
@@ -1371,12 +1371,12 @@
         }
       }
     },
-    "Directions work inside Almaty only. Move the map there and choose “From map centre”." : {
+    "Directions work inside %@ only. Move the map there and choose “From map centre”." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Маршруты работают только в Алматы. Сдвиньте карту в Алматы и выберите «От центра карты»."
+            "value" : "Маршруты работают только в регионе «%@». Сдвиньте карту туда и выберите «От центра карты»."
           }
         }
       }
@@ -1501,12 +1501,12 @@
         }
       }
     },
-    "Entry price, ₸" : {
+    "Entry price, %@" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Цена входа, ₸"
+            "value" : "Цена входа, %@"
           }
         }
       }
@@ -1571,12 +1571,12 @@
         }
       }
     },
-    "Fare, ₸ (optional)" : {
+    "Fare, %@ (optional)" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Стоимость проезда, ₸ (по желанию)"
+            "value" : "Стоимость проезда, %@ (по желанию)"
           }
         }
       }
@@ -2777,12 +2777,12 @@
         }
       }
     },
-    "Price, ₸" : {
+    "Price, %@" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Цена, ₸"
+            "value" : "Цена, %@"
           }
         }
       }
@@ -4179,12 +4179,12 @@
         }
       }
     },
-    "You seem to be outside Almaty, so directions start from the map centre." : {
+    "You seem to be outside %@, so directions start from the map centre." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Похоже, вы не в Алматы, поэтому маршрут строится от центра карты."
+            "value" : "Похоже, вы вне региона «%@», поэтому маршрут строится от центра карты."
           }
         }
       }

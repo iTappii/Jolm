@@ -1,11 +1,6 @@
 import CoreLocation
 import UIKit
 
-enum AlmatyCamera {
-    static let center = CLLocationCoordinate2D(latitude: 43.2380, longitude: 76.9450)
-    static let zoom: Double = 11
-}
-
 /// Pure camera-fitting maths (Ш-63), kept apart from MapLibre so it can be unit-tested.
 enum CameraFit {
     /// Zoom for a day with a single stop (or stops on top of each other) on the trip map: close enough to read the
