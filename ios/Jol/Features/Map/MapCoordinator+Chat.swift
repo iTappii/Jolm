@@ -69,3 +69,43 @@ extension MapCoordinator {
         )
     }
 }
+
+/// The live route (Ш-54): the camera follows it as it grows. Its pins and edges are SwiftUI (`LiveRouteOverlay`).
+extension MapCoordinator {
+    func fitLiveRoute(_ route: LiveRoute?, map: MLNMapView) {
+        parent?.projection?.invalidateSoon()
+        guard let route, !route.isEmpty else { return }
+        var coordinates = route.coordinates
+        if coordinates.count == 1, let only = coordinates.first {
+            map.setCenter(only, zoomLevel: 14, animated: true)
+            return
+        }
+        // `setVisibleCoordinates` adds its padding to the map's CURRENT content inset, which is still animating
+        // towards `bottomInset` when the chat has just opened. So the padding asks for the wanted inset minus the
+        // current one: the route lands above the chat card either way.
+        let wanted = (parent?.bottomInset ?? 0) + 84
+        let bottom = max(84, wanted - map.contentInset.bottom)
+        map.setVisibleCoordinates(
+            &coordinates, count: UInt(coordinates.count),
+            edgePadding: UIEdgeInsets(top: 72, left: 56, bottom: bottom, right: 56), animated: true
+        )
+    }
+}
+
+extension MapCoordinator {
+    func mapView(_ mapView: MLNMapView, regionIsChangingWith reason: MLNCameraChangeReason) {
+        parent?.projection?.invalidate()
+    }
+
+    func mapView(_ mapView: MLNMapView, regionDidChangeWith reason: MLNCameraChangeReason, animated: Bool) {
+        parent?.projection?.invalidate()
+        reportRegion(mapView)
+    }
+
+    func applyLiveRoute(_ parent: MapView, map: MLNMapView) {
+        parent.projection?.map = map
+        guard appliedLiveRoute != parent.liveRoute else { return }
+        appliedLiveRoute = parent.liveRoute
+        fitLiveRoute(parent.liveRoute, map: map)
+    }
+}

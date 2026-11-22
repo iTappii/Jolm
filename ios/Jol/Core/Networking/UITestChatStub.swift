@@ -8,7 +8,11 @@ import Foundation
 /// Scenario switches (by the text of the user's message): "busy" → the first attempt answers 409 `chat_busy`,
 /// "full" → 409 `chat_full`, "boom" → the first attempt streams an `error` event; the retry then succeeds;
 /// "#dlg0" … "#dlg7" → the turns of a recorded dialog for the answer chain (Ш-32b): a question, then the answers
-/// days → budget → lodging → a wish → a changed budget → `route_ready`.
+/// days → budget → lodging → a wish → a changed budget → `route_ready`;
+/// "live1" … "live4" (also "#live1" / "£live1": the simulator keyboard may type either) → the turns of a recorded
+/// live-route dialog (Ш-54): a Chinese place with two alternatives, a second stop with a transit leg, a third with a
+/// car leg, then `route_ready`. `POST /v1/chats/{id}/live-route/choose` swaps a stop for an alternative; the choice
+/// is kept for the later turns, as the server does.
 enum ChatStub {
     static let chatID = "66666666-6666-4666-8666-666666666666"
     static let oldChatID = "55555555-5555-4555-8555-555555555555"
@@ -23,6 +27,9 @@ enum ChatStub {
     private nonisolated(unsafe) static var tripBuilt = false
     private nonisolated(unsafe) static var failedOnce: Set<String> = []
     private nonisolated(unsafe) static var proposalStatus = "pending"
+    private nonisolated(unsafe) static var liveTurn = 0
+    /// Stop `ord` → id of the alternative the tester chose for it.
+    private nonisolated(unsafe) static var liveChoices: [Int: String] = [:]
 
     static func handles(_ path: String) -> Bool {
         path.hasPrefix("/v1/chat") || path.hasPrefix("/v1/trips") || path.hasPrefix("/v1/proposals")
@@ -58,6 +65,8 @@ enum ChatStub {
             return Answer(body: newChatDetail())
         case ("POST", "/v1/chats/\(chatID)/messages"):
             return message((body["content"] as? String) ?? "")
+        case ("POST", "/v1/chats/\(chatID)/live-route/choose"):
+            return chooseLive(ord: body["ord"] as? Int ?? 0, placeID: body["place_id"] as? String ?? "")
         default:
             return tripAnswer(method: method, path: path, body: body)
         }
@@ -92,6 +101,13 @@ enum ChatStub {
         if lowered.contains("full") { return error(409, "chat_full", "This chat is full.") }
         if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
         if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
+        // Live route (Ш-54): "live2" replays the second turn of the recorded live dialog.
+        for turn in 1...4 where lowered.contains("live\(turn)") {
+            sent.append(text)
+            liveTurn = turn
+            if turn == 4 { tripBuilt = true }
+            return stream("chat-live-\(turn)")
+        }
         // Chain dialog (Ш-32b): "#dlg3 …" replays the third turn of the recorded dialog.
         for turn in 0...7 where lowered.contains("#dlg\(turn)") {
             sent.append(text)
@@ -103,8 +119,59 @@ enum ChatStub {
     }
 
     private static func stream(_ name: String) -> Answer {
-        let chunks = fixture(name).components(separatedBy: "\n\n").filter { !$0.isEmpty }.map { $0 + "\n\n" }
+        let chunks = fixture(name).components(separatedBy: "\n\n").filter { !$0.isEmpty }
+            .map { applyChoices($0) + "\n\n" }
         return Answer(headers: ["Content-Type": "text/event-stream"], chunks: chunks)
+    }
+
+    // MARK: - Live route (Ш-54)
+
+    /// The route object of a `live_route` chunk with the tester's choices applied.
+    private static func applyChoices(_ chunk: String) -> String {
+        guard chunk.hasPrefix("event: live_route"), !liveChoices.isEmpty,
+              let range = chunk.range(of: "data: "),
+              let route = swapped(String(chunk[range.upperBound...])) else { return chunk }
+        return "event: live_route\ndata: \(route)"
+    }
+
+    private static func swapped(_ json: String) -> String? {
+        guard var route = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any],
+              var stops = route["stops"] as? [[String: Any]] else { return nil }
+        for index in stops.indices {
+            guard let ord = stops[index]["ord"] as? Int, let wanted = liveChoices[ord],
+                  var alternatives = stops[index]["alternatives"] as? [[String: Any]],
+                  let place = stops[index]["place"] as? [String: Any],
+                  let position = alternatives.firstIndex(where: { ($0["id"] as? String) == wanted }) else { continue }
+            let chosen = alternatives[position]
+            alternatives[position] = place
+            stops[index]["place"] = chosen
+            stops[index]["alternatives"] = alternatives
+        }
+        route["stops"] = stops
+        guard let data = try? JSONSerialization.data(withJSONObject: route, options: [.sortedKeys]) else { return nil }
+        return String(bytes: data, encoding: .utf8)
+    }
+
+    private static func liveJSON() -> String? {
+        guard liveTurn >= 1, liveTurn <= 3 else { return nil }
+        let chunks = fixture("chat-live-\(liveTurn)").components(separatedBy: "\n\n")
+        guard let chunk = chunks.first(where: { $0.hasPrefix("event: live_route") }),
+              let range = chunk.range(of: "data: ") else { return nil }
+        let json = String(chunk[range.upperBound...])
+        return swapped(json) ?? json
+    }
+
+    private static func chooseLive(ord: Int, placeID: String) -> Answer {
+        guard let json = liveJSON(),
+              let route = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any],
+              let stops = route["stops"] as? [[String: Any]],
+              let stop = stops.first(where: { ($0["ord"] as? Int) == ord }),
+              let alternatives = stop["alternatives"] as? [[String: Any]],
+              alternatives.contains(where: { ($0["id"] as? String) == placeID }) else {
+            return error(422, "invalid_choice", "That alternative is not available.")
+        }
+        liveChoices[ord] = placeID
+        return Answer(body: liveJSON() ?? "{}")
     }
 
     private static func error(_ status: Int, _ code: String, _ message: String) -> Answer {
@@ -159,8 +226,9 @@ enum ChatStub {
                 + "\"finish\":\"stop\",\"proposal_id\":null}")
         }
         let nodes = "[{\"ord\":1,\"kind\":\"fact\",\"text\":\"3 days, Dec 5-7\"}]"
+        let live = liveJSON().map { ",\"live_route\":\($0)" } ?? ""
         return String(chatHeader(chatID, title: "null").dropLast())
-            + ",\"messages\":[\(messages.joined(separator: ","))],\"brief\":\(brief),\"graph_nodes\":\(nodes)}"
+            + ",\"messages\":[\(messages.joined(separator: ","))],\"brief\":\(brief),\"graph_nodes\":\(nodes)\(live)}"
     }
 }
 

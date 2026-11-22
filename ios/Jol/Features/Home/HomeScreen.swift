@@ -14,6 +14,7 @@ struct HomeScreen: View {
     @State private var favoritesOpen = false
     @State private var cardDetent = PlaceCardSheet.cardDetent
     @State private var screenHeight: CGFloat = 874
+    @State private var projection = MapProjection()
 
     var body: some View {
         ZStack {
@@ -23,6 +24,7 @@ struct HomeScreen: View {
                 directions: container.directions,
                 tripMap: container.tripMap,
                 events: container.events,
+                projection: projection,
                 bottomInset: mapBottomInset
             )
             if chatExpanded {
@@ -38,6 +40,18 @@ struct HomeScreen: View {
                     onSelectPlace: { container.places.select($0.summary) }
                 )
             } else {
+                if let live = container.chat.state.liveRoute {
+                    LiveRouteOverlay(
+                        route: live,
+                        projection: projection,
+                        language: container.language.code,
+                        isChoosing: container.chat.isChoosing,
+                        error: container.chat.liveRouteError,
+                        onChoose: { stop, place in container.chat.chooseAlternative(ord: stop.ord, placeID: place.id) },
+                        onOpenPlace: { container.places.select($0.summary) },
+                        onDismissError: { container.chat.dismissLiveRouteError() }
+                    )
+                }
                 overlay
                 attributionLine
             }
@@ -191,7 +205,7 @@ struct HomeScreen: View {
                 ChatPanel(
                     model: container.chat,
                     draft: $draft,
-                    conversationHeight: screenHeight * Self.conversationFraction,
+                    conversationHeight: screenHeight * conversationFraction,
                     showsGuestBanner: showsGuestBanner,
                     onCollapse: { chatExpanded = false },
                     onSend: sendDraft,
@@ -298,6 +312,13 @@ extension HomeScreen {
     /// Space under the overlay for the static attribution line.
     private static let attributionClearance: CGFloat = 26
 
+    /// A live route (Ш-54) needs room on the map above the chat: the card is shorter while it is drawn.
+    private var conversationFraction: CGFloat {
+        container.chat.state.liveRoute == nil ? Self.conversationFraction : Self.liveConversationFraction
+    }
+
+    private static let liveConversationFraction: CGFloat = 0.5
+
     private var chatIsActive: Bool {
         let chat = container.chat
         return !chat.state.isEmpty || chat.isOpening || chat.openFailed
@@ -310,7 +331,7 @@ extension HomeScreen {
         }
         if container.places.selected == nil {
             // The live map keeps its pins above the open conversation.
-            return chatExpanded && chatIsActive ? screenHeight * (Self.conversationFraction + 0.03) : 0
+            return chatExpanded && chatIsActive ? screenHeight * (conversationFraction + 0.03) : 0
         }
         // At accessibility text sizes the card opens at the taller detent (PlaceCardSheet), keep the pin above it.
         let tall = container.directions.isActive || typeSize.isAccessibilitySize

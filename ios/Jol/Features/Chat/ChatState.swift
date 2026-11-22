@@ -52,6 +52,11 @@ struct ChatState: Equatable, Sendable {
     var mapPlaces: [MapPlace] = []
     /// Bumped on every change to `mapPlaces` — the map redraws and animates when it changes.
     var mapVersion = 0
+    /// The route that grows while the tourist talks (Ш-54). It wins over `mapPlaces` for drawing and goes away with
+    /// `route_ready`, when the trip by days takes over.
+    var liveRoute: LiveRoute?
+    /// Bumped on every change to `liveRoute`: the map refits and animates.
+    var liveVersion = 0
     /// Set by `route_ready`: the graph converges into the final node.
     var route: RouteReady?
     /// Bumped on every `trip_updated`; the model refreshes the trip when it changes.
@@ -97,17 +102,18 @@ struct ChatState: Equatable, Sendable {
         case .textDelta(let text):
             appendAssistantText(text)
         case .graphNode(let node):
-            guard !graph.contains(where: { $0.ord == node.ord }) else { return }
-            graph.append(node)
-            graph.sort { $0.ord < $1.ord }
+            addGraphNode(node)
         case .briefUpdated(let brief, let changed):
             let added = ChainNodes.keys(changed: changed, previous: self.brief, current: brief)
             chainOrder = ChainNodes.merged(chainOrder, with: added)
             self.brief = brief
         case .mapPlaces(let reason, let places):
             addMapPlaces(places, replacing: reason == "search")
+        case .liveRoute(let live):
+            setLiveRoute(live)
         case .routeReady(let route):
             self.route = route
+            setLiveRoute(nil)
         case .tripUpdated:
             tripRevision += 1
         case .done:
@@ -117,6 +123,12 @@ struct ChatState: Equatable, Sendable {
         case .unknown:
             break
         }
+    }
+
+    private mutating func addGraphNode(_ node: GraphNode) {
+        guard !graph.contains(where: { $0.ord == node.ord }) else { return }
+        graph.append(node)
+        graph.sort { $0.ord < $1.ord }
     }
 
     private mutating func appendAssistantText(_ text: String) {
@@ -141,6 +153,13 @@ struct ChatState: Equatable, Sendable {
         replaceMapPlaces(next)
     }
 
+    mutating func setLiveRoute(_ live: LiveRoute?) {
+        let live = live?.isEmpty == true ? nil : live
+        guard live != liveRoute else { return }
+        liveRoute = live
+        liveVersion += 1
+    }
+
     mutating func replaceMapPlaces(_ places: [MapPlace]) {
         guard places != mapPlaces else { return }
         mapPlaces = places
@@ -162,6 +181,8 @@ struct ChatState: Equatable, Sendable {
         brief = detail.brief
         chainOrder = ChainNodes.normalized(detail.brief?.filledOrder ?? [])
         self.route = route
+        // A finished plan replaces the live route.
+        if route == nil, let live = detail.liveRoute, !live.isEmpty { liveRoute = live }
         self.proposals = proposals
         for message in messages {
             if let id = message.proposalID, self.proposals[id] == nil { self.proposals[id] = .pending }

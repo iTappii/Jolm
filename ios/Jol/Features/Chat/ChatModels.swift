@@ -105,10 +105,13 @@ struct ChatDetail: Decodable, Equatable, Sendable {
     let messages: [ChatMessageDTO]
     let brief: ChatBrief?
     let graphNodes: [GraphNode]
+    /// The live route as the server kept it (Ш-54); `nil` before the first stop.
+    let liveRoute: LiveRoute?
 
     enum CodingKeys: String, CodingKey {
         case id, title, messages, brief
         case graphNodes = "graph_nodes"
+        case liveRoute = "live_route"
     }
 
     init(from decoder: Decoder) throws {
@@ -118,6 +121,7 @@ struct ChatDetail: Decodable, Equatable, Sendable {
         messages = try values.decodeIfPresent([ChatMessageDTO].self, forKey: .messages) ?? []
         brief = try values.decodeIfPresent(ChatBrief.self, forKey: .brief)
         graphNodes = try values.decodeIfPresent([GraphNode].self, forKey: .graphNodes) ?? []
+        liveRoute = try? values.decodeIfPresent(LiveRoute.self, forKey: .liveRoute)
     }
 }
 
@@ -277,6 +281,7 @@ enum ChatEvent: Equatable, Sendable {
     /// The brief and the names of the fields this update changed.
     case briefUpdated(ChatBrief, changed: [String])
     case mapPlaces(reason: String, places: [MapPlace])
+    case liveRoute(LiveRoute)
     case routeReady(RouteReady)
     case tripUpdated(TripUpdated)
     case done
@@ -299,6 +304,7 @@ enum ChatEvent: Equatable, Sendable {
         case "map_places":
             return (try? decoder.decode(MapPlacesPayload.self, from: data))
                 .map { .mapPlaces(reason: $0.reason ?? "chosen", places: $0.places) }
+        case "live_route": return (try? decoder.decode(LiveRoute.self, from: data)).map { .liveRoute($0) }
         case "route_ready": return (try? decoder.decode(RouteReady.self, from: data)).map { .routeReady($0) }
         case "trip_updated": return (try? decoder.decode(TripUpdated.self, from: data)).map { .tripUpdated($0) }
         case "done": return .done

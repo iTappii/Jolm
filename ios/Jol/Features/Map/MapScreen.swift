@@ -7,10 +7,13 @@ struct MapScreen: View {
     var directions: DirectionsModel?
     var tripMap: TripMapModel?
     var events: EventsModel?
+    var projection: MapProjection?
     var bottomInset: CGFloat = 0
     @Environment(\.colorScheme) private var colorScheme
 
     private var tripOpen: Bool { tripMap?.isOpen == true }
+    /// The live route (Ш-54) wins over the plain chat pins for drawing; the full route map hides it.
+    private var liveRoute: LiveRoute? { tripOpen ? nil : chat?.state.liveRoute }
 
     var body: some View {
         MapView(
@@ -25,8 +28,10 @@ struct MapScreen: View {
             directionOrigin: directions?.origin,
             directionVersion: directions?.lineVersion ?? 0,
             directionFitVersion: directions?.fitVersion ?? 0,
-            chatPlaces: tripOpen ? [] : chat?.state.mapPlaces ?? [],
-            chatPlacesVersion: tripOpen ? -3 : chat?.state.mapVersion ?? 0,
+            chatPlaces: tripOpen || liveRoute != nil ? [] : chat?.state.mapPlaces ?? [],
+            chatPlacesVersion: tripOpen ? -3 : liveRoute != nil ? -4 : chat?.state.mapVersion ?? 0,
+            liveRoute: liveRoute,
+            projection: projection,
             tripStops: tripOpen ? tripMap?.stops ?? [] : [],
             tripLines: tripOpen ? tripMap?.lines ?? [] : [],
             tripColor: tripMap?.dayColor ?? JolColor.brandUIColor,
@@ -77,6 +82,12 @@ struct MapScreen: View {
                     .accessibilityLabel(Text(verbatim: "chat-map-places"))
                     .accessibilityValue(Text(verbatim: String(chat?.state.mapPlaces.count ?? 0)))
                     .accessibilityIdentifier("chat-map-places")
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .accessibilityElement()
+                    .accessibilityLabel(Text(verbatim: "live-route-stops"))
+                    .accessibilityValue(Text(verbatim: String(liveRoute?.stops.count ?? 0)))
+                    .accessibilityIdentifier("live-route-stops")
             }
         }
         #endif

@@ -28,6 +28,14 @@ struct ChatService: Sendable {
         api.stream(try Endpoint.post("v1/chats/\(Self.path(chatID))/messages", json: ["content": text]))
     }
 
+    /// An alternative becomes the stop (Ш-54); the answer is the whole live route again.
+    func chooseLiveStop(chatID: UUID, ord: Int, placeID: UUID) async throws -> LiveRoute {
+        try await api.send(Endpoint.post(
+            "v1/chats/\(Self.path(chatID))/live-route/choose",
+            json: ChooseBody(ord: ord, placeID: placeID.uuidString.lowercased())
+        ))
+    }
+
     // MARK: - Guest
 
     struct GuestMessage: Encodable, Equatable, Sendable {
@@ -97,4 +105,14 @@ struct ChatService: Sendable {
     }
 
     private static func path(_ id: UUID) -> String { id.uuidString.lowercased() }
+}
+
+private struct ChooseBody: Encodable {
+    let ord: Int
+    let placeID: String
+
+    enum CodingKeys: String, CodingKey {
+        case ord
+        case placeID = "place_id"
+    }
 }

@@ -22,6 +22,10 @@ struct MapView: UIViewRepresentable {
     /// changes whenever the list does.
     var chatPlaces: [MapPlace] = []
     var chatPlacesVersion = 0
+    /// The live route (Ш-54) is drawn by `LiveRouteOverlay`; the map only fits its camera to it and reports every
+    /// camera frame through `projection`.
+    var liveRoute: LiveRoute?
+    var projection: MapProjection?
     /// The full route map (Ш-37): the stops and legs of the shown day, in the day's colour. `tripVersion` changes when
     /// they do, `tripFitVersion` when the camera should fit them again.
     var tripStops: [TripMapStop] = []
@@ -114,6 +118,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     private var appliedDirectionVersion = -1
     private var appliedFitVersion = -1
     private var appliedChatVersion = -1
+    var appliedLiveRoute: LiveRoute?
     var appliedTripVersion = -1
     var appliedTripFitVersion = -1
     var appliedEventsVersion = -1
@@ -149,6 +154,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedDirectionVersion = -1
         appliedFitVersion = -1
         appliedChatVersion = -1
+        appliedLiveRoute = nil
         appliedTripVersion = -1
         appliedTripFitVersion = -1
         appliedEventsVersion = -1
@@ -157,11 +163,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         reportRegion(mapView)
     }
 
-    func mapView(_ mapView: MLNMapView, regionDidChangeAnimated animated: Bool) {
-        reportRegion(mapView)
-    }
-
-    private func reportRegion(_ map: MLNMapView) {
+    func reportRegion(_ map: MLNMapView) {
         let bounds = map.visibleCoordinateBounds
         parent?.onRegionChange(GeoBounds(
             west: bounds.sw.longitude, south: bounds.sw.latitude, east: bounds.ne.longitude, north: bounds.ne.latitude
@@ -282,6 +284,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             appliedChatVersion = parent.chatPlacesVersion
             applyChatPlaces(parent.chatPlaces, in: style, map: map)
         }
+
+        applyLiveRoute(parent, map: map)
 
         applyTripAndEvents(parent, style: style, map: map)
 

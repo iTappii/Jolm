@@ -22,6 +22,9 @@ final class ChatModel {
     /// A saved chat is being fetched (reopen from the side panel).
     private(set) var isOpening = false
     private(set) var openFailed = false
+    /// A stop swap (Ш-54) is on its way, and the last one that failed: shown as a toast, never blocks the map.
+    private(set) var isChoosing = false
+    private(set) var liveRouteError: LiveRouteError?
 
     @ObservationIgnored private let service: ChatService
     @ObservationIgnored private let language: @MainActor () -> String
@@ -178,6 +181,8 @@ final class ChatModel {
         isOpening = false
         openFailed = false
         transcriptIsGuest = true
+        isChoosing = false
+        liveRouteError = nil
     }
 
     /// Reopens a saved chat: messages, brief and graph from `GET /v1/chats/{id}`; the converged graph and the
@@ -241,6 +246,8 @@ final class ChatModel {
             var next = loaded.state
             next.mapPlaces = state.mapPlaces
             next.mapVersion = state.mapVersion
+            next.liveRoute = state.liveRoute
+            next.liveVersion = state.liveVersion
             if let route = state.route, next.route == nil || next.route?.tripID == route.tripID { next.route = route }
             state = next
             if let id = loaded.tripID { tripID = id }
@@ -248,7 +255,52 @@ final class ChatModel {
     }
 }
 
+/// Why swapping a live stop failed (the view turns it into a short sentence).
+enum LiveRouteError: Equatable, Sendable {
+    /// The alternative or the route is gone (404 / 409 / 422): the route was re-read.
+    case outdated
+    /// 409 `chat_busy`: the assistant is still writing; the route stays, try again in a moment.
+    case busy
+    case network
+}
+
 extension ChatModel {
+    // MARK: - Live route (Ш-54)
+
+    /// «Choose this instead»: the alternative `placeID` replaces stop `ord`. The answer is the whole route again.
+    func chooseAlternative(ord: Int, placeID: UUID) {
+        guard let chatID, !isChoosing, state.liveRoute != nil else { return }
+        isChoosing = true
+        liveRouteError = nil
+        let generation = generation
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let live = try await service.chooseLiveStop(chatID: chatID, ord: ord, placeID: placeID)
+                guard generation == self.generation else { return }
+                state.setLiveRoute(live)
+            } catch {
+                guard generation == self.generation else { return }
+                if case .server(409, "chat_busy", _)? = error as? APIError {
+                    liveRouteError = .busy
+                } else if case .server(let status, _, _)? = error as? APIError, [404, 409, 422].contains(status) {
+                    liveRouteError = .outdated
+                    if let detail = try? await service.chat(id: chatID), generation == self.generation,
+                       !state.isConverged {
+                        state.setLiveRoute(detail.liveRoute)
+                    }
+                } else {
+                    liveRouteError = .network
+                }
+            }
+            if generation == self.generation { isChoosing = false }
+        }
+    }
+
+    func dismissLiveRouteError() {
+        liveRouteError = nil
+    }
+
     // MARK: - Recent chats
 
     func loadRecent(silently: Bool = false) {

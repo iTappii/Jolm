@@ -3919,16 +3919,6 @@
         }
       }
     },
-    "Loading" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Загрузка"
-          }
-        }
-      }
-    },
     "Page %lld of %lld" : {
       "localizations" : {
         "ru" : {
@@ -3985,6 +3975,116 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Показывает этот путь на карте"
+          }
+        }
+      }
+    },
+    "Choose this instead" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать вместо этого"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подробнее"
+          }
+        }
+      }
+    },
+    "That choice is no longer available." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот вариант уже недоступен."
+          }
+        }
+      }
+    },
+    "Couldn't change the stop. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось заменить остановку. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "on foot" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "пешком"
+          }
+        }
+      }
+    },
+    "by public transport" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на транспорте"
+          }
+        }
+      }
+    },
+    "by car" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на машине"
+          }
+        }
+      }
+    },
+    "From %lld to %lld: %@ %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "От %lld до %lld: %@ %@"
+          }
+        }
+      }
+    },
+    "Stop %lld: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановка %lld: %@"
+          }
+        }
+      }
+    },
+    "Alternative: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вариант: %@"
+          }
+        }
+      }
+    },
+    "The assistant is still answering. Try again in a moment." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ассистент ещё отвечает. Попробуйте через пару секунд."
           }
         }
       }
