@@ -13,7 +13,7 @@ RAIN_PROBABILITY = 0.5  # an hour counts as rainy from this precipitation probab
 
 class Forecast(Protocol):
     def rain_probability(self, day: date, hour: int) -> Optional[float]:
-        """0..1 for the local hour (Asia/Almaty), or None when unknown."""
+        """0..1 for the local hour (region time zone), or None when unknown."""
 
 
 class UnknownForecast:

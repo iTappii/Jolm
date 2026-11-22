@@ -11,14 +11,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from app import worker
-from app.chat.brief import today_almaty
+from app.chat.brief import today_in_region
 from app.db import fetch_all, fetch_one
 from app.live import clock, deps, rules
 from app.live import jobs as live_jobs
 from app.providers.weather.base import DayWeather, ForecastView, HourWeather, WeatherUnavailable
 from app.push import ApnsProvider, LogPushProvider, PushError, PushMessage, PushOutcome, make_push
+from app.regions import default_region
 from app.routing import FakeRouter
-from app.routing.service import ALMATY_TZ
 from tests.conftest import TransactionalDatabase
 from tests.test_places import add_place
 from tests.test_trips import brief_call, build, day, event, signing_secret, start  # noqa: F401
@@ -73,11 +73,11 @@ def isolated():
 
 
 def at(d, hh, mm=0):
-    return datetime.combine(d, time(hh, mm), tzinfo=ALMATY_TZ)
+    return datetime.combine(d, time(hh, mm), tzinfo=default_region().tz)
 
 
 def today():
-    return today_almaty()  # the real date: trips are built relative to it
+    return today_in_region()  # the real date: trips are built relative to it
 
 
 async def built(chat_env, conn, **brief):

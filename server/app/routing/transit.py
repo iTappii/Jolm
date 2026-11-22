@@ -1,6 +1,6 @@
 """Public transport search (TECH_PLAN Ш-21): A -> B, at most one transfer. All times approximate.
 
-There is no official GTFS/timetable for Almaty, so the model is deliberately simple:
+There is no official GTFS/timetable for the region, so the model is deliberately simple:
 
     total = walk A->boarding stop            (RoutingProvider pedestrian matrix, real streets)
           + wait  = headway / 2              (average wait for a vehicle)
@@ -14,7 +14,7 @@ Every option is flagged ``approximate=True``. Headways/speeds are per-route valu
 Direction: an OSM relation is one direction. A line (kind+ref) mapped with a single relation gets
 its opposite direction inferred (reversed stop list, ``Route.inferred_reverse``).
 
-Design choice, in-memory network: Almaty has ~1k stops and ~120 route directions (~5k route-stop
+Design choice, in-memory network: one region has ~1k stops and ~120 route directions (~5k route-stop
 rows). The network is read with two SQL queries once per process (``get_network`` caches it for
 ``CACHE_TTL_S``; the OSM import is a rare offline job) and searched in Python: finding 1-transfer
 itineraries is a graph join that would otherwise need several round trips or a large self-join per
@@ -31,10 +31,11 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from app.db import fetch_all
+from app.regions import default_region
 from app.routing.base import Point, RoutingError, RoutingProvider
 from app.routing.fake import encode_polyline6, haversine_m
 
@@ -56,16 +57,15 @@ SERVICE_HOURS = {
     "trolleybus": (6.0, 23.5),
     "tram": (6.0, 23.5),
 }
-# Almaty Airport's published operating hours. OSM relation IDs distinguish night bus 3.
+# The airport's published operating hours. OSM relation IDs distinguish night bus 3.
 AIRPORT_DAY_RELATION = 3014420
 AIRPORT_NIGHT_RELATION = 19593601
 AIRPORT_SERVICE_HOURS = {
     AIRPORT_DAY_RELATION: (6.0, 23.0),
     AIRPORT_NIGHT_RELATION: (23.0, 6.0),
 }
-ALMATY_TZ_OFFSET = timezone(timedelta(hours=5))  # UTC+5 since 2024-03; used if tzdata is missing
 CACHE_TTL_S = 600.0
-GRID_DEG = 0.004  # ~440 m lat / ~325 m lon at Almaty: cell >= TRANSFER_RADIUS_M
+GRID_DEG = 0.004  # ~440 m lat / ~325 m lon at the region: cell >= TRANSFER_RADIUS_M
 
 
 def hop_speed_boost(hop_m: float) -> float:
@@ -185,7 +185,7 @@ class TransitNetwork:
             r = routes[route_ix[row["route_id"]]]
             r.stops.append(stop_ix[row["stop_id"]])
         routes = [r for r in routes if len(r.stops) >= 2]
-        # OSM maps many Almaty lines as one relation only. A line with a single relation gets its
+        # OSM maps many lines as one relation only. A line with a single relation gets its
         # opposite direction inferred (same stops reversed; opposite-side stops are close enough).
         by_line: Dict[Tuple[str, str, bool], List[Route]] = {}
         for r in routes:
@@ -337,11 +337,9 @@ def _local_hour(depart: Optional[datetime]) -> Optional[float]:
         return None
     if depart.tzinfo is not None:
         try:
-            from zoneinfo import ZoneInfo
-
-            depart = depart.astimezone(ZoneInfo("Asia/Almaty"))
-        except Exception:  # tzdata missing
-            depart = depart.astimezone(ALMATY_TZ_OFFSET)
+            depart = depart.astimezone(default_region().tz)
+        except Exception:  # tzdata missing: keep the offset the caller gave
+            pass
     return depart.hour + depart.minute / 60.0
 
 
@@ -437,7 +435,7 @@ async def find_transit_options(
 
     Options not faster than walking the whole way are dropped (``drop_slower_than_walking``), so an
     empty list can also mean "just walk". ``depart`` only matters for service hours (metro
-    06:20-24:00, buses 06:00-23:30, Almaty time;
+    06:20-24:00, buses 06:00-23:30, local time;
     naive datetimes are taken as local). Returns [] if nothing is within walking range of both ends.
     """
     hour = _local_hour(depart)

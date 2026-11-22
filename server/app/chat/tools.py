@@ -11,9 +11,9 @@ from app.events import service as events_service
 from app.live import clock
 from app.places import service, sql
 from app.planner import outside
-from app.planner.area import ALMATY_BBOX
 from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
+from app.regions import default_region
 
 SEARCH_PLACES = "search_places"
 UPDATE_TRIP_BRIEF = "update_trip_brief"
@@ -23,7 +23,9 @@ SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
 MAX_NODE_CHARS = 80
-OUTSIDE_NOTE = "outside the area Jol plans in this version (Almaty and nearby mountains)"
+OUTSIDE_NOTE = (
+    "outside the area Jol plans in this version (the default region and nearby mountains)"
+)
 
 
 class SearchPlacesArgs(BaseModel):
@@ -57,14 +59,15 @@ class NoArgs(BaseModel):
 
 SEARCH_PLACES_SPEC = ToolSpec.from_model(
     SEARCH_PLACES,
-    "Search the places database of Almaty by name part and/or category. Use it to answer "
+    "Search the places database of the trip region by name part and/or category. Use it to answer "
     "questions about real places; never invent places, prices or hours. A well-known place "
-    "outside Almaty comes back as outside_area instead of places.",
+    "outside the region comes back as outside_area instead of places.",
     SearchPlacesArgs,
 )
 SEARCH_EVENTS_SPEC = ToolSpec.from_model(
     SEARCH_EVENTS,
-    "List events (concerts, festivals, exhibitions) in Almaty on given days. Offer them only when "
+    "List events (concerts, festivals, exhibitions) in the trip region on given days. "
+    "Offer them only when "
     "they fit what the person likes. An event with is_ad true is an advertisement: say so when "
     "you mention it using its ad_label.",
     SearchEventsArgs,
@@ -108,7 +111,7 @@ async def search_places(
     if len(query) < 2 and not category:
         return {"error": "give a query of at least 2 characters or a category"}, []
     far = None if category else outside.outside_wish(query)
-    if far is not None:  # Ш-56: not in the database because v1 covers Almaty only
+    if far is not None:  # Ш-56: not in the database because v1 covers one region only
         return {"places": [], "outside_area": far.as_json(locale), "note": OUTSIDE_NOTE}, []
     params = {
         "bbox": False,
@@ -170,7 +173,9 @@ async def search_events(
         if default_from:
             rows = await trip_events(conn, start, end, trip_pace, limit=args.limit)
         else:
-            rows = await events_service.load_events(conn, start, end, ALMATY_BBOX, limit=args.limit)
+            rows = await events_service.load_events(
+                conn, start, end, default_region().bbox, limit=args.limit
+            )
     items = [events_service.event_json(r, locale) for r in rows]
     if not items:
         return {"events": [], "note": "no events on those days"}

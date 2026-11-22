@@ -17,7 +17,7 @@ from app.chat.brief import (
     empty_brief,
     fill_entries,
     merge_filled_order,
-    today_almaty,
+    today_in_region,
 )
 from app.config import get_settings
 from app.db import fetch_all, fetch_one
@@ -34,7 +34,7 @@ def signing_secret(monkeypatch):
 
 
 def day(offset):
-    return (today_almaty() + timedelta(days=offset)).isoformat()
+    return (today_in_region() + timedelta(days=offset)).isoformat()
 
 
 def use(env, **kwargs):
@@ -334,7 +334,7 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "SELECT * FROM chat_messages WHERE chat_id = %s AND role = 'assistant' ORDER BY id LIMIT 1",
         (chat["id"],),
     )
-    assert row["prompt_id"] == "trip_brief.en.v5" and row["finish"] == "stop"
+    assert row["prompt_id"] == "trip_brief.en.v6" and row["finish"] == "stop"
     assert row["input_tokens"] > 0 and row["output_tokens"] > 0
     assert [t["name"] for t in row["tool_calls"]] == ["update_trip_brief", "add_graph_node"]
     assert all(t["ok"] for t in row["tool_calls"])
@@ -715,7 +715,7 @@ def test_brief_data_block_escapes_and_caps():
 
 
 def test_apply_update_reports_what_changed():
-    today = today_almaty()
+    today = today_in_region()
     brief = empty_brief()
     new, changed = apply_update(brief, BriefUpdate(budget_kzt=5, must_haves=["Plov"]), today)
     assert changed == ["budget_kzt", "must_haves"] and new["must_haves"] == ["Plov"]
@@ -725,7 +725,7 @@ def test_apply_update_reports_what_changed():
 
 
 def test_stored_past_dates_do_not_block_other_updates():
-    today = today_almaty()
+    today = today_in_region()
     stale = dict(
         empty_brief(), start_date=today - timedelta(days=9), end_date=today - timedelta(days=5)
     )
@@ -748,7 +748,7 @@ def test_today_is_the_almaty_date(monkeypatch):
             )  # 01:00 next day
 
     monkeypatch.setattr(brief_module, "datetime", Clock)
-    assert brief_module.today_almaty().isoformat() == "2026-11-22"
+    assert brief_module.today_in_region().isoformat() == "2026-11-22"
 
 
 def test_fill_entries_and_merge_keep_the_order_of_answers():

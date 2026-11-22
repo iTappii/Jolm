@@ -57,7 +57,7 @@ from app.chat.brief import (
     brief_data_block,
     fill_entries,
     public_brief,
-    today_almaty,
+    today_in_region,
 )
 from app.chat.deps import make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
@@ -245,7 +245,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
 
     locale = chat["locale"]
     prompt = load_prompt(TRIP_BRIEF, locale)
-    system = prompt.render(today_almaty())  # static per prompt version; no user text in it
+    system = prompt.render(today_in_region())  # static per prompt version; no user text in it
     history.insert(0, Message(role="user", content=brief_data_block(brief)))
     if memory_block is not None:  # Ш-41: data for the model, like the brief, never in `system`
         history.insert(0, Message(role="user", content=memory_block))
@@ -367,7 +367,7 @@ async def _update_trip_brief(
     async with db.transaction() as conn:
         current = await store.lock_brief(conn, chat_id)
         try:
-            new, changed = apply_update(current, args, today_almaty())
+            new, changed = apply_update(current, args, today_in_region())
         except BriefError as exc:
             return ToolOutcome({"ok": False, "error": str(exc)}, ok=False, error=str(exc))
         far = _new_outside_wishes(current, new) if "must_haves" in changed else []
@@ -379,7 +379,7 @@ async def _update_trip_brief(
                 conn, "wish_outside_area", clock.now(), props={"place": place.id}
             )
     result = {"ok": True, "changed": changed, "brief": public_brief(new)}
-    if far:  # the model says honestly that v1 plans Almaty only (prompt v5)
+    if far:  # the model says honestly that v1 plans one region only (prompt v5)
         result["outside_area"] = [dict(place.as_json(locale), wish=wish) for wish, place in far]
     events = []
     if changed:

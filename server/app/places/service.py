@@ -2,11 +2,10 @@
 
 from datetime import datetime, time
 from typing import Dict, Iterable, List, Optional, Tuple
-from zoneinfo import ZoneInfo
 
-ALMATY_TZ = ZoneInfo("Asia/Almaty")
+from app.regions import default_region
 
-# Max bbox span in degrees (protects the server: Almaty region fits easily).
+# Max bbox span in degrees (protects the server: one region fits easily).
 MAX_BBOX_SPAN_DEG = 2.0
 
 _ROUND_CLOCK_CLOSE = time(23, 59)
@@ -70,7 +69,7 @@ def _covers(opens: time, closes: time, t: time) -> bool:
 def is_open_now(
     hours: List[Tuple[int, time, time]], now: Optional[datetime] = None
 ) -> Optional[bool]:
-    """Is the place open at `now` (default: current time in Asia/Almaty)?
+    """Is the place open at `now` (default: current time in the region time zone)?
 
     `hours` = (weekday 0=Mon, opens, closes). closes <= opens -> past midnight (spills into
     the next weekday); 00:00-23:59 -> round the clock. None when there are no hours at all.
@@ -78,11 +77,11 @@ def is_open_now(
     if not hours:
         return None
     if now is None:
-        now = datetime.now(ALMATY_TZ)
+        now = datetime.now(default_region().tz)
     elif now.tzinfo is None:
-        now = now.replace(tzinfo=ALMATY_TZ)
+        now = now.replace(tzinfo=default_region().tz)
     else:
-        now = now.astimezone(ALMATY_TZ)
+        now = now.astimezone(default_region().tz)
     today = now.weekday()
     yesterday = (today - 1) % 7
     t = now.time().replace(second=0, microsecond=0, tzinfo=None)

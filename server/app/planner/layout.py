@@ -29,7 +29,6 @@ from uuid import UUID
 
 from app.planner import hours as hrs
 from app.planner import scoring
-from app.planner.area import ALMATY_CENTRE
 from app.planner.model import Place
 from app.planner.travel import (
     LegProvider,
@@ -39,10 +38,10 @@ from app.planner.travel import (
     pick_default,
 )
 from app.planner.weather import Forecast, UnknownForecast, is_rainy
+from app.regions import default_region
 from app.routing.base import Point
 from app.routing.fake import haversine_m
 from app.routing.schemas import DirectionOption
-from app.routing.service import ALMATY_TZ
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +78,7 @@ class Stop:  # -> trip_items
     place: Place
     kind: str  # "activity" | "meal"
     meal: Optional[str]  # "lunch" | "dinner" | None
-    start: datetime  # Asia/Almaty
+    start: datetime  # region time zone
     end: datetime
     visit_min: int
     must_have: bool
@@ -125,7 +124,7 @@ class TripLayout:
     days: List[DayPlan]
     unplaced: List[Unplaced] = field(default_factory=list)
     warnings: List[LayoutWarning] = field(default_factory=list)
-    start_point: Point = ALMATY_CENTRE
+    start_point: Point = field(default_factory=lambda: default_region().centre)
     start_point_default: bool = True
     travel_estimated: bool = False
 
@@ -574,7 +573,9 @@ def _drop(
 
 # --- timing with real legs --------------------------------------------------------------
 def _at(day: date, minutes: int) -> datetime:
-    return datetime.combine(day, time(0, 0), tzinfo=ALMATY_TZ) + timedelta(minutes=minutes)
+    return datetime.combine(day, time(0, 0), tzinfo=default_region().tz) + timedelta(
+        minutes=minutes
+    )
 
 
 async def _time_day(
@@ -719,7 +720,7 @@ async def _plan_once(
         cap=scoring.ACTIVITIES_PER_DAY[pace],
         hours=hours,
         forecast=forecast or UnknownForecast(),
-        start_point=start_point or ALMATY_CENTRE,
+        start_point=start_point or default_region().centre,
     )
     layout = TripLayout(
         days=[], start_point=ctx.start_point, start_point_default=start_point is None
@@ -802,7 +803,7 @@ async def retime_day(
         cap=scoring.ACTIVITIES_PER_DAY[pace],
         hours=hours,
         forecast=forecast or UnknownForecast(),
-        start_point=start_point or ALMATY_CENTRE,
+        start_point=start_point or default_region().centre,
     )
     order = [
         ctx.make_item(s.place, day, s.kind, s.must_have, rank, s.meal)

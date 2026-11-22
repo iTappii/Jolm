@@ -12,7 +12,7 @@ from uuid import UUID
 from app.analytics import events
 from app.analytics.schemas import EventBatch
 from app.db import execute, fetch_all, fetch_one
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 
 # A check-in counts as a visit inside the trip item's time window +- this much. The same
 # number is in the `analytics_visits` view (a test keeps them equal).
@@ -208,7 +208,7 @@ async def anonymize_user(conn, user_id: UUID) -> None:
 
 
 def period(start: Optional[date], end: Optional[date], today: date):
-    """Local (Almaty) calendar days, both inclusive -> [start, end) timestamps and the dates.
+    """Local (region) calendar days, both inclusive -> [start, end) timestamps and the dates.
 
     Defaults to the last DEFAULT_PERIOD_DAYS ending today; an inverted range is swapped.
     """
@@ -216,8 +216,8 @@ def period(start: Optional[date], end: Optional[date], today: date):
     start = start or end - timedelta(days=DEFAULT_PERIOD_DAYS - 1)
     if start > end:
         start, end = end, start
-    lo = datetime.combine(start, time.min, tzinfo=ALMATY_TZ)
-    hi = datetime.combine(end + timedelta(days=1), time.min, tzinfo=ALMATY_TZ)
+    lo = datetime.combine(start, time.min, tzinfo=default_region().tz)
+    hi = datetime.combine(end + timedelta(days=1), time.min, tzinfo=default_region().tz)
     return start, end, lo, hi
 
 

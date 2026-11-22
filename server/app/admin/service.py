@@ -12,7 +12,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from app.db import execute, fetch_all, fetch_one
-from app.planner.area import ALMATY_BBOX
+from app.regions import default_region
 
 from . import sql
 
@@ -465,7 +465,7 @@ def validate_event(form: Mapping[str, str]) -> Tuple[Dict[str, Any], Errors]:
 
 
 def _parse_event_point(form: Mapping[str, str], errors: Errors):
-    """Own coordinates of an event: both or none, inside the Almaty area."""
+    """Own coordinates of an event: both or none, inside the region."""
     raw_lat, raw_lon = (form.get("lat") or "").strip(), (form.get("lon") or "").strip()
     if not raw_lat and not raw_lon:
         return None, None
@@ -474,9 +474,9 @@ def _parse_event_point(form: Mapping[str, str], errors: Errors):
     except ValueError:
         errors["lat"] = "Нужны числа: широта и долгота"
         return None, None
-    west, south, east, north = ALMATY_BBOX
+    west, south, east, north = default_region().bbox
     if not (south <= lat <= north and west <= lon <= east):
-        errors["lat"] = "Точка вне Алматы"
+        errors["lat"] = "Точка вне региона (%s)" % default_region().name_ru
         return None, None
     return lat, lon
 

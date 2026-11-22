@@ -11,6 +11,7 @@ from app.analytics import events, service
 from app.config import get_settings
 from app.db import fetch_all, fetch_one
 from app.live import clock
+from app.regions import default_region
 from tests.test_admin import logged_in
 from tests.test_chat import sign_in
 from tests.test_places import add_place
@@ -347,7 +348,7 @@ async def test_place_visits_report_for_a_period(conn):
     ]
     assert report[0]["last_visit_at"] == NOW + timedelta(minutes=40)
     # a period that ends the day before: nothing; a one-day period around today: everything
-    day = NOW.astimezone(service.ALMATY_TZ).date()
+    day = NOW.astimezone(default_region().tz).date()
     _, _, lo2, hi2 = service.period(day - timedelta(days=5), day - timedelta(days=1), day)
     assert await service.place_visits_report(conn, lo2, hi2) == []
     _, _, lo3, hi3 = service.period(day, day, day)

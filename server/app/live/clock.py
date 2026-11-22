@@ -3,7 +3,7 @@
 from datetime import date, datetime, timezone
 from typing import Callable, Optional
 
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 
 _override: Optional[Callable[[], datetime]] = None
 
@@ -18,4 +18,4 @@ def set_clock(fn: Optional[Callable[[], datetime]]) -> None:
 
 
 def local_today(moment: Optional[datetime] = None) -> date:
-    return (moment or now()).astimezone(ALMATY_TZ).date()
+    return (moment or now()).astimezone(default_region().tz).date()

@@ -31,6 +31,8 @@ from app.places.api import router as places_router
 from app.providers.storage import make_storage
 from app.providers.weather import OpenMeteoProvider
 from app.ratelimit import RateRule
+from app.regions import refresh as refresh_regions
+from app.regions.api import router as regions_router
 from app.routing import make_router
 from app.routing.api import router as directions_router
 from app.submissions.api import router as submissions_router
@@ -56,6 +58,8 @@ async def lifespan(app: FastAPI):
         stack.push_async_callback(db.close)
         await db.open()
         app.state.db = db
+        async with db.transaction() as conn:
+            await refresh_regions(conn)  # Ш-57: region constants come from the database
         routing_provider = make_router(settings.valhalla_url)
         stack.push_async_callback(routing_provider.aclose)
         app.state.routing_provider = routing_provider
@@ -88,6 +92,7 @@ def create_app() -> FastAPI:
     app.state.analytics_limiters = make_analytics_limiters(settings)
     app.state.geocode_limiter = RateRule("geocode", GEOCODE_LIMIT, 60)
     app.include_router(system_router)
+    app.include_router(regions_router)
     app.include_router(auth_router)
     app.include_router(otp_router)
     app.include_router(apple_router)

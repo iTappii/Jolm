@@ -2,7 +2,7 @@
 
     GET /events?from=YYYY-MM-DD&to=YYYY-MM-DD&bbox=west,south,east,north
 
-`from` defaults to today (Almaty), `to` to `from` + 14 days (at most 62 days apart); both are
+`from` defaults to today (region), `to` to `from` + 14 days (at most 62 days apart); both are
 inclusive local dates. An event is listed while it overlaps the window. Answer:
 
     {"items": [{"id", "title", "title_lang", "description", "starts_at", "ends_at",

@@ -2,7 +2,7 @@
 
 Hours rows are `(weekday 0=Mon, opens, closes)` as in `place_hours` (see places.service
 .is_open_now): closes <= opens runs past midnight, 00:00-23:59 is round the clock. All times are
-Asia/Almaty wall-clock; the layout never converts, it works on local dates.
+region wall-clock; the layout never converts, it works on local dates.
 """
 
 from datetime import date, time

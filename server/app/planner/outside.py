@@ -1,10 +1,11 @@
 """Known places of Kazakhstan outside the v1 area (Ш-56, SSOT §5.4 «до запуска межгорода»).
 
-v1 plans Almaty and the mountains next to it (`area.ALMATY_BBOX`). When a wish names a well-known
-place outside that area (Charyn, Kolsai, Turkistan…), the database has nothing for it, and the
-category reading would otherwise hand the wish some park in Almaty. This small fixed list lets the
-search, the live route and the generator say "this is outside the area Jol plans for now" instead
-of "nothing found", and lets analytics count which regions people ask for (SSOT §16.16).
+v1 plans the default region and the mountains next to it (`default_region().bbox`). When a
+wish names a well-known place outside that area (Charyn, Kolsai, Turkistan…), the database has
+nothing for it, and the category reading would otherwise hand the wish some park in the default
+region. This small fixed list lets the search, the live route and the generator say "this is
+outside the area Jol plans for now" instead of "nothing found", and lets
+analytics count which regions people ask for (SSOT §16.16).
 
 The text comes from the tourist through the model, so it is matched against fixed stems only (the
 same rules as `planner.interests`): a stem matches a word that starts with it, a stem with a space
@@ -17,8 +18,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.planner.area import ALMATY_CENTRE
 from app.planner.interests import SPECIFIC_FOOD, resolve
+from app.regions import default_region
 
 EARTH_RADIUS_KM = 6371.0
 FOOD_SLUGS = SPECIFIC_FOOD | {"food"}
@@ -47,8 +48,8 @@ class OutsidePlace:
         return self.region_en if locale == "en" else self.region_ru
 
     def distance_km(self) -> int:
-        """Straight line from the centre of Almaty, rounded to 10 km (not a road distance)."""
-        lat1, lon1 = map(math.radians, ALMATY_CENTRE)
+        """Straight line from the region centre, rounded to 10 km (not a road distance)."""
+        lat1, lon1 = map(math.radians, default_region().centre)
         lat2, lon2 = math.radians(self.lat), math.radians(self.lon)
         a = (
             math.sin((lat2 - lat1) / 2) ** 2
@@ -153,7 +154,7 @@ def match(text: Optional[str]) -> Optional[OutsidePlace]:
     return None
 
 
-# Words that make "Туркестан" a venue or a street in Almaty, not the city: food and drink come
+# Words that make "Туркестан" a venue or a street in the region, not the city: food and drink come
 # from `planner.interests`, the rest is here.
 VENUE_STEMS = (
     "кафе", "cafe", "café", "столов", "чайхан", "отел", "hotel", "гостиниц", "хостел", "hostel",
@@ -162,7 +163,7 @@ VENUE_STEMS = (
 
 
 def names_a_venue(text: Optional[str]) -> bool:
-    """The text is about a café, hotel, shop or street in Almaty named after a place
+    """The text is about a café, hotel, shop or street in the region named after a place
     ("ресторан Туркестан", "улица Туркестанская"), not a trip to the place itself."""
     norm = " ".join((text or "").casefold().split())
     if resolve([norm]).slugs & FOOD_SLUGS:

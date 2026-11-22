@@ -37,6 +37,7 @@ from app.config import get_settings
 from app.db import Database, execute, fetch_all, fetch_one
 from app.jobs import sql
 from app.logging_setup import setup_logging
+from app.regions import refresh as refresh_regions
 
 log = logging.getLogger("app.worker")
 
@@ -278,6 +279,8 @@ async def _main() -> None:
     observability.init_error_reporting(settings)
     db = Database(settings.database_url, 1, max(2, settings.db_pool_min))
     await db.open()
+    async with db.transaction() as conn:
+        await refresh_regions(conn)  # Ш-57: region constants come from the database
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):

@@ -65,7 +65,7 @@ EXPLAIN = (
     "describe the two variants (remove the least valuable places / cheaper alternatives); the "
     "person chooses in the app. If must_have_unmet is not empty, say honestly which wishes "
     "could not be included and why; for reason outside_area say that this version of Jol plans "
-    "Almaty and the mountains nearby, and trips across Kazakhstan come later. Do not promise "
+    "the region and the mountains nearby, and trips across Kazakhstan come later. Do not promise "
     "bookings. If "
     "events is not empty, you may mention one or two that fit the person; an event with is_ad "
     "true is an advertisement and you must include its ad_label."

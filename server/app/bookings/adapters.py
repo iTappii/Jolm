@@ -6,10 +6,12 @@ partner is slow or flaky: move `create_booking` to a job then (the stub is insta
 skeleton calls it inline). Money never goes through Jol (ADR 0003 п.7): a booking is a request.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Protocol
 from uuid import UUID
+
+from app.regions import default_region
 
 
 @dataclass(frozen=True)
@@ -48,7 +50,7 @@ class BookingLimits:
     hours_open: Optional[str] = None  # "HH:MM"; `starts_at` local time within [open, close]
     hours_close: Optional[str] = None
     max_nights: Optional[int] = None  # room: longest stay
-    timezone: str = "Asia/Almaty"
+    timezone: str = field(default_factory=lambda: default_region().timezone)
 
     def to_json(self) -> Dict[str, Any]:
         return {

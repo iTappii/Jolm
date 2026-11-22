@@ -8,7 +8,7 @@ from datetime import timedelta
 import pytest
 from pydantic import SecretStr
 
-from app.chat.brief import today_almaty
+from app.chat.brief import today_in_region
 from app.config import get_settings
 from app.db import fetch_all, fetch_one
 from app.providers.llm.fake import Step
@@ -75,7 +75,7 @@ async def seed_world(conn):
 
 
 def day(offset):
-    return (today_almaty() + timedelta(days=offset)).isoformat()
+    return (today_in_region() + timedelta(days=offset)).isoformat()
 
 
 def brief_call(**fields):

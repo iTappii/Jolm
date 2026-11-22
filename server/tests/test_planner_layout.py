@@ -19,10 +19,10 @@ from app.planner.travel import (
     pick_default,
 )
 from app.planner.weather import UnknownForecast
+from app.regions import default_region
 from app.routing import FakeRouter, RoutingUnavailable
 from app.routing.costs import Tariff
 from app.routing.schemas import DirectionOption
-from app.routing.service import ALMATY_TZ
 from tests.test_places import add_place, load_categories
 from tests.test_routing import VALHALLA, needs_valhalla
 
@@ -306,7 +306,7 @@ def test_windows_and_open_now_agree():
         for minute in range(0, 1440, 30):
             wins = hrs.windows(rows, day)
             mine = any(a <= minute < b for a, b in wins)
-            now = datetime.combine(day, time(minute // 60, minute % 60), tzinfo=ALMATY_TZ)
+            now = datetime.combine(day, time(minute // 60, minute % 60), tzinfo=default_region().tz)
             assert mine == is_open_now(rows, now), (day, minute)
 
 

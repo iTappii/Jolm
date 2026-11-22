@@ -8,10 +8,10 @@ from datetime import date
 from typing import Any, Dict, List, Mapping, Optional
 
 from app.events import service
-from app.planner.area import ALMATY_BBOX
 from app.planner.layout import DAY_END, DAY_START
 from app.planner.model import Place
 from app.planner.scoring import DEFAULT_PACE
+from app.regions import default_region
 
 
 class EventIndex:
@@ -33,5 +33,10 @@ async def trip_events(
 ) -> List[Dict[str, Any]]:
     pace = pace if pace in DAY_START else DEFAULT_PACE
     return await service.load_events(
-        conn, start, end, ALMATY_BBOX, limit, active_minutes=(DAY_START[pace], DAY_END[pace])
+        conn,
+        start,
+        end,
+        default_region().bbox,
+        limit,
+        active_minutes=(DAY_START[pace], DAY_END[pace]),
     )

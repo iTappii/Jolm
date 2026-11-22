@@ -19,13 +19,13 @@ from app.memory.affinity import NO_MEMORY, load_memory
 from app.planner import budget as bud
 from app.planner import hours as hrs
 from app.planner import sql
-from app.planner.area import ALMATY_BBOX
 from app.planner.candidates import Selection, select_candidates
 from app.planner.events import load_event_index
 from app.planner.layout import TripLayout, plan_days
 from app.planner.model import Place
 from app.planner.travel import DirectionsLegs, RouterMatrix
 from app.planner.weather import Forecast, UnknownForecast
+from app.regions import default_region
 from app.routing import get_network
 from app.routing.base import RoutingProvider
 from app.routing.costs import load_tariffs
@@ -91,7 +91,7 @@ async def build_plan(
     must-have wish (Ш-54, see `select_candidates`).
     """
     dates = trip_dates(brief)
-    west, south, east, north = ALMATY_BBOX
+    west, south, east, north = default_region().bbox
     area = {"west": west, "south": south, "east": east, "north": north}
     async with db.transaction() as conn:
         memory = await load_memory(conn, user_id) if user_id else NO_MEMORY

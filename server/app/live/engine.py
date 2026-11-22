@@ -28,7 +28,7 @@ from app.live import store as live_store
 from app.planner import sql as planner_sql
 from app.planner.model import Place, place_from_row
 from app.providers.weather.base import ForecastView
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 from app.trips import edit, store
 
 log = logging.getLogger("app.live")
@@ -49,7 +49,7 @@ class Spec:
 
 
 def _minutes(moment: datetime) -> int:
-    local = moment.astimezone(ALMATY_TZ)
+    local = moment.astimezone(default_region().tz)
     return local.hour * 60 + local.minute
 
 
@@ -102,7 +102,7 @@ async def plan_proposal(
     trip_id = trip["id"]
     items = await store.main_items(conn, trip_id)
     places = await edit._places(conn, sorted({r["place_id"] for r in items}, key=str))
-    today = now.astimezone(ALMATY_TZ).date()
+    today = now.astimezone(default_region().tz).date()
     plan = Plan(version=trip["version"], expire=[])
 
     def problem_of(row: dict) -> Optional[rules.Problem]:
