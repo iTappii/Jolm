@@ -112,12 +112,20 @@ async def test_bare_point_and_validation(client, conn):
     far = await client.get(URL, params={"lat": 43.30, "lon": 77.10})
     assert far.json() == {"kind": "point", "lat": 43.30, "lon": 77.10}
     for params in [
-        {"lat": 51.1, "lon": 71.4},  # Astana: outside Almaty
+        {"lat": 55.75, "lon": 37.6},  # Moscow: outside every region
         {"lat": 91, "lon": 76.9},
         {"lat": 43.2},
         {"lat": "x", "lon": 76.9},
     ]:
         assert (await client.get(URL, params=params)).status_code == 422
+
+
+async def test_point_in_another_region_is_answered(client, conn):
+    """Ш-59: Astana is outside Almaty but inside `kazakhstan`: a bare point, not a 422."""
+    await load_fixture(conn)
+    response = await client.get(URL, params={"lat": 51.1, "lon": 71.4})
+    assert response.status_code == 200
+    assert response.json() == {"kind": "point", "lat": 51.1, "lon": 71.4}
 
 
 async def test_rate_limit_carries_retry_after(client, conn):

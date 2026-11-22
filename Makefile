@@ -85,9 +85,12 @@ places-coverage: venv
 	$(PY) data/places/region_coverage.py --region $(REGION) $(if $(OUT),--out $(OUT))
 
 # Map (Ш-11/Ш-12): build vector tiles, regenerate styles, serve maps/ with Range support
-.PHONY: tiles tiles-styles tiles-serve
+.PHONY: tiles tiles-almaty tiles-styles tiles-serve
 tiles:
 	./maps/build_tiles.sh
+
+tiles-almaty:
+	AREA=almaty ./maps/build_tiles.sh
 
 tiles-styles:
 	python3 maps/style/build_styles.py

@@ -11,6 +11,8 @@ from psycopg import OperationalError
 from app import main
 from app.db import execute
 from app.main import create_app
+from app.regions.model import Region
+from app.regions.seed import ALMATY
 from app.routing import FakeRouter, NoRoute, RoutingUnavailable, api, service
 from app.routing.costs import Tariff
 from app.routing.fake import encode_polyline6
@@ -19,6 +21,7 @@ from app.routing.transit import TransitLeg, TransitOption
 from app.routing.valhalla import ValhallaRouter
 from tests.conftest import TransactionalDatabase
 from tests.test_places import add_place
+from tests.test_routing import VALHALLA, needs_valhalla
 
 ORIGIN = (43.25, 76.95)
 TARGET = (43.25, 76.955)
@@ -32,6 +35,34 @@ TARIFFS = {
     "taxi": Tariff("taxi", Decimal(500), Decimal(0), Decimal(0)),
     "scooter": Tariff("scooter", Decimal(100), Decimal(30), Decimal(0)),
 }
+
+
+def _stub_region_for_point(regions):
+    """`region_for_point` over in-memory boxes: the smallest covering box wins (as in SQL)."""
+
+    async def fake(_conn, lat, lon):
+        hit = [r for r in regions if r.contains(lat, lon)]
+        return min(
+            hit, key=lambda r: (r.bbox[2] - r.bbox[0]) * (r.bbox[3] - r.bbox[1]), default=None
+        )
+
+    return fake
+
+
+# the `kazakhstan` row of migration 0030 as a box (bbox of its polygon)
+COUNTRY = Region(
+    id="kazakhstan",
+    name_ru="Казахстан",
+    name_en="Kazakhstan",
+    timezone="Asia/Almaty",
+    currency="KZT",
+    languages=("ru", "en"),
+    centre=(48.0, 66.9),
+    zoom=4.5,
+    bbox=(46.4, 40.5, 87.4, 55.5),
+)
+CHARYN = (43.355, 79.077)  # about 200 km from Almaty, inside `kazakhstan` only
+SATY = (42.996, 78.333)  # about 300 km from Almaty
 
 
 class StubDatabase:
@@ -48,6 +79,7 @@ async def directions_api(monkeypatch):
     tariffs = AsyncMock(return_value=TARIFFS.copy())
     monkeypatch.setattr(api, "load_tariffs", tariffs)
     monkeypatch.setattr(api, "get_network", AsyncMock(return_value=object()))
+    monkeypatch.setattr(api, "region_for_point", _stub_region_for_point([ALMATY, COUNTRY]))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield app, client, tariffs
 
@@ -93,8 +125,8 @@ async def test_directions_motor_range_for_local_departure(departure, factor, dir
 @pytest.mark.parametrize(
     "changes",
     [
-        {"from": {"lat": 42.9, "lon": 77.0}},  # outside the region
-        {"to": {"lat": 43.25, "lon": 77.31}},  # outside the region
+        {"from": {"lat": 55.75, "lon": 37.6}},  # outside every region
+        {"to": {"lat": 55.75, "lon": 37.6}},  # outside every region
         {"to": {"lat": "43.25", "lon": 77.0}},
         {"to": None},
         {"to_place_id": str(uuid4())},
@@ -138,6 +170,33 @@ async def test_directions_empty_vs_unavailable(error, status, directions_api, mo
         assert response.json() == []
     else:
         assert response.json()["error"]["code"] == "routing_unavailable"
+
+
+async def test_directions_accepts_point_in_another_region(directions_api, monkeypatch):
+    """Ш-59: Almaty -> Charyn is routed (a car, a taxi), though Charyn is not in the default
+    region; no walk, no scooter (200 km), no transit (it exists in the default region only)."""
+    _, client, _ = directions_api
+    response = await client.post(
+        "/v1/directions",
+        json={**PAYLOAD, "to": {"lat": CHARYN[0], "lon": CHARYN[1]}},
+    )
+    assert response.status_code == 200, response.text
+    assert {option["mode"] for option in response.json()} == {"car", "taxi"}
+    assert not api.get_network.await_count
+
+
+async def test_directions_other_region_to_other_region_works(directions_api):
+    _, client, _ = directions_api
+    response = await client.post(
+        "/v1/directions",
+        json={
+            **PAYLOAD,
+            "from": {"lat": CHARYN[0], "lon": CHARYN[1]},
+            "to": {"lat": 42.996, "lon": 78.333},
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert {option["mode"] for option in response.json()} == {"car", "taxi"}
 
 
 async def test_directions_omits_long_walk(directions_api):
@@ -424,3 +483,37 @@ async def test_planner_legs_ask_for_one_variant_per_mode(monkeypatch):
     assert sorted(o.mode for o in options) == ["car", "scooter", "taxi"]
     assert {o.variant for o in options} == {0}
     assert all(o.arrive_at for o in options)
+
+
+ALMATY_CENTRE = (43.2389, 76.9455)
+
+
+@needs_valhalla
+@pytest.mark.parametrize(
+    "name, target, km, hours",
+    [("charyn", CHARYN, (180, 280), (2.5, 5.0)), ("saty", SATY, (250, 380), (4.0, 7.5))],
+)
+async def test_integration_car_from_almaty_across_the_country(
+    directions_api, name, target, km, hours
+):
+    """Ш-59, on the real Valhalla (country graph): the car routes of "how to get there"."""
+    app, client, _ = directions_api
+    app.state.routing_provider = ValhallaRouter(VALHALLA)
+    try:
+        response = await client.post(
+            "/v1/directions",
+            json={
+                "from": {"lat": ALMATY_CENTRE[0], "lon": ALMATY_CENTRE[1]},
+                "to": {"lat": target[0], "lon": target[1]},
+                "depart_at": "2026-11-20T20:30:00Z",
+            },
+        )
+    finally:
+        await app.state.routing_provider.aclose()
+    assert response.status_code == 200, response.text
+    options = response.json()
+    assert {o["mode"] for o in options} == {"car", "taxi"}, name  # no walk, no scooter, no transit
+    car = next(o for o in options if o["mode"] == "car")
+    assert km[0] <= car["distance_m"] / 1000 <= km[1], car["distance_m"]
+    assert hours[0] <= car["duration_s"] / 3600 <= hours[1], car["duration_s"]
+    assert car["geometry"] and car["arrive_at"]

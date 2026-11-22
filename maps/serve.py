@@ -7,6 +7,10 @@ from pathlib import Path
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 
+# Whole country first (Ш-59), Almaty-only extract as a fallback.
+TILE_FILES = ("kazakhstan.pmtiles", "almaty.pmtiles")
+
+
 class H(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -23,7 +27,8 @@ class H(SimpleHTTPRequestHandler):
         if native:
             style = json.loads(Path("style", native.group(1)).read_text())
             port = self.server.server_port
-            style["sources"]["openmaptiles"]["url"] = f"pmtiles://http://localhost:{port}/build/almaty.pmtiles"
+            name = next((n for n in TILE_FILES if Path("build", n).is_file()), TILE_FILES[-1])
+            style["sources"]["openmaptiles"]["url"] = f"pmtiles://http://localhost:{port}/build/{name}"
             body = json.dumps(style, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

@@ -51,6 +51,16 @@ struct MapView: UIViewRepresentable {
         let map = MLNMapView(frame: .zero, styleURL: styleURL)
         map.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         map.setCenter(Region.current.center, zoomLevel: Region.current.zoom, animated: false)
+        #if DEBUG
+        // Screenshots of far regions (Ш-59): `-JolStartCamera 43.297,68.272,12` (lat,lon,zoom).
+        if let spec = UserDefaults.standard.string(forKey: "JolStartCamera") {
+            let parts = spec.split(separator: ",").compactMap { Double($0) }
+            if parts.count == 3 {
+                map.setCenter(CLLocationCoordinate2D(latitude: parts[0], longitude: parts[1]),
+                              zoomLevel: parts[2], animated: false)
+            }
+        }
+        #endif
         map.showsUserLocation = true
         map.logoView.isHidden = false
         map.attributionButton.isHidden = false
