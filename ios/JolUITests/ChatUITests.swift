@@ -120,10 +120,12 @@ final class ChatUITests: XCTestCase {
         send(app, "live1 Chinese restaurant")
         waitFor(app, "chat-message-user")
         XCTAssertTrue(waitForFocus(input), "the field keeps the keyboard after the send button")
-        // A new message is accepted once the answer has finished streaming.
-        let answered = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Chinese places"))
-        XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15))
-        input.typeText("live2 First President park\n")
+        // A new message is accepted once the answer has finished streaming (the send button turns on then).
+        input.typeText("live2 First President park")
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"),
+                                              object: element(app, "chat-send"))
+        XCTAssertEqual(XCTWaiter().wait(for: [ready], timeout: 15), .completed, "the answer finished")
+        input.typeText("\n")
         let users = app.descendants(matching: .any).matching(identifier: "chat-message-user")
         XCTAssertTrue(users.element(boundBy: 1).waitForExistence(timeout: 15), "sent with return, no tap")
         XCTAssertEqual(users.element(boundBy: 1).label, "live2 First President park", "no new line left in the text")

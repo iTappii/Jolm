@@ -49,6 +49,8 @@ struct ChatTranscriptView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollDismissesKeyboard(.interactively)
+            // Pinned to the newest message when the card changes height (keyboard up with a live route).
+            .defaultScrollAnchor(.bottom)
             // Room for the fade below, so the first message is fully visible when scrolled to the top.
             .contentMargins(.top, Self.topFade, for: .scrollContent)
             // A clean top boundary under the chain strip: scrolled-up messages dissolve instead of being sliced

@@ -1,6 +1,5 @@
 {
   "3": "htmx-1.9.12.min (105)",
-  "8": "budget (78)",
   "16": "APIClientTests (64)",
   "17": "layout (61)",
   "19": "test_live_plan (59)",
@@ -8,7 +7,6 @@
   "24": "test_submissions (55)",
   "27": "ProfileScreen (52)",
   "31": "test_chat (51)",
-  "34": "PlacesModel (50)",
   "35": "Ш-32 (47)",
   "36": "DirectionsTests (47)",
   "39": "Ш-31 (45)",
@@ -25,7 +23,6 @@
   "75": "DirectionsFormatting (32)",
   "81": "_macros (30)",
   "82": "test_transit_search (29)",
-  "84": "valhalla (29)",
   "86": "EventModels (28)",
   "90": "ci (27)",
   "91": "PlacesTests (27)",

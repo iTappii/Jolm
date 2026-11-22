@@ -164,6 +164,33 @@ final class LiveRouteUITests: XCTestCase {
         capture("live-after-choose-dark", XCUIScreen.main.screenshot())
     }
 
+    /// The field keeps the keyboard after sending; with a live route the card shrinks above it and the camera keeps
+    /// every stop in the map strip above the card (owner, 2026-11-22).
+    func testLiveRouteStaysVisibleAboveTheCardWhileTyping() {
+        let app = launch()
+        send(app, "Chinese restaurant live1")
+        waitFor(app, "live-stop-1")
+        waitForAnswer(app)
+        send(app, "First President park live2")
+        waitFor(app, "live-edge-1-2")
+        waitForAnswer(app)
+        XCTAssertFalse(app.keyboards.allElementsBoundByIndex.isEmpty, "the keyboard stays up while typing")
+        let card = element(app, "chat-panel")
+        // The camera settles after the card has shrunk.
+        let settled = NSPredicate { _, _ in
+            ["live-stop-1", "live-stop-2"].allSatisfy { id in
+                let stop = self.element(app, id).frame
+                return stop.minY > 0 && stop.maxY < card.frame.minY
+            }
+        }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: settled, object: nil)],
+                                        timeout: 5), .completed, "both stops are visible above the card")
+        let keyboardTop = app.keyboards.firstMatch.frame.minY
+        XCTAssertLessThan(card.frame.height, keyboardTop * 0.6, "the card leaves room for the map")
+        XCTAssertTrue(element(app, "chat-input").isHittable, "the field stays usable")
+        capture("live-keyboard-light", XCUIScreen.main.screenshot())
+    }
+
     func testTappingAStopOpensThePlaceCard() {
         let app = launch()
         send(app, "Chinese restaurant live1")

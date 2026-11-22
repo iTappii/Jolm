@@ -83,11 +83,14 @@ extension MapCoordinator {
         // `setVisibleCoordinates` adds its padding to the map's CURRENT content inset, which is still animating
         // towards `bottomInset` when the chat has just opened. So the padding asks for the wanted inset minus the
         // current one: the route lands above the chat card either way.
-        let wanted = (parent?.bottomInset ?? 0) + 84
-        let bottom = max(84, wanted - map.contentInset.bottom)
+        // A narrow strip above the card (keyboard up) gets tighter margins, so the route is not drawn tiny.
+        let inset = parent?.bottomInset ?? 0
+        let tight = map.bounds.height - inset < 420
+        let wanted = inset + (tight ? 52 : 84)
+        let bottom = max(tight ? 52 : 84, wanted - map.contentInset.bottom)
         map.setVisibleCoordinates(
             &coordinates, count: UInt(coordinates.count),
-            edgePadding: UIEdgeInsets(top: 72, left: 56, bottom: bottom, right: 56), animated: true
+            edgePadding: UIEdgeInsets(top: tight ? 56 : 72, left: 56, bottom: bottom, right: 56), animated: true
         )
     }
 }
@@ -104,8 +107,16 @@ extension MapCoordinator {
 
     func applyLiveRoute(_ parent: MapView, map: MLNMapView) {
         parent.projection?.map = map
-        guard appliedLiveRoute != parent.liveRoute else { return }
-        appliedLiveRoute = parent.liveRoute
+        // Refit when the route changes, and when the space under it does (keyboard, chat collapsed or expanded).
+        let insetChanged = parent.liveRoute != nil && liveFit.inset != parent.bottomInset
+        guard liveFit.route != parent.liveRoute || insetChanged else { return }
+        liveFit = LiveRouteFit(route: parent.liveRoute, inset: parent.bottomInset)
         fitLiveRoute(parent.liveRoute, map: map)
     }
+}
+
+/// What the camera was last fitted to for the live route: the route and the map's bottom inset at that moment.
+struct LiveRouteFit {
+    var route: LiveRoute?
+    var inset: CGFloat = -1
 }

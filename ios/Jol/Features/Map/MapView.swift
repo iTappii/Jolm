@@ -118,7 +118,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     private var appliedDirectionVersion = -1
     private var appliedFitVersion = -1
     private var appliedChatVersion = -1
-    var appliedLiveRoute: LiveRoute?
+    var liveFit = LiveRouteFit()
     var appliedTripVersion = -1
     var appliedTripFitVersion = -1
     var appliedEventsVersion = -1
@@ -154,7 +154,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedDirectionVersion = -1
         appliedFitVersion = -1
         appliedChatVersion = -1
-        appliedLiveRoute = nil
+        liveFit = LiveRouteFit()
         appliedTripVersion = -1
         appliedTripFitVersion = -1
         appliedEventsVersion = -1

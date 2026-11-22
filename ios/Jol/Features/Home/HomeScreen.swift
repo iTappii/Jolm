@@ -14,6 +14,8 @@ struct HomeScreen: View {
     @State private var favoritesOpen = false
     @State private var cardDetent = PlaceCardSheet.cardDetent
     @State private var screenHeight: CGFloat = 874
+    /// Height of the on-screen keyboard (0 when hidden): with a live route the card shrinks above it (owner).
+    @State private var keyboardHeight: CGFloat = 0
     @State private var projection = MapProjection()
 
     var body: some View {
@@ -93,6 +95,13 @@ struct HomeScreen: View {
             }
             .ignoresSafeArea()
         )
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
+            guard let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+            withAnimation(.easeOut(duration: 0.25)) { keyboardHeight = max(0, screenHeight - frame.minY) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.25)) { keyboardHeight = 0 }
+        }
         .animation(.snappy(duration: 0.3), value: chatExpanded)
         .sheet(isPresented: $profileOpen) {
             ProfileMenuSheet()
@@ -205,7 +214,7 @@ struct HomeScreen: View {
                 ChatPanel(
                     model: container.chat,
                     draft: $draft,
-                    conversationHeight: screenHeight * conversationFraction,
+                    conversationHeight: cardHeight,
                     showsGuestBanner: showsGuestBanner,
                     onCollapse: { chatExpanded = false },
                     onSend: sendDraft,
@@ -319,6 +328,23 @@ extension HomeScreen {
 
     private static let liveConversationFraction: CGFloat = 0.5
 
+    /// With the keyboard up and a live route on the map, the card takes this share of the space above the keyboard
+    /// (never less than `liveKeyboardCardMin`: header, answer chain and the field stay usable), so the route stays
+    /// visible above it while the person keeps typing wishes.
+    private static let liveKeyboardCardShare: CGFloat = 0.5
+    private static let liveKeyboardCardMin: CGFloat = 250
+
+    private var liveRouteUnderKeyboard: Bool {
+        keyboardHeight > 0 && container.chat.state.liveRoute != nil
+    }
+
+    private var cardHeight: CGFloat {
+        let normal = screenHeight * conversationFraction
+        guard liveRouteUnderKeyboard else { return normal }
+        let aboveKeyboard = screenHeight - keyboardHeight
+        return min(normal, max(Self.liveKeyboardCardMin, aboveKeyboard * Self.liveKeyboardCardShare))
+    }
+
     private var chatIsActive: Bool {
         let chat = container.chat
         return !chat.state.isEmpty || chat.isOpening || chat.openFailed
@@ -331,7 +357,10 @@ extension HomeScreen {
         }
         if container.places.selected == nil {
             // The live map keeps its pins above the open conversation.
-            return chatExpanded && chatIsActive ? screenHeight * (conversationFraction + 0.03) : 0
+            guard chatExpanded, chatIsActive else { return 0 }
+            // The keyboard lifts the card: the map keeps the live route in the strip above both.
+            if liveRouteUnderKeyboard { return keyboardHeight + cardHeight + 12 }
+            return screenHeight * (conversationFraction + 0.03)
         }
         // At accessibility text sizes the card opens at the taller detent (PlaceCardSheet), keep the pin above it.
         let tall = container.directions.isActive || typeSize.isAccessibilitySize
