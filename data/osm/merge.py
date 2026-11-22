@@ -100,6 +100,15 @@ MOVE_STATEMENTS = (
     # analytics events (Ш-50): FK without ON DELETE CASCADE. The visit views read
     # place_crowd_reports and trip_items, which move above.
     "UPDATE analytics_events SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    # live route of a chat (Ш-54): stops and alternatives, FKs without ON DELETE CASCADE. An
+    # alternative that would duplicate the stop's place or a sibling alternative is dropped.
+    "UPDATE chat_live_stops SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    "UPDATE chat_live_alternatives a SET place_id = %(keep)s WHERE a.place_id = %(drop)s "
+    "AND NOT EXISTS (SELECT 1 FROM chat_live_alternatives j "
+    "WHERE j.chat_id = a.chat_id AND j.ord = a.ord AND j.place_id = %(keep)s)",
+    "DELETE FROM chat_live_alternatives WHERE place_id = %(drop)s",
+    "DELETE FROM chat_live_alternatives a USING chat_live_stops s "
+    "WHERE s.chat_id = a.chat_id AND s.ord = a.ord AND s.place_id = a.place_id",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

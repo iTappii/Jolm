@@ -14,7 +14,7 @@ from datetime import date
 from typing import Any, Dict, List, Mapping, Optional, Set
 from uuid import UUID
 
-from app.db import fetch_all
+from app.db import fetch_all, fetch_one
 from app.memory.affinity import W_FAVORITE_CATEGORY, W_FAVORITE_PLACE, Memory
 from app.places import service
 from app.planner import scoring, sql
@@ -92,7 +92,9 @@ def _area() -> Dict[str, Any]:
     return {"west": west, "south": south, "east": east, "north": north}
 
 
-async def _resolve_must_have(conn, text: str, count: int, taken: Set[UUID]) -> MustHave:
+async def _resolve_must_have(
+    conn, text: str, count: int, taken: Set[UUID], chosen: Optional[UUID] = None
+) -> MustHave:
     """Name match first (one place), then the category reading, up to `count` places.
 
     Words that are a known category ("музеи", "Chinese food") only match names strongly, so
@@ -128,6 +130,12 @@ async def _resolve_must_have(conn, text: str, count: int, taken: Set[UUID]) -> M
         found = (found + fresh + shared)[:count]
         if found and how == "none":
             how = "category"
+    if chosen is not None:  # Ш-54: the place the tourist picked on the live route comes first
+        row = await fetch_one(conn, sql.PLACE_BY_ID, dict(_area(), id=chosen))
+        if row is not None:
+            found = [place_from_row(row)] + [p for p in found if p.id != chosen]
+            found = found[: max(count, 1)]
+            how = "chosen"
     return MustHave(text, found, how)
 
 
@@ -138,13 +146,15 @@ async def select_candidates(
     favorites: Optional[Memory] = None,
     crowd: Optional[CrowdSource] = None,
     event_bonus: EventBonus = no_event_bonus,
+    chosen_places: Optional[Mapping[str, UUID]] = None,
 ) -> Selection:
     """Must-have places plus scored candidate pools for a brief with dates.
 
     `memory`: category slug -> penalty 0..1 (Ш-41, `memory.affinity`; none for a guest);
     `favorites`: the person's favourite places/categories for a small bonus (same source;
     only its favourite fields are read here). `crowd`: Ф15 (`ProfileCrowd`), unknown by
-    default. `event_bonus`: Ф16 (`EventIndex.bonus`), zero by default.
+    default. `event_bonus`: Ф16 (`EventIndex.bonus`), zero by default. `chosen_places`: wish
+    (case-folded) -> the place picked on the chat's live route (Ш-54); it comes first for that wish.
     """
     days = trip_days(brief)
     memory = memory or {}
@@ -156,7 +166,9 @@ async def select_candidates(
     taken: Set[UUID] = set()
     count = places_per_must_have(days)
     for text in brief.get("must_haves") or []:
-        wish = await _resolve_must_have(conn, text, count, taken)
+        wish = await _resolve_must_have(
+            conn, text, count, taken, (chosen_places or {}).get(text.casefold())
+        )
         selection.must_haves.append(wish)
         taken.update(p.id for p in wish.places)
         if not wish.places:

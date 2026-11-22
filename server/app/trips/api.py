@@ -6,6 +6,8 @@
     POST /trips/{id}/legs/{leg_id}/mode  {"mode"}    -> chosen transport of a leg     (Ш-37)
     POST /trips/{id}/items/{item_id}/remove {"force"?}  -> edit result                (Ш-38)
     POST /trips/{id}/items/{item_id}/replace {...}      -> edit result                (Ш-38)
+    GET  /trips/{id}/items/{item_id}/alternatives    -> {"items": [{id, name, category, lat, lon,
+                                                         price_kzt|null, distance_m}]}  (Ш-55)
     GET  /trips/{id}/proposals                       -> {"items": [proposal]}         (Ш-40)
     POST /proposals/{id}/accept                      -> edit result + "proposal"      (Ш-40)
     POST /proposals/{id}/decline                     -> {"id", "status": "declined"}  (Ш-40)
@@ -24,6 +26,8 @@ plan fits the budget or a choice was already made; 404 for a missing or foreign 
 `budget` is the stored block (no place ids): `status`, `total_kzt`, `breakdown`, `choice`, ...
 """
 
+import hashlib
+import json
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable, Literal, Optional
 from uuid import UUID
@@ -139,20 +143,25 @@ async def get_trip_offline(trip_id: UUID, request: Request):
         trip = await store.get_trip_row(conn, user["id"], trip_id)
         if trip is None:
             raise AppError(404, "not_found")
-        etag = '"v%d-%s"' % (trip["version"], locale)
-        headers = {"ETag": etag, "Cache-Control": "private, no-cache", "Vary": "Accept-Language"}
-        if etag_matches(request.headers.get("if-none-match"), etag):
-            return Response(status_code=304, headers=headers)
         items = await store.main_items(conn, trip_id)
         legs = await store.main_legs(conn, trip_id)
         extras, hours = await store.offline_extras(conn, list({i["place_id"] for i in items}))
+        body = read.offline_json(
+            trip, items, legs, extras, hours, locale, get_settings().media_base_url
+        )
+        # Ш-55 (Ш-42): the tag covers the content, not only the trip version, so an edit of a
+        # place in the trip (name, prices, address, hours, photo) also makes the copy stale.
+        digest = hashlib.sha1(
+            json.dumps(body, sort_keys=True, default=str, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()[:12]
+        etag = '"v%d-%s-%s"' % (trip["version"], locale, digest)
+        headers = {"ETag": etag, "Cache-Control": "private, no-cache", "Vary": "Accept-Language"}
+        if etag_matches(request.headers.get("if-none-match"), etag):
+            return Response(status_code=304, headers=headers)
         await analytics.record_server(  # Ш-50: a 200 is a download; a 304 is not
             conn, "trip_downloaded", clock.now(), user["id"], None, trip_id,
             {"version": trip["version"]},
         )  # fmt: skip
-    body = read.offline_json(
-        trip, items, legs, extras, hours, locale, get_settings().media_base_url
-    )
     return JSONResponse(body, headers=headers)
 
 
@@ -178,6 +187,15 @@ async def remove_item(
             force=bool(payload and payload.force),
         ),
     )  # fmt: skip
+
+
+@router.get("/trips/{trip_id}/items/{item_id}/alternatives")
+async def item_alternatives(trip_id: UUID, item_id: UUID, request: Request):
+    access = bearer_token(request)
+    locale = _locale(request)
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        return await edit.alternatives(conn, user["id"], trip_id, item_id, locale)
 
 
 @router.post("/trips/{trip_id}/items/{item_id}/replace")

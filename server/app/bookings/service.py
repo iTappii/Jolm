@@ -248,6 +248,39 @@ async def get_one(conn, user_id: UUID, booking_id: UUID, locale: str) -> Dict[st
     return booking_json(row, locale)
 
 
+async def cancel(
+    conn, user_id: UUID, booking_id: UUID, now: datetime, locale: str
+) -> Dict[str, Any]:
+    """Cancel the user's booking (Ш-55). 404 unknown/foreign; 409 `not_cancellable` when it is
+    not pending/confirmed any more (cancelled, declined, failed) or its start time has passed;
+    503 `booking_partner_unavailable` when the partner could not be asked (nothing changes).
+    The partner is asked first (adapters that have `cancel`); only then is the booking marked."""
+    row = await fetch_one(conn, GET_ONE + " FOR UPDATE OF b", (booking_id, user_id))
+    if row is None:
+        raise AppError(404, "not_found")
+    if row["status"] not in ("pending", "confirmed"):
+        raise AppError(409, "not_cancellable")
+    starts_at = row["payload"].get("starts_at")
+    if starts_at and datetime.fromisoformat(starts_at) <= now:
+        raise AppError(409, "not_cancellable")
+    adapter = adapters.get_adapter(row["adapter"])
+    ask = getattr(adapter, "cancel", None)
+    if row["external_ref"] and callable(ask):
+        try:
+            after = await ask(row["external_ref"])
+        except Exception as exc:
+            log.exception("partner cancel failed", extra={"adapter": row["adapter"]})
+            raise AppError(503, "booking_partner_unavailable") from exc
+        if after != "cancelled":
+            raise AppError(409, "not_cancellable")
+    await execute(
+        conn,
+        "UPDATE bookings SET status = 'cancelled', updated_at = clock_timestamp() WHERE id = %s",
+        (booking_id,),
+    )
+    return booking_json(await fetch_one(conn, GET_ONE, (booking_id, user_id)), locale)
+
+
 async def list_mine(
     conn, user_id: UUID, locale: str, limit: int, cursor: Optional[str]
 ) -> Dict[str, Any]:

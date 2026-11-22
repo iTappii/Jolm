@@ -405,6 +405,48 @@ async def _candidates(
     return [p for p in found if p.id not in taken]
 
 
+MAX_ALTERNATIVES = 5
+
+
+async def alternatives(
+    conn, user_id: UUID, trip_id: UUID, item_id: UUID, locale: str
+) -> Dict[str, Any]:
+    """Up to 5 places similar to a stop (same category, nearest first), none already in the trip
+    (Ш-55, for the replace UI). Read-only; replacing is `replace_item` with `place_id`; whether
+    one fits the day is only known when it is tried, so a pick may still answer 409."""
+    if await store.get_trip_row(conn, user_id, trip_id) is None:
+        raise AppError(404, "not_found")
+    items = await store.main_items(conn, trip_id)
+    target = _find_item(items, item_id)
+    if not target["category"]:
+        return {"items": []}
+    taken = {r["place_id"] for r in items}
+    meal = target["kind"] == "meal"
+    found = [
+        p for p in await _candidates(conn, target, taken, None, target["category"], None)
+        if _usable(p, meal)
+    ][:MAX_ALTERNATIVES]  # fmt: skip
+    here = _point(target)
+    out = []
+    for place in found:
+        price = place.avg_check_kzt if place.is_food else place.entry_price_kzt
+        out.append(
+            {
+                "id": str(place.id),
+                "name": (place.name_ru if locale == "ru" else place.name_en)
+                or place.name_ru
+                or place.name_en
+                or "",
+                "category": place.category,
+                "lat": place.lat,
+                "lon": place.lon,
+                "price_kzt": int(price) if price is not None else None,
+                "distance_m": int(round(haversine_m(here, (place.lat, place.lon)))),
+            }
+        )
+    return {"items": out}
+
+
 async def first_fit_replacement(
     conn,
     router: Any,

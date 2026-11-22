@@ -6,6 +6,9 @@
                      -> 201 booking | 200 (replay)
     GET  /bookings?limit&cursor -> {"items": [booking], "next_cursor"}   newest first
     GET  /bookings/{id}         -> booking (a `pending` one is refreshed from the partner)
+    POST /bookings/{id}/cancel  -> booking with status `cancelled` (Ш-55); 404 unknown/foreign;
+                                   409 `not_cancellable` (already cancelled/declined/failed, or its
+                                   start time has passed); 503 `booking_partner_unavailable`
 
     booking: {"id", "place": {"id", "name"}, "kind", "status", "party_size", "starts_at",
               "ends_at", "event_id", "note", "created_at", "updated_at"}
@@ -81,3 +84,13 @@ async def get_booking(booking_id: UUID, request: Request, response: Response):
     async with request.app.state.db.transaction() as conn:
         user = await sessions.current_user(conn, access)
         return await service.get_one(conn, user["id"], booking_id, locale)
+
+
+@router.post("/bookings/{booking_id}/cancel")
+async def cancel_booking(booking_id: UUID, request: Request, response: Response):
+    access = bearer_token(request)
+    locale = pick_locale(request.headers.get("accept-language"))
+    response.headers["Cache-Control"] = "no-store"
+    async with request.app.state.db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        return await service.cancel(conn, user["id"], booking_id, clock.now(), locale)

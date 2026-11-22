@@ -81,12 +81,14 @@ async def build_plan(
     router: RoutingProvider,
     forecast: Optional[Forecast] = None,
     user_id: Optional[UUID] = None,
+    chosen_places: Optional[Mapping[str, UUID]] = None,
 ) -> BuiltPlan:
     """Plan the whole trip for a complete brief (dates and budget set).
 
     `forecast`: the planner's weather view (`providers.weather.city_forecast`); default none.
     `user_id`: the signed-in owner; their memory (rejected categories, favourites, Ш-41) shapes
-    the scores. None = no memory.
+    the scores. None = no memory. `chosen_places`: places picked on the chat's live route per
+    must-have wish (Ш-54, see `select_candidates`).
     """
     dates = trip_dates(brief)
     west, south, east, north = ALMATY_BBOX
@@ -97,7 +99,7 @@ async def build_plan(
         events = await load_event_index(conn, brief)  # Ш-48: events of the trip dates
         selection = await select_candidates(
             conn, brief, memory=memory.penalties, favorites=memory, crowd=crowd,
-            event_bonus=events.bonus,
+            event_bonus=events.bonus, chosen_places=chosen_places,
         )  # fmt: skip
         selection.events = events.items
         must = selection.must_have_places

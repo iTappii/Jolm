@@ -112,6 +112,16 @@ class S3Storage:
             url=url, method="PUT", headers={"Content-Type": content_type}, expires_at=expires_at
         )
 
+    async def put(self, key: str, content_type: str, data: bytes) -> None:
+        """Server-side upload through a presigned PUT (the same signing the app clients use)."""
+        signed = self.presign_put(key, content_type, len(data), 60)
+        try:
+            response = await self._client.put(signed.url, content=data, headers=signed.headers)
+        except httpx.HTTPError as exc:
+            raise StorageError("storage put failed") from exc
+        if response.status_code not in (200, 201, 204):
+            raise StorageError("storage put: HTTP %s" % response.status_code)
+
     async def read(self, key: str, max_bytes: int) -> Optional[bytes]:
         url, _ = self._url("GET", key, {}, 60)
         try:

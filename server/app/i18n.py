@@ -109,6 +109,10 @@ MESSAGES = {
         "en": "The booking partner is temporarily unavailable",
         "ru": "Сервис бронирования партнёра временно недоступен",
     },
+    "not_cancellable": {
+        "en": "This booking can no longer be cancelled",
+        "ru": "Эту бронь уже нельзя отменить",
+    },
     "party_too_small": {
         "en": "The party is smaller than this place accepts",
         "ru": "Компания меньше, чем принимает это место",

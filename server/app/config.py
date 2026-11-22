@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     admin_login_window_min: int = 15
 
     llm_provider: str = "fake"
+    # DeepSeek (Ш-53): the key only from the environment, never committed
+    deepseek_api_key: SecretStr = SecretStr("")
+    deepseek_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com"
     llm_timeout_sec: float = 60.0
     llm_max_retries: int = 2
     # Chat limits (Ш-30/31). Counted in PostgreSQL (`rate_limit_hits`, Ш-51), shared by all API

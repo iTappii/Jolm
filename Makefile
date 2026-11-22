@@ -125,3 +125,17 @@ backup-verify: venv up
 # New secrets for a .env.prod (JWT / OTP / Apple nonce / token encryption)
 secrets-generate: venv
 	cd server && ../$(PY) -m app.auth.keys generate
+
+# Ш-53: one real prompt to DeepSeek (needs DEEPSEEK_API_KEY in .env; without it explains what to do)
+.PHONY: llm-smoke
+llm-smoke: venv
+	cd server && ../$(PY) -m app.providers.llm.smoke
+
+# Ш-55: local S3-compatible storage for place photos (dev only); see docs/photos.md
+.PHONY: minio-up minio-down
+minio-up: .env
+	$(COMPOSE) --profile minio up -d --wait minio
+	$(COMPOSE) --profile minio up minio-init
+
+minio-down:
+	$(COMPOSE) --profile minio stop minio

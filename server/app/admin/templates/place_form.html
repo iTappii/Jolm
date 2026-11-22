@@ -70,7 +70,6 @@
 
 <div class="card" style="margin-top:18px">
   <h2>Фото</h2>
-  <!-- TODO(Ш-44): загрузка файлов в S3; пока — ключ в хранилище или https-ссылка -->
   {% if photo_error %}<div class="flash bad">{{ photo_error }}</div>{% endif %}
   <table>
     {% for ph in place.photos %}
@@ -79,10 +78,16 @@
         {{ csrf_field(csrf) }}<button class="danger small" type="submit">Удалить</button></form></td></tr>
     {% else %}<tr><td class="muted">Фото нет</td></tr>{% endfor %}
   </table>
-  <form method="post" action="/admin/places/{{ place.id }}/photos" class="toolbar" style="margin-top:12px">
+  <form method="post" action="/admin/places/{{ place.id }}/photos" enctype="multipart/form-data" class="toolbar" style="margin-top:12px">
     {{ csrf_field(csrf) }}
-    <input type="text" name="storage_key" placeholder="storage key или https://… (заглушка до Ш-44)" required>
-    <button type="submit">Добавить</button>
+    <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+    <button type="submit">Загрузить фото</button>
   </form>
+  <details style="margin-top:12px"><summary class="muted">Или указать готовый ключ в хранилище / https-ссылку</summary>
+  <form method="post" action="/admin/places/{{ place.id }}/photos" class="toolbar" style="margin-top:8px">
+    {{ csrf_field(csrf) }}
+    <input type="text" name="storage_key" placeholder="storage key или https://…" required>
+    <button type="submit">Добавить</button>
+  </form></details>
 </div>
 {% endblock %}

@@ -177,6 +177,42 @@ def test_merge_moves_trip_rows_to_the_survivor(sconn):
     }
 
 
+def test_merge_moves_live_route_rows_to_the_survivor(sconn):
+    """TECH_PLAN rule 8: chat_live_stops / chat_live_alternatives (Ш-54) have no cascade."""
+    from merge import merge_place
+
+    def place(name):
+        return q(
+            sconn,
+            "INSERT INTO places (name_ru, geom) VALUES (%s, "
+            "ST_SetSRID(ST_MakePoint(76.9, 43.2), 4326)::geography) RETURNING id",
+            (name,),
+        )[0]["id"]
+
+    keep, drop, other = place("Оставить"), place("Удалить"), place("Рядом")
+    user = q(sconn, "INSERT INTO users (locale) VALUES ('en') RETURNING id")[0]["id"]
+    chat = q(sconn, "INSERT INTO chats (user_id) VALUES (%s) RETURNING id", (user,))[0]["id"]
+    stop = "INSERT INTO chat_live_stops (chat_id, ord, wish, place_id) VALUES (%s, %s, 'w', %s)"
+    alt = (
+        "INSERT INTO chat_live_alternatives (chat_id, ord, place_id, rank) VALUES (%s, %s, %s, %s)"
+    )
+    sconn.execute(stop, (chat, 1, drop))  # the stop itself is the dropped place
+    sconn.execute(alt, (chat, 1, other, 0))
+    sconn.execute(stop, (chat, 2, other))
+    sconn.execute(alt, (chat, 2, drop, 0))  # an alternative that moves
+    sconn.execute(alt, (chat, 2, keep, 1))  # ... next to the survivor: one row stays
+    sconn.execute(stop, (chat, 3, keep))
+    sconn.execute(alt, (chat, 3, drop, 0))  # would duplicate the stop after the move: dropped
+
+    merge_place(sconn, keep, drop)
+
+    assert q(sconn, "SELECT count(*) AS n FROM places WHERE id = %s", (drop,))[0]["n"] == 0
+    stops = q(sconn, "SELECT ord, place_id FROM chat_live_stops ORDER BY ord")
+    assert [(r["ord"], r["place_id"]) for r in stops] == [(1, keep), (2, other), (3, keep)]
+    alts = q(sconn, "SELECT ord, place_id FROM chat_live_alternatives ORDER BY ord, place_id")
+    assert {(r["ord"], r["place_id"]) for r in alts} == {(1, other), (2, keep)}
+
+
 def test_merge_moves_user_place_signals_to_the_survivor(sconn):
     """TECH_PLAN rule 8: user_place_signals (Ш-38) references places without cascade."""
     from merge import merge_place

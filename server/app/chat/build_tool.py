@@ -33,7 +33,7 @@ from uuid import UUID
 
 from app import worker
 from app.analytics import service as analytics
-from app.chat import edit_tools, store
+from app.chat import edit_tools, live_route, store
 from app.chat.brief import missing_fields
 from app.chat.engine import ToolOutcome
 from app.chat.tools import MAX_SEARCH_LIMIT, event_for_model
@@ -122,7 +122,11 @@ async def build_trip(
     forecast = None
     if weather is not None:  # Ш-40: the real forecast shapes the plan; failure = plan without it
         forecast = await city_forecast(weather, trip_dates(brief))
-    plan = await build_plan(db, brief, router or FakeRouter(), forecast, owner["user_id"])
+    async with db.transaction() as conn:
+        chosen = await live_route.chosen_places(conn, chat_id)  # Ш-54: picks on the live route
+    plan = await build_plan(
+        db, brief, router or FakeRouter(), forecast, owner["user_id"], chosen_places=chosen
+    )
     checked = None if forecast is None or isinstance(forecast, UnknownForecast) else clock.now()
     async with db.transaction() as conn:
         trip_id, version, _created = await trips_store.save_plan(

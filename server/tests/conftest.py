@@ -58,6 +58,8 @@ AUTH_TABLES = (
     "trip_legs",
     "trip_items",
     "trips",
+    "chat_live_alternatives",  # Ш-54: the live route hangs off chats
+    "chat_live_stops",
     "chat_graph_nodes",  # chats hang off users, so TRUNCATE users needs them listed
     "chat_messages",
     "trip_briefs",

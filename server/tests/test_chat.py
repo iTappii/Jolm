@@ -272,6 +272,7 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
     assert [n for n, _ in third] == [
         "brief_updated",
         "map_places",
+        "live_route",  # Ш-54
         "graph_node",
         "graph_node",
         "text_delta",
@@ -281,7 +282,7 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
     assert pins["reason"] == "must_have"
     assert [(p["name"], p["must_have"]) for p in pins["places"]] == [("Плов-центр", "Плов-центр")]
     assert third[0][1]["brief"]["complete"] is True
-    assert [third[2][1]["ord"], third[3][1]["ord"]] == [3, 4]
+    assert [third[3][1]["ord"], third[4][1]["ord"]] == [3, 4]
 
     fourth = parse_sse((await say(chat_env, headers, chat["id"], "Build it")).text)
     assert [n for n, _ in fourth] == ["route_ready", "text_delta", "done"]

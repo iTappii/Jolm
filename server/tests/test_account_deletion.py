@@ -146,9 +146,25 @@ async def test_delete_removes_chats_briefs_messages_and_graph(client, conn, deli
     tokens = await otp_sign_in(client, delivery, ADDRESS)
     other = await otp_sign_in(client, delivery, {**ADDRESS, "destination": "stays@example.com"})
     chat_ids = []
+    place = (
+        await fetch_one(
+            conn,
+            "INSERT INTO places(name_en, geom) "
+            "VALUES ('Live', ST_GeogFromText('POINT(76.9 43.2)')) RETURNING id",
+        )
+    )["id"]
     for who in (tokens, other):
         chat = (await client.post("/v1/chats", headers=auth(who))).json()
         chat_ids.append(chat["id"])
+        await conn.execute(  # Ш-54: the live route is chat data and goes with the chat
+            "INSERT INTO chat_live_stops (chat_id, ord, wish, place_id) VALUES (%s, 1, 'w', %s)",
+            (chat["id"], place),
+        )
+        await conn.execute(
+            "INSERT INTO chat_live_alternatives (chat_id, ord, place_id, rank) "
+            "VALUES (%s, 1, %s, 0)",
+            (chat["id"], place),
+        )
         await conn.execute(
             "INSERT INTO chat_messages (chat_id, role, content) VALUES (%s, 'user', 'hi')",
             (chat["id"],),
@@ -162,13 +178,15 @@ async def test_delete_removes_chats_briefs_messages_and_graph(client, conn, deli
             "WHERE chat_id = %s",
             (chat["id"],),
         )
-    for table in ("chats", "trip_briefs", "chat_messages", "chat_graph_nodes"):
+    live = ("chat_live_stops", "chat_live_alternatives")
+    for table in ("chats", "trip_briefs", "chat_messages", "chat_graph_nodes") + live:
         assert await count(conn, table) == 2, table
 
     assert (await client.delete("/v1/me", headers=auth(tokens))).status_code == 204
 
-    for table in ("chats", "trip_briefs", "chat_messages", "chat_graph_nodes"):
+    for table in ("chats", "trip_briefs", "chat_messages", "chat_graph_nodes") + live:
         assert await count(conn, table) == 1, table
+    assert await count(conn, "places") >= 1  # the place stays
     left = await fetch_all(conn, "SELECT id::text AS id FROM chats")
     assert left == [{"id": chat_ids[1]}]
     assert (await client.get("/v1/chats/%s" % chat_ids[1], headers=auth(other))).status_code == 200

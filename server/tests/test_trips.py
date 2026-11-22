@@ -129,7 +129,7 @@ async def count(conn, table, where="true", params=()):
 async def test_build_trip_writes_the_trip_and_announces_route_ready(chat_env, conn):
     headers, chat, events, llm = await start(chat_env, conn, must_haves=["Плов-центр"])
     assert [n for n, _ in events] == [
-        "brief_updated", "map_places", "route_ready", "text_delta", "done"
+        "brief_updated", "map_places", "live_route", "route_ready", "text_delta", "done"
     ]  # fmt: skip
     ready = event(events, "route_ready")
     assert set(ready) == {"trip_id", "version", "days", "warnings", "must_have_unmet", "budget"}
