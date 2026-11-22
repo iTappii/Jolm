@@ -265,10 +265,10 @@ def test_fake_is_rejected_in_prod():
         get_llm_provider(settings(app_env="prod", llm_provider="fake"))
 
 
-def test_real_provider_is_open_and_gives_clear_error():
+def test_unknown_provider_gives_clear_error():
     with pytest.raises(LLMNotConfigured) as error:
         get_llm_provider(settings(llm_provider="anthropic"))
-    assert "16.12" in str(error.value) and "anthropic" in str(error.value)
+    assert "anthropic" in str(error.value)
     assert error.value.retryable is False
 
 
