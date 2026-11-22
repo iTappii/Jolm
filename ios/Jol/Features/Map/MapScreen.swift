@@ -18,8 +18,10 @@ struct MapScreen: View {
     var body: some View {
         MapView(
             styleURL: AppConfig.mapStyleURL(dark: colorScheme == .dark),
-            pins: places.activeRoute == nil && !tripOpen ? places.pins : [],
-            pinsVersion: tripOpen ? -3 : places.activeRoute == nil ? places.pinsVersion : -2,
+            // Ordinary place pins and their orange clusters hide under a drawn route: next to the live route's
+            // numbered stops a cluster «2» read as a stop.
+            pins: places.activeRoute == nil && !tripOpen && liveRoute == nil ? places.pins : [],
+            pinsVersion: tripOpen ? -3 : liveRoute != nil ? -5 : places.activeRoute == nil ? places.pinsVersion : -2,
             routeStops: places.routeStops,
             routeID: places.activeRoute?.id,
             selectedID: places.selected?.id,
