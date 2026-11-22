@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// «О приложении» (Ш-52): version, data attributions the licences require (OpenStreetMap ODbL, Open-Meteo CC BY 4.0)
+/// «О приложении» (Ш-52): version, data attributions the licences require (OpenStreetMap ODbL,
+/// Overture Maps CDLA-Permissive-2.0, Foursquare OS Places Apache 2.0, Open-Meteo CC BY 4.0)
 /// and the privacy policy link.
 struct AboutScreen: View {
     static let osmCopyright = URL(string: "https://www.openstreetmap.org/copyright")!
     static let openMeteo = URL(string: "https://open-meteo.com/")!
     static let ccBy4 = URL(string: "https://creativecommons.org/licenses/by/4.0/")!
     static let maplibre = URL(string: "https://maplibre.org/")!
+    static let overture = URL(string: "https://overturemaps.org/")!
+    static let foursquare = URL(string: "https://opensource.foursquare.com/os-places/")!
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -26,6 +29,14 @@ struct AboutScreen: View {
                     Text(verbatim: "© OpenStreetMap contributors")
                 }
                 .accessibilityIdentifier("about-osm")
+                Link(destination: Self.overture) {
+                    Text("Places data © Overture Maps Foundation (CDLA-Permissive-2.0)")
+                }
+                .accessibilityIdentifier("about-overture")
+                Link(destination: Self.foursquare) {
+                    Text("Places data © Foursquare OS Places (Apache 2.0)")
+                }
+                .accessibilityIdentifier("about-foursquare")
                 Link(destination: Self.maplibre) {
                     Text("Map rendering by MapLibre Native.")
                 }

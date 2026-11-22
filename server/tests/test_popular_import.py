@@ -66,7 +66,7 @@ def test_osm_reimport_does_not_overwrite_curated(sconn):
         "address_ru": None, "address_en": None, "website": None, "is_public": False,
         "is_mountain": False, "elevation_m": 5, "setting": "indoor",
     }  # fmt: skip
-    sconn.execute(UPSERT_PLACE, osm_rec)
+    sconn.execute(UPSERT_PLACE, {"phone": None, **osm_rec})
     row = q(
         sconn,
         "SELECT p.name_ru, p.name_en, p.name_kk, p.elevation_m, p.setting, c.slug, "

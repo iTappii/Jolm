@@ -2069,6 +2069,26 @@
         }
       }
     },
+    "Places data © Overture Maps Foundation (CDLA-Permissive-2.0)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Данные о местах © Overture Maps Foundation (CDLA-Permissive-2.0)"
+          }
+        }
+      }
+    },
+    "Places data © Foursquare OS Places (Apache 2.0)" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Данные о местах © Foursquare OS Places (Apache 2.0)"
+          }
+        }
+      }
+    },
     "Meals" : {
       "localizations" : {
         "ru" : {

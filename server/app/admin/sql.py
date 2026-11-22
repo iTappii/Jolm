@@ -130,6 +130,13 @@ PLACE_TOUCH_OVERRIDE = """
 UPDATE places SET manual_override = %s::jsonb, data_updated_at = now() WHERE id = %s
 """
 
+# Ш-58: a hand edit owns the field (priority manual > user > open data, db function source_rank)
+PLACE_MARK_MANUAL = """
+INSERT INTO place_field_sources (place_id, field, source)
+SELECT %s, f, 'manual' FROM unnest(%s::text[]) AS f
+ON CONFLICT (place_id, field) DO UPDATE SET source = 'manual', updated_at = now()
+"""
+
 PLACE_HOURS_GET = """
 SELECT weekday, opens, closes FROM place_hours WHERE place_id = %s ORDER BY weekday, opens, closes
 """

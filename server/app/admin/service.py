@@ -44,6 +44,8 @@ PLACE_FIELDS = (
     "status",
 )
 HOURS_FIELD = "hours"  # same marker the OSM importer checks (data/osm/upsert.py)
+# fields tracked in place_field_sources (the open-data importers, data/osm/upsert.py TRACKED_FIELDS)
+SOURCE_FIELDS = ("name_ru", "name_en", "name_kk", "category_id", HOURS_FIELD)
 
 MAX_MONEY = 1_000_000_000
 PAGE_SIZE = 25
@@ -279,6 +281,9 @@ async def save_place(
         if mark not in override:
             override.append(mark)
 
+    sourced = [m for m in marks if m in SOURCE_FIELDS]
+    if sourced:
+        await execute(conn, sql.PLACE_MARK_MANUAL, (place_id, sourced))
     if changed:
         await execute(
             conn,

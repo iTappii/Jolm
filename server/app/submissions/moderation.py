@@ -48,6 +48,11 @@ UPDATE places SET entry_price_kzt = %s, data_updated_at = now(),
         FROM jsonb_array_elements(manual_override || '["entry_price_kzt"]'::jsonb) AS v)
 WHERE id = %s
 """
+ENTRY_PRICE_SOURCE = """
+INSERT INTO place_field_sources (place_id, field, source) VALUES (%s, 'entry_price_kzt', 'user')
+ON CONFLICT (place_id, field) DO UPDATE SET source = 'user', updated_at = now()
+WHERE place_field_sources.source IN ('osm', 'overture', 'foursquare', 'user')
+"""
 
 
 class AlreadyDecided(Exception):
@@ -97,3 +102,4 @@ async def _apply(conn, row: Dict[str, Any]) -> None:
         await execute(conn, MENU_UPSERT, (row["place_id"], Jsonb(menu)))
     elif row["type"] == "price" and payload.get("audience", "adult") == "adult":
         await execute(conn, ENTRY_PRICE, (payload["price_kzt"], row["place_id"]))
+        await execute(conn, ENTRY_PRICE_SOURCE, (row["place_id"],))

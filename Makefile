@@ -7,7 +7,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml --env-file .env
 -include .env
 export
 
-.PHONY: up down migrate run worker test lint seed import-osm import-transit import-addresses osm-pbf ci venv
+.PHONY: up down migrate run worker test lint seed import-osm import-transit import-addresses osm-pbf ci venv places-fetch places-import places-coverage
 
 .env:
 	cp .env.example .env
@@ -63,6 +63,26 @@ import-transit: venv osm-pbf
 import-addresses: venv osm-pbf
 	$(VENV)/bin/pip install -q -e "server[osm]"
 	$(PY) data/osm/import_addresses.py
+
+# Places by region (Ш-58): OSM + Overture Maps + Foursquare OS Places inside a region boundary.
+#   make places-fetch BBOX="46.4 40.5 87.4 55.5"     Overture Parquet -> data/places/cache (no key)
+#   make places-import REGION=kazakhstan [SOURCE=osm|overture|foursquare|all]
+#   make places-coverage REGION=kazakhstan           markdown coverage report
+# Foursquare OS Places is gated on Hugging Face: put the Parquet file at
+# data/places/cache/foursquare-places.parquet (or pass FSQ=path) after getting access.
+REGION ?= almaty
+SOURCE ?= all
+places-fetch: venv
+	$(VENV)/bin/pip install -q -e "server[places]"
+	$(PY) data/places/fetch_overture.py --bbox $(BBOX) $(if $(OVERTURE),--out $(OVERTURE))
+
+places-import: venv osm-pbf
+	$(VENV)/bin/pip install -q -e "server[osm,places]"
+	$(PY) data/places/run_import.py --region $(REGION) --source $(SOURCE) \
+		$(if $(PBF),--pbf $(PBF)) $(if $(OVERTURE),--overture $(OVERTURE)) $(if $(FSQ),--foursquare $(FSQ))
+
+places-coverage: venv
+	$(PY) data/places/region_coverage.py --region $(REGION) $(if $(OUT),--out $(OUT))
 
 # Map (Ш-11/Ш-12): build vector tiles, regenerate styles, serve maps/ with Range support
 .PHONY: tiles tiles-styles tiles-serve

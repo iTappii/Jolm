@@ -7,7 +7,11 @@ import (a manual row that turns out to be an OSM object). The surviving row ("ke
     own (hours, menu, same route item, same trip's lodging option);
   - fields the survivor lacks (names, descriptions, address, prices ...);
   - fields the dropped row set by hand (manual_override) when the survivor did not;
-  - the union of both manual_override lists.
+  - the union of both manual_override lists;
+  - external ids in the open datasets (Overture, Foursquare) and the field sources (Ш-58): a
+    field
+    the dropped row got from manual / partner / user data takes over like a manual_override field,
+    and the survivor gets the source rows of fields it lacked.
 Then the dropped row is deleted. Column names come from the hard-coded lists below only.
 """
 
@@ -16,19 +20,27 @@ from __future__ import annotations
 # nullable columns: the survivor's own value wins, the dropped row only fills holes
 FILL_COLUMNS = (
     "name_ru", "name_en", "name_kk", "description_ru", "description_en", "address_ru",
-    "address_en", "website", "elevation_m", "setting", "typical_visit_min", "entry_price_kzt",
-    "avg_check_kzt", "price_per_night_kzt", "category_id",
+    "address_en", "website", "phone", "elevation_m", "setting", "typical_visit_min",
+    "entry_price_kzt", "avg_check_kzt", "price_per_night_kzt", "category_id",
 )  # fmt: skip
 # columns taken from the dropped row when it set them by hand and the survivor did not
 TAKEOVER_COLUMNS = FILL_COLUMNS + ("kind", "geom", "is_public", "is_mountain")
 _ALL = TAKEOVER_COLUMNS
 
 
-def _set(column: str) -> str:
-    take = (
-        f"d.manual_override @> '\"{column}\"'::jsonb "
-        f"AND NOT k.manual_override @> '\"{column}\"'::jsonb"
+PROTECTED = "'manual', 'partner', 'user'"  # sources an import never overwrites (upsert.py)
+
+
+def _protected(alias: str, column: str) -> str:
+    return (
+        f"({alias}.manual_override @> '\"{column}\"'::jsonb OR EXISTS (SELECT 1 FROM "
+        f"place_field_sources s WHERE s.place_id = {alias}.id AND s.field = '{column}' "
+        f"AND s.source IN ({PROTECTED})))"
     )
+
+
+def _set(column: str) -> str:
+    take = f"{_protected('d', column)} AND NOT {_protected('k', column)}"
     fallback = f"COALESCE(k.{column}, d.{column})" if column in FILL_COLUMNS else f"k.{column}"
     return f"{column} = CASE WHEN {take} THEN d.{column} ELSE {fallback} END"
 
@@ -109,6 +121,17 @@ MOVE_STATEMENTS = (
     "DELETE FROM chat_live_alternatives WHERE place_id = %(drop)s",
     "DELETE FROM chat_live_alternatives a USING chat_live_stops s "
     "WHERE s.chat_id = a.chat_id AND s.ord = a.ord AND s.place_id = a.place_id",
+    # open-data ids (Ш-58): the survivor keeps every id, so a repeated import finds the place
+    "UPDATE place_external_ids SET place_id = %(keep)s WHERE place_id = %(drop)s",
+    # field sources (Ш-58): rows of fields the survivor has no source for move over; a hand/partner/
+    # user source of the dropped row beats an open one of the survivor (as the takeover above)
+    "INSERT INTO place_field_sources (place_id, field, source, updated_at) "
+    "SELECT %(keep)s, field, source, updated_at FROM place_field_sources WHERE place_id = %(drop)s "
+    "ON CONFLICT (place_id, field) DO UPDATE SET source = EXCLUDED.source, "
+    "updated_at = EXCLUDED.updated_at "
+    f"WHERE EXCLUDED.source IN ({PROTECTED}) "
+    f"AND place_field_sources.source NOT IN ({PROTECTED})",
+    "DELETE FROM place_field_sources WHERE place_id = %(drop)s",
 )
 
 DELETE_DROPPED = "DELETE FROM places WHERE id = %(drop)s AND (%(any_row)s OR osm_id IS NULL)"

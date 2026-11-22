@@ -116,6 +116,22 @@ WHERE id = %(id)s AND osm_id IS NULL
 """
 
 
+MARK_MANUAL = """
+INSERT INTO place_field_sources (place_id, field, source)
+SELECT %s, f, 'manual' FROM unnest(%s::text[]) AS f
+ON CONFLICT (place_id, field) DO UPDATE SET source = 'manual', updated_at = now()
+"""
+# curated fields that place_field_sources tracks (Ш-58, data/osm/upsert.py TRACKED_FIELDS)
+SOURCE_FIELDS = ("name_ru", "name_en", "category_id", "geom")
+
+
+def mark_manual(conn, place_id, rec: dict) -> None:
+    """Record the curated fields as hand-made (priority manual: open-data imports keep them)."""
+    fields = [c for c in SOURCE_FIELDS if rec[f"set_{c}"]]
+    if fields:
+        conn.execute(MARK_MANUAL, (place_id, fields))
+
+
 def link_manual_to_osm(conn, rec: dict) -> str:
     """Make sure a CSV row with an OSM id does not leave a manual twin behind.
 
@@ -227,14 +243,17 @@ def import_csv(conn, path: Path = DEFAULT_CSV) -> Dict[str, int]:
             if linked != "none":
                 stats[linked] = stats.get(linked, 0) + 1
             row = conn.execute(UPSERT_OSM, rec).fetchone()
+            mark_manual(conn, row[0], rec)
             stats["inserted" if row[1] else "updated"] += 1
             continue
         found = conn.execute(FIND_MANUAL, rec).fetchone()
         if found:
             conn.execute(UPDATE_MANUAL, {**rec, "id": found[0]})
+            mark_manual(conn, found[0], rec)
             stats["updated"] += 1
         else:
-            conn.execute(INSERT_MANUAL, rec)
+            new_id = conn.execute(INSERT_MANUAL, rec).fetchone()[0]
+            mark_manual(conn, new_id, rec)
             stats["inserted"] += 1
     return stats
 

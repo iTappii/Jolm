@@ -29,6 +29,10 @@ dev = [
 osm = [
   "osmium>=3.7",
 ]
+# Open place datasets by region (Ш-58): Overture / Foursquare Parquet files are read with DuckDB.
+places = [
+  "duckdb>=1.0",
+]
 # Optional error reporting (Ш-51): enabled only when SENTRY_DSN is set.
 sentry = [
   "sentry-sdk>=2.0",
@@ -46,4 +50,4 @@ include = ["app*"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-pythonpath = [".", "../db", "../data/osm", "../data/seed"]
+pythonpath = [".", "../db", "../data/osm", "../data/seed", "../data/places"]

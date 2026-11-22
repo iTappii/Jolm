@@ -164,6 +164,7 @@ def build_record(osm_type: str, osm_id: int, lon: float, lat: float, tags: Dict[
         "address_ru": spec.address_ru,
         "address_en": spec.address_en,
         "website": spec.website,
+        "phone": spec.phone,
         "is_public": spec.is_public,
         "is_mountain": spec.is_mountain,
         "elevation_m": spec.elevation_m,
@@ -246,9 +247,16 @@ def main(argv=None) -> int:
     return 0
 
 
-def collect(pbf: Path, bbox: Tuple[float, float, float, float] = BBOX):
-    """Read the PBF/XML and dedupe: (records, {dropped key: survivor key}, dedupe counters)."""
-    return dedupe(extract(pbf, bbox), relation_outer_members(pbf))
+def collect(pbf: Path, bbox: Tuple[float, float, float, float] = BBOX, keep=None):
+    """Read the PBF/XML and dedupe: (records, {dropped key: survivor key}, dedupe counters).
+
+    `keep` (optional) filters the extracted records before dedupe, e.g. by a region boundary
+    (data/places/run_import.py); it takes and returns a list of (type, id, lon, lat, tags).
+    """
+    found = extract(pbf, bbox)
+    if keep is not None:
+        found = keep(list(found))
+    return dedupe(found, relation_outer_members(pbf))
 
 
 def load(conn, records, drops) -> Counter:

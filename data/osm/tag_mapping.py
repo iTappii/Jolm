@@ -209,6 +209,7 @@ class PlaceSpec:
     address_ru: Optional[str]
     address_en: Optional[str]
     website: Optional[str]
+    phone: Optional[str] = None
 
 
 def _clean(value: Optional[str]) -> Optional[str]:
@@ -338,4 +339,5 @@ def classify(tags: Mapping[str, str]) -> Optional[PlaceSpec]:
         address_ru=addr_ru,
         address_en=addr_en,
         website=website,
+        phone=_clean(tags.get("phone")) or _clean(tags.get("contact:phone")),
     )
