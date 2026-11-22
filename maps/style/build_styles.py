@@ -13,7 +13,9 @@ OUT = Path(__file__).parent
 ACCENT = "#FF7A00"
 
 # Source URL is a placeholder: the app / demo replaces it (see maps/README.md).
-PMTILES_URL = "pmtiles://https://tiles.example.com/almaty.pmtiles"
+# Tile file name (Ш-59: whole country). maps/serve.py falls back to almaty.pmtiles if this file is absent.
+PMTILES_NAME = "kazakhstan.pmtiles"
+PMTILES_URL = f"pmtiles://https://tiles.example.com/{PMTILES_NAME}"
 # TODO(self-host): MapLibre public demo glyph server (Noto Sans, verified to include Cyrillic);
 # not for production traffic -> self-host the .pbf glyphs on our bucket before release.
 # (fonts.openmaptiles.org now returns HTML, do not use.)

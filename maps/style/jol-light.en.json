@@ -16,7 +16,7 @@
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "pmtiles://https://tiles.example.com/almaty.pmtiles",
+      "url": "pmtiles://https://tiles.example.com/kazakhstan.pmtiles",
       "minzoom": 0,
       "maxzoom": 14,
       "attribution": "<a href=\"https://www.openstreetmap.org/copyright\">© OpenStreetMap contributors</a>"

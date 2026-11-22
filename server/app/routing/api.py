@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from app.db import fetch_one
 from app.errors import AppError
-from app.regions import default_region
+from app.regions import region_for_point
 from app.routing import RoutingUnavailable, get_network
 from app.routing.costs import load_tariffs
 from app.routing.schemas import DirectionOption, DirectionsRequest, RoutePoint
@@ -39,17 +39,27 @@ async def directions(payload: DirectionsRequest, request: Request):
         except ValidationError:
             raise AppError(422, "validation_error") from None
 
-    region = default_region()
-    if not (
-        region.contains(*payload.origin.as_point()) and region.contains(*destination.as_point())
-    ):
-        raise AppError(422, "validation_error")  # a point outside the region: no routing there yet
+    origin = payload.origin.as_point()
+    target = destination.as_point()
+    try:
+        async with db.transaction() as conn:
+            origin_region = await region_for_point(conn, *origin)
+            target_region = await region_for_point(conn, *target)
+    except OperationalError:
+        raise AppError(503, "db_unavailable") from None
+    if origin_region is None or target_region is None:
+        # a point outside every region: no road data and no tariffs there (Ш-59: any region counts,
+        # not only the default one; "how to get there" works across the whole country)
+        raise AppError(422, "validation_error")
+    # Public transit exists only inside the default region (its stops come from the imported
+    # network); between regions or in another one it is not built rather than invented.
+    local = origin_region.is_default and target_region.is_default
 
     try:
         depart_at = (
-            payload.depart_at.astimezone(default_region().tz)
+            payload.depart_at.astimezone(origin_region.tz)
             if payload.depart_at is not None
-            else datetime.now(default_region().tz)
+            else datetime.now(origin_region.tz)
         )
     except OverflowError:
         raise AppError(422, "validation_error") from None
@@ -59,7 +69,7 @@ async def directions(payload: DirectionsRequest, request: Request):
     try:
         async with db.transaction() as conn:
             tariffs = await load_tariffs(conn, depart_at.date())
-            if "bus" in tariffs or "metro" in tariffs:
+            if local and ("bus" in tariffs or "metro" in tariffs):
                 network = await get_network(conn)
     except OperationalError:
         log.warning("directions data unavailable", exc_info=True)

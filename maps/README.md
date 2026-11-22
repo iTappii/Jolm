@@ -1,11 +1,12 @@
 # maps/ — карта Jol (Ш-11, Ш-12)
 
-Векторные тайлы OpenStreetMap (схема OpenMapTiles) → один файл `almaty.pmtiles` + стиль Jol для MapLibre.
+Векторные тайлы OpenStreetMap (схема OpenMapTiles) → один файл `kazakhstan.pmtiles` (вся страна, ~380 МБ, z0–14; Ш-59) или `almaty.pmtiles` (только Алматы, 21 МБ) + стиль Jol для MapLibre.
 
 ## 1. Сборка тайлов (Ш-11)
 
 ```bash
-./maps/build_tiles.sh        # или: make tiles
+./maps/build_tiles.sh        # или: make tiles — вся страна, bbox 46.4,40.5,87.4,55.5 (~1 мин)
+AREA=almaty ./maps/build_tiles.sh   # или: make tiles-almaty — только Алматы
 ```
 
 Что делает: скачивает выгрузку Казахстана Geofabrik (~230 МБ) в `maps/build/` (в git не попадает),

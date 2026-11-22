@@ -17,6 +17,8 @@ log = logging.getLogger("app.routing")
 
 # Five kilometres limits the standalone walk to about an hour at city walking pace.
 MAX_WALK_M = 5000
+# Ш-59: an e-scooter is not a way to cover 200 km; past this it is not offered (SSOT §6.1 п. 4).
+MAX_SCOOTER_M = 30000
 # Ш-22a: up to this many path variants per transport group (variant 0 = the optimal one).
 MAX_VARIANTS = 3
 # A variant slower than this multiple of its group's best is not a reasonable alternative.
@@ -248,7 +250,7 @@ async def get_directions(
     road_modes = {}
     if haversine_m(origin, destination) <= MAX_WALK_M:
         road_modes["walk"] = ("walk",)
-    if "scooter" in tariffs:
+    if "scooter" in tariffs and haversine_m(origin, destination) <= MAX_SCOOTER_M:
         road_modes["scooter"] = ("scooter",)
     motor_modes = tuple(mode for mode in ("taxi", "car") if mode in tariffs)
     if motor_modes:

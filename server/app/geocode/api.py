@@ -10,6 +10,7 @@ the place radius: a tap inside a big building can be some tens of metres from it
 from typing import Any, Dict
 
 from fastapi import APIRouter, Query, Request, Response
+from psycopg import OperationalError
 
 from app.clientip import client_ip
 from app.db import fetch_one
@@ -19,7 +20,7 @@ from app.places import service
 from app.places import sql as places_sql
 from app.places.api import _summary
 from app.ratelimit import acquire_own
-from app.regions import default_region
+from app.regions import region_for_point
 
 router = APIRouter(prefix="/v1/geocode", tags=["geocode"])
 
@@ -71,8 +72,13 @@ async def reverse(
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
 ) -> Dict[str, Any]:
-    if not default_region().contains(lat, lon):
-        raise AppError(422, "validation_error", "The point is outside the region")
+    try:
+        async with request.app.state.db.transaction() as conn:
+            region = await region_for_point(conn, lat, lon)
+    except OperationalError:
+        raise AppError(503, "db_unavailable") from None
+    if region is None:  # Ш-59: any region of the table, not only the default one
+        raise AppError(422, "validation_error", "The point is outside every region")
     wait = await acquire_own(
         request.app.state.db, [(request.app.state.geocode_limiter, client_ip(request))]
     )

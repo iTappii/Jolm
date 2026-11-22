@@ -24,7 +24,7 @@
 <script>
   // Serve maps/ with Range support:  python3 maps/serve.py  ->  http://localhost:8080/demo/
   const q = new URLSearchParams(location.search);
-  const tilesUrl = q.get("pmtiles") || new URL("../build/almaty.pmtiles", location.href).href;
+  const tilesUrl = q.get("pmtiles") || new URL("../build/kazakhstan.pmtiles", location.href).href;
   maplibregl.addProtocol("pmtiles", new pmtiles.Protocol().tile);
 
   async function load(theme, lang) {
