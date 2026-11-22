@@ -1176,9 +1176,9 @@
     "semantic_hash": "29ff022ddd6f056472ed37326c55c7b0"
   },
   "ios/Jol/Features/Sidebar/SidebarPanel.swift": {
-    "mtime": 1795284174.2651541,
-    "seen": 1795286185.9475179,
-    "ast_hash": "6f7e67a561ef281e3bc3f9000cb40eb2",
+    "mtime": 1795328236.3983834,
+    "seen": 1795328727.413722,
+    "ast_hash": "52dcdbc3e7388acb4f385d73f2ec7ab9",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Sidebar/SidebarScreen.swift": {

@@ -33,7 +33,11 @@ struct SidebarPanel: View {
                     .accessibilityLabel(Text("Close"))
                     .accessibilityAddTraits(.isButton)
                     .transition(.opacity)
+                // Trips and chats reload while the panel opens, so their rows are inserted mid-animation. Without
+                // a geometry group SwiftUI draws such rows at their final place, ahead of the sliding panel;
+                // `geometryGroup()` makes them take the panel's animated position.
                 panel
+                    .geometryGroup()
                     .transition(.move(edge: .leading))
             }
         }
