@@ -117,6 +117,11 @@ extension MapCoordinator {
         guard refit else { return }
         var all = stops.map(\.coordinate) + lines.flatMap(\.coordinates)
         guard !all.isEmpty else { return }
+        // A day with a single stop must not zoom in beyond a sensible level (Ш-63).
+        if case .center(let center, let zoom) = CameraFit.plan(for: all, singleZoom: CameraFit.singleStopZoom) {
+            map.setCenter(center, zoomLevel: zoom, animated: true)
+            return
+        }
         map.setVisibleCoordinates(
             &all, count: UInt(all.count),
             edgePadding: UIEdgeInsets(top: 130, left: 50, bottom: 90, right: 50), animated: true

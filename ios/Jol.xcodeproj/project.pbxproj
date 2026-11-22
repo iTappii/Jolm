@@ -115,6 +115,7 @@
 		743210FC96EA99D78EBC566F /* PlaceCardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D48FEE523F5A6D969F3988B /* PlaceCardSheet.swift */; };
 		75F95192F651B0649A063A4C /* chat-dlg-5.sse in Resources */ = {isa = PBXBuildFile; fileRef = CF80947889202F546473F586 /* chat-dlg-5.sse */; };
 		77D234DA89F8A49824B8EFD2 /* TripDayListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31F7712007D9906CA078E69 /* TripDayListView.swift */; };
+		7ABCF9B1F1F10067A1FAFF90 /* CameraFitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E255910D63220F310E0631D /* CameraFitTests.swift */; };
 		7CBC9720DECC93A6F5FB3EE7 /* chat-dlg-2.sse in Resources */ = {isa = PBXBuildFile; fileRef = F545F7ADEFDFDFFA7A710DA4 /* chat-dlg-2.sse */; };
 		7DE01055E7F512C4828F802E /* ContentModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3716D3F921790C5504B3EB7A /* ContentModel.swift */; };
 		7EDED0BF212B19CA07E8D7CC /* FavoritesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1761E118198B7933AF11CE /* FavoritesTests.swift */; };
@@ -307,6 +308,7 @@
 		4AD52F4D5C65875EFD1A9938 /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		4C50E0994384D56BD3E7D898 /* ProfileModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileModel.swift; sourceTree = "<group>"; };
 		4E19CEC85799ADE6F510091C /* PlaceholderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderScreen.swift; sourceTree = "<group>"; };
+		4E255910D63220F310E0631D /* CameraFitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraFitTests.swift; sourceTree = "<group>"; };
 		4E26C6D63011E05A1B59B148 /* SidebarPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarPanel.swift; sourceTree = "<group>"; };
 		4E27A4CF8727688AA3A175AA /* ChainNodesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChainNodesTests.swift; sourceTree = "<group>"; };
 		50392AF9A1CC44BF92B4A2E1 /* TripMapDrawing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripMapDrawing.swift; sourceTree = "<group>"; };
@@ -706,6 +708,7 @@
 				84367B2746DCF01FA55C7DD0 /* AppConfigTests.swift */,
 				93279B2C34849A596C0679B8 /* BonusTests.swift */,
 				5AE3F319D2721BF13EF6F635 /* BookingsListTests.swift */,
+				4E255910D63220F310E0631D /* CameraFitTests.swift */,
 				021DE7A566562DB34BD97D14 /* ChainGeometryTests.swift */,
 				4E27A4CF8727688AA3A175AA /* ChainNodesTests.swift */,
 				EF23C0656FD9ADC9F4CCDEF8 /* ChatChainReductionTests.swift */,
@@ -1105,6 +1108,7 @@
 				1B3AA3311557DBFFBED329DF /* AppConfigTests.swift in Sources */,
 				E76A8FC0517CC85C5928A930 /* BonusTests.swift in Sources */,
 				E0461DE175EE5CAD20C27D73 /* BookingsListTests.swift in Sources */,
+				7ABCF9B1F1F10067A1FAFF90 /* CameraFitTests.swift in Sources */,
 				6048FADE271D56D5435DA36A /* ChainGeometryTests.swift in Sources */,
 				036A46A3193850588536A707 /* ChainNodesTests.swift in Sources */,
 				FC848A26796765013213E63D /* ChatChainReductionTests.swift in Sources */,

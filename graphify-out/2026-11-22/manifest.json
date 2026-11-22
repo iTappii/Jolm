@@ -6,9 +6,9 @@
     "semantic_hash": ""
   },
   "JOL_SSOT.md": {
-    "mtime": 1795333087.769451,
-    "seen": 1795338472.956467,
-    "ast_hash": "a5b7aeca0f61963f45b668a4edea2ad2",
+    "mtime": 1795357011.7745676,
+    "seen": 1795358463.708852,
+    "ast_hash": "8213c0afd08f6d993cd487d49a05037d",
     "semantic_hash": ""
   },
   "logo/jol-icon-1024.png": {
@@ -48,9 +48,9 @@
     "semantic_hash": "9b31786b637be3c13978bec4c2330752"
   },
   "TECH_PLAN.md": {
-    "mtime": 1795343036.9451063,
-    "seen": 1795343057.9208162,
-    "ast_hash": "621bbff80eebf183484c2ddf560b264c",
+    "mtime": 1795358459.7788277,
+    "seen": 1795358463.7088661,
+    "ast_hash": "5749139f270cf90b9ab779235ae40059",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -870,9 +870,9 @@
     "semantic_hash": "4603000cab77232050ebd2ab4dfc037a"
   },
   "docs/HANDOFF.md": {
-    "mtime": 1795343036.945501,
-    "seen": 1795343057.920817,
-    "ast_hash": "4b6c6b76085bdfbb6faafdd5b0e22e85",
+    "mtime": 1795358459.779356,
+    "seen": 1795358463.708867,
+    "ast_hash": "ad549cb76e69752a9ebea92209d6a6a3",
     "semantic_hash": ""
   },
   "docs/reviews/\u0428-21.md": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
   },
   "server/app/chat/api.py": {
-    "mtime": 1795338356.6270933,
-    "seen": 1795338472.956366,
-    "ast_hash": "3671ae913cb0fa7c87e34f031c2b0750",
+    "mtime": 1795358249.2188501,
+    "seen": 1795358463.705246,
+    "ast_hash": "fd52f8752f9a2387b7e3852405181d6a",
     "semantic_hash": ""
   },
   "server/app/chat/brief.py": {
@@ -1314,10 +1314,10 @@
     "semantic_hash": ""
   },
   "server/app/chat/tools.py": {
-    "mtime": 1795261527.036392,
-    "seen": 1795338472.956372,
-    "ast_hash": "c4a16dddf7e680ca329afd09ebec6658",
-    "semantic_hash": "c4a16dddf7e680ca329afd09ebec6658"
+    "mtime": 1795358249.2185843,
+    "seen": 1795358463.7055721,
+    "ast_hash": "efbbf91da40fd89ea354b8b0417aa0e3",
+    "semantic_hash": ""
   },
   "server/app/planner/__init__.py": {
     "mtime": 1795232025.608344,
@@ -1332,9 +1332,9 @@
     "semantic_hash": "b421c06318f5ac11aff0f1299871d3ce"
   },
   "server/app/planner/candidates.py": {
-    "mtime": 1795338356.6340704,
-    "seen": 1795338472.956398,
-    "ast_hash": "a233e9e0e4aef2991120c48f274c458c",
+    "mtime": 1795358249.218642,
+    "seen": 1795358463.706483,
+    "ast_hash": "925fd22f7821a69e9e933590a69b39fa",
     "semantic_hash": ""
   },
   "server/app/planner/hours.py": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "server/tests/test_chat.py": {
-    "mtime": 1795338356.6449986,
-    "seen": 1795338472.9564428,
-    "ast_hash": "290c0cba3b5d6079f8e939a1dab4c479",
+    "mtime": 1795358355.2894692,
+    "seen": 1795358463.708092,
+    "ast_hash": "234f6883201802f1bcc903e3987c8e88",
     "semantic_hash": ""
   },
   "server/tests/test_chat_guest.py": {
@@ -1464,10 +1464,10 @@
     "semantic_hash": "e8db1ad6eec2398aa378595f324eb583"
   },
   "server/tests/test_prompts.py": {
-    "mtime": 1795261487.7161708,
-    "seen": 1795338472.956457,
-    "ast_hash": "a6c1a700728cbf80b1bd5c770d343fd2",
-    "semantic_hash": "a6c1a700728cbf80b1bd5c770d343fd2"
+    "mtime": 1795358306.4800675,
+    "seen": 1795358463.708522,
+    "ast_hash": "7b56347f0bf6c0d64d848e32b951cd95",
+    "semantic_hash": ""
   },
   "docs/reviews/\u0428-14.md": {
     "mtime": 1795231291.8076193,
@@ -1638,9 +1638,9 @@
     "semantic_hash": ""
   },
   "server/app/chat/build_tool.py": {
-    "mtime": 1795338356.62922,
-    "seen": 1795338472.956367,
-    "ast_hash": "f6cecc96aadf58ced815f2fcfe231626",
+    "mtime": 1795358255.1307516,
+    "seen": 1795358463.7052832,
+    "ast_hash": "78f5c45276fd49830276b8d7f681dcc3",
     "semantic_hash": ""
   },
   "server/app/chat/edit_tools.py": {
@@ -1656,9 +1656,9 @@
     "semantic_hash": "f31bdfc8ecbe8948d127b0e04e53f22d"
   },
   "server/app/planner/build.py": {
-    "mtime": 1795338356.6322474,
-    "seen": 1795338472.956398,
-    "ast_hash": "8d3d04a741902df12105f63ff9055cdf",
+    "mtime": 1795358225.1873198,
+    "seen": 1795358463.706483,
+    "ast_hash": "d3f2de075a18cba7a9fc6b549683dd3a",
     "semantic_hash": ""
   },
   "server/app/providers/weather/__init__.py": {
@@ -2304,10 +2304,10 @@
     "semantic_hash": "f698ce30e544597c7ca86da705ab4543"
   },
   "server/app/analytics/events.py": {
-    "mtime": 1795266377.0701632,
-    "seen": 1795338472.956356,
-    "ast_hash": "92acfad90266fa99db2245490475400b",
-    "semantic_hash": "92acfad90266fa99db2245490475400b"
+    "mtime": 1795358232.2567472,
+    "seen": 1795358463.704628,
+    "ast_hash": "1b3478f12e777cd9880fe435d9102eb2",
+    "semantic_hash": ""
   },
   "server/app/analytics/schemas.py": {
     "mtime": 1795266377.0724328,
@@ -4347,6 +4347,48 @@
     "mtime": 1795353824.7946172,
     "seen": 1795354002.307242,
     "ast_hash": "404aeec9c18cc2d30613d5684afe26f7",
+    "semantic_hash": ""
+  },
+  "server/app/planner/outside.py": {
+    "mtime": 1795358318.4427977,
+    "seen": 1795358463.706571,
+    "ast_hash": "3e102770164a1d12a28e411da33d80ad",
+    "semantic_hash": ""
+  },
+  "server/tests/test_outside_area.py": {
+    "mtime": 1795358318.4429393,
+    "seen": 1795358463.708402,
+    "ast_hash": "b1326f06c87b0713fd3b8b7ab0d431f8",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-56.md": {
+    "mtime": 1795358459.778491,
+    "seen": 1795358463.71019,
+    "ast_hash": "58db24afc520c642cb2c17cbeb0e7afa",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/guest.en.v3.md": {
+    "mtime": 1795358205.9238484,
+    "seen": 1795358463.710667,
+    "ast_hash": "e2f7ee61377b5b3d332cb150ac31aa68",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/guest.ru.v3.md": {
+    "mtime": 1795358205.924106,
+    "seen": 1795358463.710707,
+    "ast_hash": "b7a5cdca2b2632817d344dc0aea535bf",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.en.v5.md": {
+    "mtime": 1795358205.9231665,
+    "seen": 1795358463.71078,
+    "ast_hash": "81af48ec28887e0a5d4a0cc8cdf92327",
+    "semantic_hash": ""
+  },
+  "server/app/chat/prompts/trip_brief.ru.v5.md": {
+    "mtime": 1795358205.9235551,
+    "seen": 1795358463.7108538,
+    "ast_hash": "f591a4207e787f56e5a786bed84e00b6",
     "semantic_hash": ""
   }
 }

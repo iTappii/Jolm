@@ -76,22 +76,14 @@ extension MapCoordinator {
         parent?.projection?.invalidateSoon()
         guard let route, !route.isEmpty else { return }
         var coordinates = route.coordinates
-        if coordinates.count == 1, let only = coordinates.first {
-            map.setCenter(only, zoomLevel: 14, animated: true)
+        if case .center(let center, let zoom) = CameraFit.plan(for: coordinates, singleZoom: CameraFit.liveSingleStopZoom) {
+            map.setCenter(center, zoomLevel: zoom, animated: true)
             return
         }
-        // `setVisibleCoordinates` adds its padding to the map's CURRENT content inset, which is still animating
-        // towards `bottomInset` when the chat has just opened. So the padding asks for the wanted inset minus the
-        // current one: the route lands above the chat card either way.
-        // A narrow strip above the card (keyboard up) gets tighter margins, so the route is not drawn tiny.
-        let inset = parent?.bottomInset ?? 0
-        let tight = map.bounds.height - inset < 420
-        let wanted = inset + (tight ? 52 : 84)
-        let bottom = max(tight ? 52 : 84, wanted - map.contentInset.bottom)
-        map.setVisibleCoordinates(
-            &coordinates, count: UInt(coordinates.count),
-            edgePadding: UIEdgeInsets(top: tight ? 56 : 72, left: 56, bottom: bottom, right: 56), animated: true
-        )
+        // The maths (padding above the chat card, tighter with the keyboard up) lives in `CameraFit`.
+        let padding = CameraFit.liveRoutePadding(
+            mapHeight: map.bounds.height, targetInset: parent?.bottomInset ?? 0, currentInset: map.contentInset.bottom)
+        map.setVisibleCoordinates(&coordinates, count: UInt(coordinates.count), edgePadding: padding, animated: true)
     }
 }
 
