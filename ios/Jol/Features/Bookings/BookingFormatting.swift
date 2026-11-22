@@ -1,6 +1,6 @@
 import Foundation
 
-/// Dates of a booking: the server writes ISO times with the region's offset; the screen shows them in the region's time.
+/// Dates of a booking: the server writes ISO times with the region's offset; the screen shows them in region time.
 enum BookingFormatting {
     private static func date(_ iso: String?) -> Date? {
         guard let iso else { return nil }

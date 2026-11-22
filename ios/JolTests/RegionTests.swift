@@ -35,6 +35,11 @@ final class RegionTests: XCTestCase {
         return RegionModel(api: client, defaults: defaults)
     }
 
+    private func berlin() throws -> Region {
+        let answer = try JSONDecoder().decode(RegionsResponse.self, from: Data(Self.twoRegions.utf8))
+        return try XCTUnwrap(answer.preferred)
+    }
+
     func testDecodesContract() throws {
         let answer = try JSONDecoder().decode(RegionsResponse.self, from: Data(RegionTests.twoRegions.utf8))
         XCTAssertEqual(answer.regions.count, 2)
@@ -97,7 +102,7 @@ final class RegionTests: XCTestCase {
         let option = try JSONDecoder().decode(DirectionOption.self, from: Data(json.utf8))
         XCTAssertEqual(DirectionsFormatting.price(option, language: "en"), "≈ 120\u{00A0}₸")
         XCTAssertEqual(PlaceFormatting.tenge(1500), "≈ 1\u{00A0}500\u{00A0}₸")
-        Region.current = try XCTUnwrap(JSONDecoder().decode(RegionsResponse.self, from: Data(Self.twoRegions.utf8)).preferred)
+        Region.current = try berlin()
         XCTAssertEqual(DirectionsFormatting.price(option, language: "en"), "≈ 120\u{00A0}€")
         XCTAssertEqual(PlaceFormatting.tenge(1500), "≈ 1\u{00A0}500\u{00A0}€")
         XCTAssertEqual(TripFormatting.kzt(120_000, locale: Locale(identifier: "en_US")), "120,000\u{00A0}€")
@@ -111,7 +116,7 @@ final class RegionTests: XCTestCase {
         XCTAssertEqual(PlaceFormatting.weekday(of: date), 4)  // Friday
         let late = Date(timeIntervalSince1970: 1_800_000_000 + 14 * 3600)  // 22:00 UTC: 03:00 next day in Almaty
         XCTAssertEqual(EventsModel.dateString(late), "2027-01-16")
-        Region.current = try XCTUnwrap(JSONDecoder().decode(RegionsResponse.self, from: Data(Self.twoRegions.utf8)).preferred)
+        Region.current = try berlin()
         XCTAssertEqual(EventsModel.dateString(late), "2027-01-15")  // 23:00 in Berlin
     }
 
