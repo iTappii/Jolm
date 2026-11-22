@@ -84,24 +84,34 @@ extension MapCoordinator {
         stops: [TripMapStop], lines: [TripMapLine], color: UIColor, refit: Bool, map: MLNMapView
     ) {
         guard let style = map.style else { return }
+        // Each stop and leg carries its day's colour, so «All days» draws every day in its own colour
+        // (`color` is only the fallback for a feature without one).
+        let perFeature = NSExpression(
+            format: "TERNARY(color != nil, CAST(color, 'UIColor'), %@)", color
+        )
         for id in [Layer.tripLine, Layer.tripDashed] {
-            (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = NSExpression(forConstantValue: color)
+            (style.layer(withIdentifier: id) as? MLNLineStyleLayer)?.lineColor = perFeature
         }
-        (style.layer(withIdentifier: Layer.tripStop) as? MLNCircleStyleLayer)?.circleStrokeColor =
-            NSExpression(forConstantValue: color)
+        (style.layer(withIdentifier: Layer.tripStop) as? MLNCircleStyleLayer)?.circleStrokeColor = perFeature
         let legSource = style.source(withIdentifier: Layer.tripSource) as? MLNShapeSource
         let stopSource = style.source(withIdentifier: Layer.tripStopsSource) as? MLNShapeSource
         let legFeatures = lines.map { line -> MLNPolylineFeature in
             var coordinates = line.coordinates
             let feature = MLNPolylineFeature(coordinates: &coordinates, count: UInt(coordinates.count))
-            feature.attributes = ["leg": line.legID.uuidString.lowercased(), "approx": line.approximate ? 1 : 0]
+            feature.attributes = [
+                "leg": line.legID.uuidString.lowercased(), "approx": line.approximate ? 1 : 0,
+                "color": Self.hexString(line.colorHex)
+            ]
             return feature
         }
         legSource?.shape = legFeatures.isEmpty ? nil : MLNShapeCollectionFeature(shapes: legFeatures)
         stopSource?.shape = stops.isEmpty ? nil : MLNShapeCollectionFeature(shapes: stops.map { stop in
             let feature = MLNPointFeature()
             feature.coordinate = stop.coordinate
-            feature.attributes = ["id": stop.placeID.uuidString.lowercased(), "number": String(stop.number)]
+            feature.attributes = [
+                "id": stop.placeID.uuidString.lowercased(), "number": String(stop.number),
+                "color": Self.hexString(stop.colorHex)
+            ]
             return feature
         })
         guard refit else { return }
@@ -111,6 +121,11 @@ extension MapCoordinator {
             &all, count: UInt(all.count),
             edgePadding: UIEdgeInsets(top: 130, left: 50, bottom: 90, right: 50), animated: true
         )
+    }
+
+    /// `#RRGGBB` for a feature attribute (MapLibre turns it into a colour with `CAST(…, 'UIColor')`).
+    nonisolated static func hexString(_ hex: UInt32) -> String {
+        String(format: "#%06X", hex & 0xFFFFFF)
     }
 
     func applyEvents(_ events: [EventItem], in style: MLNStyle) {

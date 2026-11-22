@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		00799F5426D062AFCEF36ADB /* PlaceFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6D87597C8482806DF49013 /* PlaceFormatting.swift */; };
+		02FE35E5BBCA125CA6B86A5B /* TripMapColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B256AE505BD0CD537E1B2221 /* TripMapColorTests.swift */; };
 		036A46A3193850588536A707 /* ChainNodesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E27A4CF8727688AA3A175AA /* ChainNodesTests.swift */; };
 		03E2A4CFE255E0D24C189D1F /* AppleSignIn.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 87F2D0F10A503A8F7880E855 /* AppleSignIn.xcstrings */; };
 		06EC57464A4B49099E73888D /* ContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E23476566361A47872F6151 /* ContentService.swift */; };
@@ -373,6 +374,7 @@
 		B0D6B3E9344D6AD96525133C /* chat-trip.sse */ = {isa = PBXFileReference; path = "chat-trip.sse"; sourceTree = "<group>"; };
 		B16B75CD0846965574FA337D /* UITestChatStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestChatStub.swift; sourceTree = "<group>"; };
 		B17FCEAC170B61F302FE0CB5 /* stub-style.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "stub-style.json"; sourceTree = "<group>"; };
+		B256AE505BD0CD537E1B2221 /* TripMapColorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripMapColorTests.swift; sourceTree = "<group>"; };
 		B74C9B614D496005FF0BEF82 /* ContentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentModels.swift; sourceTree = "<group>"; };
 		B7C8BCEDE994658789F1152C /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		B8DEDBE7388BB2FD63273F39 /* ChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModel.swift; sourceTree = "<group>"; };
@@ -693,6 +695,7 @@
 				4498ACF3FB5ACC08BB37C9C1 /* SignInTests.swift */,
 				958B7F86EFB567246C38DA3D /* SSEParserTests.swift */,
 				153C079C20244810CBDA56A9 /* StubURLProtocol.swift */,
+				B256AE505BD0CD537E1B2221 /* TripMapColorTests.swift */,
 				2CFAE7DA8A18DEB441BC1DEB /* TripMapTests.swift */,
 				20B3BD8EDF24EE98326D91E3 /* TripReplaceTests.swift */,
 			);
@@ -1079,6 +1082,7 @@
 				E84FFAB4728FB61BCBEC8817 /* SidebarAndLegalTests.swift in Sources */,
 				C4D95132AF0A721250FAC6AC /* SignInTests.swift in Sources */,
 				DCF9670B7FA9BB117C158D92 /* StubURLProtocol.swift in Sources */,
+				02FE35E5BBCA125CA6B86A5B /* TripMapColorTests.swift in Sources */,
 				E1CEAF719CE363AC53B7B862 /* TripMapTests.swift in Sources */,
 				114142CED05400E2600F7306 /* TripReplaceTests.swift in Sources */,
 			);
