@@ -10,6 +10,7 @@ from app.db import fetch_all
 from app.events import service as events_service
 from app.live import clock
 from app.places import service, sql
+from app.planner import outside
 from app.planner.area import ALMATY_BBOX
 from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
@@ -22,6 +23,7 @@ SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
 MAX_NODE_CHARS = 80
+OUTSIDE_NOTE = "outside the area Jol plans in this version (Almaty and nearby mountains)"
 
 
 class SearchPlacesArgs(BaseModel):
@@ -56,7 +58,8 @@ class NoArgs(BaseModel):
 SEARCH_PLACES_SPEC = ToolSpec.from_model(
     SEARCH_PLACES,
     "Search the places database of Almaty by name part and/or category. Use it to answer "
-    "questions about real places; never invent places, prices or hours.",
+    "questions about real places; never invent places, prices or hours. A well-known place "
+    "outside Almaty comes back as outside_area instead of places.",
     SearchPlacesArgs,
 )
 SEARCH_EVENTS_SPEC = ToolSpec.from_model(
@@ -104,6 +107,9 @@ async def search_places(
     category = (args.category or "").strip() or None
     if len(query) < 2 and not category:
         return {"error": "give a query of at least 2 characters or a category"}, []
+    far = None if category else outside.outside_wish(query)
+    if far is not None:  # Ш-56: not in the database because v1 covers Almaty only
+        return {"places": [], "outside_area": far.as_json(locale), "note": OUTSIDE_NOTE}, []
     params = {
         "bbox": False,
         "west": None,

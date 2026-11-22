@@ -13,8 +13,10 @@ SSE event `route_ready` (once per successful build; JSON exactly):
   `must_haves_exceed_budget` (detail = least cost of the must-haves), `meal_prices_assumed`
   (detail = number of meals), `lodging_price_assumed`, `no_lodging_found`.
 - `must_have_unmet[]`: `reason` is `no_place` (nothing in the database matches the wish; `wish`
-  is set), or `closed_on_trip_days` / `no_time` (a place was found but cannot be scheduled;
-  `place_name` is set). SSOT §16.11: the plan is built anyway and the AI says so.
+  is set), `outside_area` (Ш-56: a known place outside the v1 area; `wish` and `place_name` are
+  set, plus `outside_area` = {id, name, region, distance_km}), or `closed_on_trip_days` /
+  `no_time` (a place was found but cannot be scheduled; `place_name` is set). SSOT §16.11: the
+  plan is built anyway and the AI says so.
 - `budget`: see `planner.build.budget_json`. `status` "ok" | "over"; `breakdown` has
   lodging/entries/meals/transport/events in tenge; `lodging.options` (3-5, only when the tourist
   has no lodging); `variants` is null when the plan fits, else `{drop_places, cheaper}` with
@@ -62,7 +64,9 @@ EXPLAIN = (
     "Prices are rough estimates per person. If budget.status is 'over', say so plainly and "
     "describe the two variants (remove the least valuable places / cheaper alternatives); the "
     "person chooses in the app. If must_have_unmet is not empty, say honestly which wishes "
-    "could not be included and why. Do not promise bookings. If "
+    "could not be included and why; for reason outside_area say that this version of Jol plans "
+    "Almaty and the mountains nearby, and trips across Kazakhstan come later. Do not promise "
+    "bookings. If "
     "events is not empty, you may mention one or two that fit the person; an event with is_ad "
     "true is an advertisement and you must include its ad_label."
 )

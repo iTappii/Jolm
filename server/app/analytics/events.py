@@ -7,10 +7,15 @@ a person could otherwise inflate the funnel with fake route_created events.
 
 from typing import Any, Callable, Dict, Optional
 
+from app.planner.outside import BY_ID
+
 CLIENT_EVENTS = ("app_install", "app_launch", "directions_start")
-SERVER_EVENTS = ("sign_in", "route_created", "place_shown", "trip_downloaded")
+SERVER_EVENTS = (
+    "sign_in", "route_created", "place_shown", "trip_downloaded", "wish_outside_area",
+)  # fmt: skip
 
 MAX_PROP_STR = 40
+OUTSIDE_IDS = tuple(BY_ID)
 MODES = ("walk", "scooter", "bus", "metro", "taxi", "car")
 PROVIDERS = ("email", "phone", "apple")
 
@@ -41,6 +46,9 @@ PROPS: Dict[str, Dict[str, Callable[[Any], bool]]] = {
     "route_created": {"version": _small_int, "days": _small_int, "places": _small_int},
     "place_shown": {"version": _small_int},
     "trip_downloaded": {"version": _small_int},
+    # Ш-56: which known place outside the v1 area was asked for (an id of `planner.outside`);
+    # written without user, install or trip, and without the tourist's words
+    "wish_outside_area": {"place": _one_of(*OUTSIDE_IDS)},
 }
 # Which events may carry a place_id from the client.
 CLIENT_PLACE_EVENTS = ("directions_start",)

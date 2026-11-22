@@ -21,6 +21,7 @@ from app.planner import scoring, sql
 from app.planner.area import ALMATY_BBOX
 from app.planner.interests import resolve
 from app.planner.model import Place, place_from_row
+from app.planner.outside import OutsidePlace, outside_wish
 from app.planner.signals import CrowdSource, EventBonus, UnknownCrowd, no_event_bonus
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,8 @@ MIN_NAME_CHARS = 2
 class MustHave:
     text: str
     places: List[Place]
-    how: str  # "name" | "category" | "none"
+    how: str  # "name" | "category" | "chosen" | "outside" | "none"
+    outside: Optional[OutsidePlace] = None  # Ш-56: a known place outside the v1 area
 
 
 @dataclass
@@ -101,6 +103,9 @@ async def _resolve_must_have(
     "park" does not pick every "Park Hotel". Places already given to an earlier wish are used
     again only when nothing else fits, so every wish still gets a place.
     """
+    far = None if chosen is not None else outside_wish(text)
+    if far is not None:  # Ш-56: never stand in an Almaty park for Charyn Canyon
+        return MustHave(text, [], "outside", far)
     reading = resolve([text])
     name = " ".join(text.split())
     found: List[Place] = []

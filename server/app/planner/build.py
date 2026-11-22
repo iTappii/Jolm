@@ -276,11 +276,19 @@ def warnings_json(plan: BuiltPlan) -> List[Dict[str, Any]]:
 
 
 def must_have_unmet_json(plan: BuiltPlan, locale: str) -> List[Dict[str, Any]]:
-    """Wishes the plan does not honour (SSOT §16.11): nothing found, or found but no room."""
-    out: List[Dict[str, Any]] = [
-        {"wish": text, "place_name": None, "reason": "no_place"}
-        for text in plan.selection.must_have_unmet
-    ]
+    """Wishes the plan does not honour (SSOT §16.11): nothing found, outside the v1 area (Ш-56),
+    or found but no room."""
+    out: List[Dict[str, Any]] = []
+    for wish in plan.selection.must_haves:
+        if wish.places:
+            continue
+        if wish.outside is not None:
+            out.append({
+                "wish": wish.text, "place_name": wish.outside.name(locale),
+                "reason": "outside_area", "outside_area": wish.outside.as_json(locale),
+            })  # fmt: skip
+        else:
+            out.append({"wish": wish.text, "place_name": None, "reason": "no_place"})
     for item in plan.layout.must_have_unplaced:
         out.append(
             {"wish": None, "place_name": place_name(item.place, locale), "reason": item.reason}

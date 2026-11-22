@@ -46,6 +46,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field, field_validator
 
+from app.analytics import service as analytics
 from app.auth import sessions
 from app.auth.api import bearer_token
 from app.chat import build_tool, edit_tools, live_route, store, tools
@@ -65,8 +66,10 @@ from app.chat.sse import format_event, sse_response
 from app.config import get_settings
 from app.db import fetch_one
 from app.errors import AppError
+from app.live import clock
 from app.memory import affinity
 from app.memory.notes import latest_notes, memory_data_block
+from app.planner.outside import outside_wish
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
 from app.ratelimit import acquire
 from app.routing import FakeRouter
@@ -367,10 +370,17 @@ async def _update_trip_brief(
             new, changed = apply_update(current, args, today_almaty())
         except BriefError as exc:
             return ToolOutcome({"ok": False, "error": str(exc)}, ok=False, error=str(exc))
+        far = _new_outside_wishes(current, new) if "must_haves" in changed else []
         if changed:
             await store.save_brief(conn, chat_id, new)
             await store.record_filled_order(conn, chat_id, fill_entries(current, new, changed))
+        for _, place in far:  # Ш-56: demand by region, without who asked or their words
+            await analytics.record_server(
+                conn, "wish_outside_area", clock.now(), props={"place": place.id}
+            )
     result = {"ok": True, "changed": changed, "brief": public_brief(new)}
+    if far:  # the model says honestly that v1 plans Almaty only (prompt v5)
+        result["outside_area"] = [dict(place.as_json(locale), wish=wish) for wish, place in far]
     events = []
     if changed:
         events.append(("brief_updated", {"brief": public_brief(new), "changed": changed}))
@@ -384,6 +394,18 @@ async def _update_trip_brief(
             if route_changed:
                 events.append(("live_route", route or {"stops": [], "legs": []}))
     return ToolOutcome(result, events)
+
+
+def _new_outside_wishes(current: dict, new: dict) -> list:
+    """(wish, known place) for each must-have this update added that names a place outside the
+    v1 area (Ш-56). A wish that was already in the brief is not counted again."""
+    known = {item.casefold() for item in current.get("must_haves") or []}
+    out = []
+    for wish in new.get("must_haves") or []:
+        place = None if wish.casefold() in known else outside_wish(wish)
+        if place is not None:
+            out.append((wish, place))
+    return out
 
 
 async def _add_graph_node(db, chat_id: UUID, locale: str, call: ToolCall) -> ToolOutcome:

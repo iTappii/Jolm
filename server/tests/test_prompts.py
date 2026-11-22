@@ -23,9 +23,9 @@ def test_unknown_locale_falls_back_to_english_and_unknown_prompt_fails():
 
 
 def test_versions_are_listed_and_latest_is_loaded():
-    assert prompts.versions(prompts.GUEST, "en") == [1, 2]
+    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3]
     assert prompts.load_prompt(prompts.GUEST, "en", version=1).version == 1
-    assert prompts.load_prompt(prompts.GUEST, "en").version == 2
+    assert prompts.load_prompt(prompts.GUEST, "en").version == 3
 
 
 def test_render_fills_today():
@@ -52,3 +52,9 @@ def test_guest_prompt_exposes_place_and_event_search():
         assert all(word in text for word in ("search_places", "search_events", "ad_label"))
         for tool in ("update_trip_brief", "build_trip", "add_graph_node"):
             assert tool not in text
+
+
+def test_latest_prompts_name_places_outside_the_area_honestly():  # Ш-56
+    for name in (prompts.TRIP_BRIEF, prompts.GUEST):
+        for locale in ("en", "ru"):
+            assert "outside_area" in prompts.load_prompt(name, locale).text
