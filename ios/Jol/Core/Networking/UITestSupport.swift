@@ -1,10 +1,23 @@
 #if DEBUG
 import CoreLocation
 import Foundation
+import SwiftUI
 
 /// Debug-only support for UI tests (`-JolStubAPI`): a `URLProtocol` that answers the places and curated-route
 /// endpoints from fixtures, so tests never depend on a running server, and an offline stub map style.
 enum UITestSupport {
+    /// `-JolForceTheme dark|light`: the screen is drawn in that theme whatever the simulator's appearance is (other
+    /// sessions on the same Mac flip the shared appearance mid-test, which made themed screenshots unreliable).
+    static var forcedColorScheme: ColorScheme? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-JolForceTheme"), index + 1 < arguments.count else { return nil }
+        switch arguments[index + 1] {
+        case "dark": return .dark
+        case "light": return .light
+        default: return nil
+        }
+    }
+
     static var isStubbed: Bool { ProcessInfo.processInfo.arguments.contains("-JolStubAPI") }
 
     /// Fixture place that sits exactly at `AlmatyCamera.center`, i.e. in the middle of the screen at launch.

@@ -38,11 +38,14 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-JolFeatureGallery") {
-            FeatureGalleryScreen()
-        } else {
-            HomeScreen()
+        Group {
+            if ProcessInfo.processInfo.arguments.contains("-JolFeatureGallery") {
+                FeatureGalleryScreen()
+            } else {
+                HomeScreen()
+            }
         }
+        .preferredColorScheme(UITestSupport.forcedColorScheme)
         #else
         HomeScreen()
         #endif

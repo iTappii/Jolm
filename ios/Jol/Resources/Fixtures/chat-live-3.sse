@@ -1,0 +1,12 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": 200000, "has_accommodation": true, "must_haves": ["Chinese food", "First President's Park", "Green Bazaar"], "interests": [], "pace": null, "crowd_tolerance": null, "missing": [], "complete": false}, "changed": ["must_haves"]}
+
+event: text_delta
+data: {"text": "Added Green Bazaar. "}
+
+event: live_route
+data: {"stops": [{"ord": 1, "wish": "Chinese food", "place": {"id": "1a000000-0000-4000-8000-000000000001", "name": "Lan Zhou Noodle House", "category": "restaurant", "lat": 43.2330, "lon": 76.8750}, "alternatives": [{"id": "1a000000-0000-4000-8000-000000000002", "name": "Dragon Pearl", "category": "restaurant", "lat": 43.2455, "lon": 76.8990}, {"id": "1a000000-0000-4000-8000-000000000003", "name": "Beijing Garden", "category": "restaurant", "lat": 43.2250, "lon": 76.8960}]}, {"ord": 2, "wish": "First President's Park", "place": {"id": "1a000000-0000-4000-8000-000000000004", "name": "First President's Park", "category": "park", "lat": 43.1849, "lon": 76.8857}, "alternatives": []}, {"ord": 3, "wish": "Green Bazaar", "place": {"id": "1a000000-0000-4000-8000-000000000005", "name": "Green Bazaar", "category": "market", "lat": 43.2627, "lon": 76.9535}, "alternatives": []}], "legs": [{"from_ord": 1, "to_ord": 2, "mode": "transit", "duration_s": 1080, "distance_m": 8600}, {"from_ord": 2, "to_ord": 3, "mode": "car", "duration_s": 1260, "distance_m": 9100}]}
+
+event: done
+data: {"message_id": 6, "usage": {"input_tokens": 10, "output_tokens": 20}}
+

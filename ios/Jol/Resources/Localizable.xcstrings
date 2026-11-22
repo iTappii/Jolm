@@ -11,12 +11,126 @@
         }
       }
     },
+    "%@ is something you asked for. Replace it anyway?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%@» — это то, что вы просили. Всё равно заменить?"
+          }
+        }
+      }
+    },
     "%@ left" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "осталось %@"
+          }
+        }
+      }
+    },
+    "%lld answers, route is not ready" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld answer, route is not ready"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld answers, route is not ready"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответ, маршрут не готов"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответа, маршрут не готов"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответов, маршрут не готов"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответа, маршрут не готов"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld answers, route is ready" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld answer, route is ready"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld answers, route is ready"
+                }
+              }
+            }
+          }
+        },
+        "ru" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответ, маршрут готов"
+                }
+              },
+              "few" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответа, маршрут готов"
+                }
+              },
+              "many" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответов, маршрут готов"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld ответа, маршрут готов"
+                }
+              }
+            }
           }
         }
       }
@@ -275,12 +389,32 @@
         }
       }
     },
+    "All days" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Все дни"
+          }
+        }
+      }
+    },
     "Allow location access to do this." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Разрешите доступ к геопозиции, чтобы это сделать."
+          }
+        }
+      }
+    },
+    "Alternative: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вариант: %@"
           }
         }
       }
@@ -405,6 +539,16 @@
         }
       }
     },
+    "Booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Бронь"
+          }
+        }
+      }
+    },
     "Booking isn't available here" : {
       "localizations" : {
         "ru" : {
@@ -455,6 +599,22 @@
         }
       }
     },
+    "Calm pace" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calm pace"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "спокойный темп"
+          }
+        }
+      }
+    },
     "Cancel" : {
       "localizations" : {
         "ru" : {
@@ -465,12 +625,42 @@
         }
       }
     },
+    "Cancel booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить бронь"
+          }
+        }
+      }
+    },
+    "Cancel this booking?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменить эту бронь?"
+          }
+        }
+      }
+    },
     "Cancelled" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Отменено"
+          }
+        }
+      }
+    },
+    "Cancelling…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отменяем…"
           }
         }
       }
@@ -645,6 +835,16 @@
         }
       }
     },
+    "Choose this instead" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать вместо этого"
+          }
+        }
+      }
+    },
     "Close" : {
       "localizations" : {
         "ru" : {
@@ -775,6 +975,26 @@
         }
       }
     },
+    "Couldn't cancel the booking. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось отменить бронь. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
+    "Couldn't change the stop. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось заменить остановку. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
     "Couldn't download the route. Check your connection." : {
       "localizations" : {
         "ru" : {
@@ -845,6 +1065,16 @@
         }
       }
     },
+    "Couldn't load the places." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить места."
+          }
+        }
+      }
+    },
     "Couldn't load the reviews" : {
       "localizations" : {
         "ru" : {
@@ -881,6 +1111,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось загрузить бонусы."
+          }
+        }
+      }
+    },
+    "Couldn't load your bookings." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось загрузить брони."
           }
         }
       }
@@ -1005,6 +1245,22 @@
         }
       }
     },
+    "Crowds: either way" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crowds: either way"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "толпа не важна"
+          }
+        }
+      }
+    },
     "Date and time" : {
       "localizations" : {
         "ru" : {
@@ -1061,6 +1317,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Удалить аккаунт?"
+          }
+        }
+      }
+    },
+    "Deleting the account…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удаляем аккаунт…"
+          }
+        }
+      }
+    },
+    "Details" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подробнее"
           }
         }
       }
@@ -1355,6 +1631,22 @@
         }
       }
     },
+    "Fine in a crowd" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fine in a crowd"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "в толпе нормально"
+          }
+        }
+      }
+    },
     "Food order" : {
       "localizations" : {
         "ru" : {
@@ -1411,6 +1703,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Пятница"
+          }
+        }
+      }
+    },
+    "From %lld to %lld: %@ %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "От %lld до %lld: %@ %@"
           }
         }
       }
@@ -1485,6 +1787,22 @@
         }
       }
     },
+    "Have accommodation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Have accommodation"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "жильё есть"
+          }
+        }
+      }
+    },
     "Heavy traffic" : {
       "localizations" : {
         "ru" : {
@@ -1541,6 +1859,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "В избранном"
+          }
+        }
+      }
+    },
+    "Instead of %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вместо «%@»"
           }
         }
       }
@@ -1611,6 +1939,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Номера Казахстана можно вводить без кода страны; для других стран начните с +."
+          }
+        }
+      }
+    },
+    "Keep booking" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставить бронь"
           }
         }
       }
@@ -1691,6 +2029,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Жильё"
+          }
+        }
+      }
+    },
+    "Love lively places" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Love lively places"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "люблю оживлённые"
           }
         }
       }
@@ -1825,6 +2179,16 @@
         }
       }
     },
+    "My bookings" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Мои брони"
+          }
+        }
+      }
+    },
     "My car" : {
       "localizations" : {
         "ru" : {
@@ -1841,6 +2205,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Мои поездки"
+          }
+        }
+      }
+    },
+    "Need accommodation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need accommodation"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "нужно жильё"
           }
         }
       }
@@ -1871,6 +2251,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Бонусов пока нет. Их начисляют после того, как модератор одобрит ваши отзывы, фото и данные."
+          }
+        }
+      }
+    },
+    "No bookings yet. Book a table, a room or tickets from a place's card." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Броней пока нет. Забронируйте столик, номер или билеты в карточке места."
           }
         }
       }
@@ -1935,6 +2325,16 @@
         }
       }
     },
+    "No connection. Your booking was not cancelled. Try again." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нет соединения. Бронь не отменена. Попробуйте ещё раз."
+          }
+        }
+      }
+    },
     "No data for this hour yet" : {
       "localizations" : {
         "ru" : {
@@ -1965,6 +2365,16 @@
         }
       }
     },
+    "No other place fits this day." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В этот день другое место не подходит."
+          }
+        }
+      }
+    },
     "No photos yet" : {
       "localizations" : {
         "ru" : {
@@ -1991,6 +2401,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Отзывов пока нет"
+          }
+        }
+      }
+    },
+    "No similar places nearby." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Похожих мест рядом нет."
           }
         }
       }
@@ -2155,6 +2575,26 @@
         }
       }
     },
+    "Opens the budget" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает бюджет"
+          }
+        }
+      }
+    },
+    "Opens the place card" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает карточку места"
+          }
+        }
+      }
+    },
     "Opens the website" : {
       "localizations" : {
         "ru" : {
@@ -2201,6 +2641,32 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Обзор"
+          }
+        }
+      }
+    },
+    "Packed days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packed days"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "плотные дни"
+          }
+        }
+      }
+    },
+    "Page %lld of %lld" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Страница %lld из %lld"
           }
         }
       }
@@ -2285,6 +2751,22 @@
         }
       }
     },
+    "Prefer quiet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prefer quiet"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "лучше потише"
+          }
+        }
+      }
+    },
     "Preparing the photo…" : {
       "localizations" : {
         "ru" : {
@@ -2301,6 +2783,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Цена, ₸"
+          }
+        }
+      }
+    },
+    "Privacy policy" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Политика конфиденциальности"
           }
         }
       }
@@ -2331,6 +2823,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Пусто"
+          }
+        }
+      }
+    },
+    "Quiet places only" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiet places only"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "только тихие места"
           }
         }
       }
@@ -2451,6 +2959,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Убрать фото"
+          }
+        }
+      }
+    },
+    "Replace a must-have?" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменить то, что вы просили?"
+          }
+        }
+      }
+    },
+    "Replace anyway" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Всё равно заменить"
+          }
+        }
+      }
+    },
+    "Replace this place" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменить место"
+          }
+        }
+      }
+    },
+    "Replaces the stop with this place" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заменяет остановку этим местом"
           }
         }
       }
@@ -2715,6 +3263,26 @@
         }
       }
     },
+    "Shows the ways to get there" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает способы добраться"
+          }
+        }
+      }
+    },
+    "Shows this way on the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает этот путь на карте"
+          }
+        }
+      }
+    },
     "Sidebar" : {
       "localizations" : {
         "ru" : {
@@ -2771,6 +3339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Войдите, чтобы построить маршрут. Ваше сообщение сохранено."
+          }
+        }
+      }
+    },
+    "Sign in to keep your chats and trips." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите, чтобы сохранять чаты и поездки."
           }
         }
       }
@@ -2845,12 +3423,38 @@
         }
       }
     },
+    "Steady pace" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady pace"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "обычный темп"
+          }
+        }
+      }
+    },
     "Still %@ over budget" : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Всё равно на %@ больше бюджета"
+          }
+        }
+      }
+    },
+    "Stop %lld: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановка %lld: %@"
           }
         }
       }
@@ -2945,12 +3549,32 @@
         }
       }
     },
+    "That choice is no longer available." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этот вариант уже недоступен."
+          }
+        }
+      }
+    },
     "That email or phone number doesn't look right." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Похоже, почта или номер указаны неверно."
+          }
+        }
+      }
+    },
+    "The assistant is still answering. Try again in a moment." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ассистент ещё отвечает. Попробуйте через пару секунд."
           }
         }
       }
@@ -3031,6 +3655,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Заведение отказало"
+          }
+        }
+      }
+    },
+    "The venue will be told that you are not coming." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заведение узнает, что вы не придёте."
+          }
+        }
+      }
+    },
+    "This booking can't be cancelled any more: it is already cancelled or over. Contact the venue." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эту бронь уже нельзя отменить: она отменена или прошла. Свяжитесь с заведением."
+          }
+        }
+      }
+    },
+    "This booking is no longer in your list." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Этой брони больше нет в списке."
           }
         }
       }
@@ -3315,6 +3969,16 @@
         }
       }
     },
+    "Uses this way for the leg" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выбрать этот способ для перехода"
+          }
+        }
+      }
+    },
     "Version" : {
       "localizations" : {
         "ru" : {
@@ -3371,6 +4035,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Мы отправили 6-значный код на %@."
+          }
+        }
+      }
+    },
+    "Weather" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Погода"
           }
         }
       }
@@ -3545,6 +4219,26 @@
         }
       }
     },
+    "by car" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на машине"
+          }
+        }
+      }
+    },
+    "by public transport" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на транспорте"
+          }
+        }
+      }
+    },
     "h" : {
       "localizations" : {
         "ru" : {
@@ -3595,6 +4289,16 @@
         }
       }
     },
+    "on foot" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "пешком"
+          }
+        }
+      }
+    },
     "© OpenStreetMap contributors" : {
       "localizations" : {
         "ru" : {
@@ -3621,600 +4325,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "₸"
-          }
-        }
-      }
-    },
-    "%lld answers, route is not ready" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld answer, route is not ready"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld answers, route is not ready"
-                }
-              }
-            }
-          }
-        },
-        "ru" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответ, маршрут не готов"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответа, маршрут не готов"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответов, маршрут не готов"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответа, маршрут не готов"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "%lld answers, route is ready" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld answer, route is ready"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld answers, route is ready"
-                }
-              }
-            }
-          }
-        },
-        "ru" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответ, маршрут готов"
-                }
-              },
-              "few" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответа, маршрут готов"
-                }
-              },
-              "many" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответов, маршрут готов"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld ответа, маршрут готов"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Calm pace" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Calm pace"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "спокойный темп"
-          }
-        }
-      }
-    },
-    "Crowds: either way" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crowds: either way"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "толпа не важна"
-          }
-        }
-      }
-    },
-    "Fine in a crowd" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fine in a crowd"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "в толпе нормально"
-          }
-        }
-      }
-    },
-    "Have accommodation" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Have accommodation"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "жильё есть"
-          }
-        }
-      }
-    },
-    "Love lively places" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Love lively places"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "люблю оживлённые"
-          }
-        }
-      }
-    },
-    "Need accommodation" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Need accommodation"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "нужно жильё"
-          }
-        }
-      }
-    },
-    "Packed days" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Packed days"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "плотные дни"
-          }
-        }
-      }
-    },
-    "Prefer quiet" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Prefer quiet"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "лучше потише"
-          }
-        }
-      }
-    },
-    "Quiet places only" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quiet places only"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "только тихие места"
-          }
-        }
-      }
-    },
-    "Steady pace" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Steady pace"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "обычный темп"
-          }
-        }
-      }
-    },
-    "Sign in to keep your chats and trips." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Войдите, чтобы сохранять чаты и поездки."
-          }
-        }
-      }
-    },
-    "Weather" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Погода"
-          }
-        }
-      }
-    },
-    "Privacy policy" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Политика конфиденциальности"
-          }
-        }
-      }
-    },
-    "Page %lld of %lld" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Страница %lld из %lld"
-          }
-        }
-      }
-    },
-    "Opens the budget" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открывает бюджет"
-          }
-        }
-      }
-    },
-    "Opens the place card" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открывает карточку места"
-          }
-        }
-      }
-    },
-    "Shows the ways to get there" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показывает способы добраться"
-          }
-        }
-      }
-    },
-    "Uses this way for the leg" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выбрать этот способ для перехода"
-          }
-        }
-      }
-    },
-    "Shows this way on the map" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показывает этот путь на карте"
-          }
-        }
-      }
-    },
-    "All days" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Все дни"
-          }
-        }
-      }
-    },
-    "Replace this place" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заменить место"
-          }
-        }
-      }
-    },
-    "Instead of %@" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вместо «%@»"
-          }
-        }
-      }
-    },
-    "Replace a must-have?" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заменить то, что вы просили?"
-          }
-        }
-      }
-    },
-    "%@ is something you asked for. Replace it anyway?" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "«%@» — это то, что вы просили. Всё равно заменить?"
-          }
-        }
-      }
-    },
-    "Replace anyway" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Всё равно заменить"
-          }
-        }
-      }
-    },
-    "Couldn't load the places." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось загрузить места."
-          }
-        }
-      }
-    },
-    "No similar places nearby." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Похожих мест рядом нет."
-          }
-        }
-      }
-    },
-    "Replaces the stop with this place" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заменяет остановку этим местом"
-          }
-        }
-      }
-    },
-    "No other place fits this day." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "В этот день другое место не подходит."
-          }
-        }
-      }
-    },
-    "My bookings" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Мои брони"
-          }
-        }
-      }
-    },
-    "Booking" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Бронь"
-          }
-        }
-      }
-    },
-    "No bookings yet. Book a table, a room or tickets from a place's card." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Броней пока нет. Забронируйте столик, номер или билеты в карточке места."
-          }
-        }
-      }
-    },
-    "Couldn't load your bookings." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось загрузить брони."
-          }
-        }
-      }
-    },
-    "This booking is no longer in your list." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Этой брони больше нет в списке."
-          }
-        }
-      }
-    },
-    "Cancel booking" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Отменить бронь"
-          }
-        }
-      }
-    },
-    "Cancelling…" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Отменяем…"
-          }
-        }
-      }
-    },
-    "Cancel this booking?" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Отменить эту бронь?"
-          }
-        }
-      }
-    },
-    "Keep booking" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Оставить бронь"
-          }
-        }
-      }
-    },
-    "The venue will be told that you are not coming." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заведение узнает, что вы не придёте."
-          }
-        }
-      }
-    },
-    "This booking can't be cancelled any more: it is already cancelled or over. Contact the venue." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Эту бронь уже нельзя отменить: она отменена или прошла. Свяжитесь с заведением."
-          }
-        }
-      }
-    },
-    "No connection. Your booking was not cancelled. Try again." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Нет соединения. Бронь не отменена. Попробуйте ещё раз."
-          }
-        }
-      }
-    },
-    "Couldn't cancel the booking. Try again." : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось отменить бронь. Попробуйте ещё раз."
-          }
-        }
-      }
-    },
-    "Deleting the account…" : {
-      "localizations" : {
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Удаляем аккаунт…"
           }
         }
       }
