@@ -18,6 +18,7 @@
 		0FBEBD9589B7B9B1E61332E2 /* AdaptiveLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86E7EB95BA234232D9AF0D00 /* AdaptiveLayout.swift */; };
 		117736267B8E9A647C40C09E /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C930643C06F8340CDAC60B /* Palette.swift */; };
 		117DFE629019DF23F8A0EAC5 /* SidebarUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9311F04BE8DCB091FEA48F4C /* SidebarUITests.swift */; };
+		139A05F233C5672D530BE109 /* LiveRouteLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E80CA185E55AD4E07B43243E /* LiveRouteLayoutTests.swift */; };
 		13B2E6C9381441F0DF712807 /* AccountGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A542D7E9F0C6A239B2A1E48D /* AccountGate.swift */; };
 		1400E7443A8ABD941852AF99 /* LiveRouteOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62C9F3AE884B68E203D05E31 /* LiveRouteOverlay.swift */; };
 		14634225423A191BCCDC1F83 /* chat-live-3.sse in Resources */ = {isa = PBXBuildFile; fileRef = C5B4984877A5F5A17116BEAB /* chat-live-3.sse */; };
@@ -35,6 +36,7 @@
 		1B5013B2A34B41EF206CDE7E /* MapProjection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5473E445FBFE37841B356938 /* MapProjection.swift */; };
 		1B608B805EE65973C68E518F /* ContentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B74C9B614D496005FF0BEF82 /* ContentModels.swift */; };
 		1D02FB42EB67100F80D0052F /* AnalyticsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DD3DF7182A42F8CA932E59 /* AnalyticsClient.swift */; };
+		1D4CC502CFB620A18210D9C3 /* LiveRouteLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74A6F63453A89F2A48C19BE9 /* LiveRouteLayout.swift */; };
 		1F3930CD06A52C84DFC34F06 /* TripScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A4C7FECA6D7895754955CC1 /* TripScreen.swift */; };
 		1FAA98A65EA034AECF3AC184 /* SignInGateUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EA7D904B22983583FE3013 /* SignInGateUITests.swift */; };
 		1FCB714C51A5109868C2A192 /* MapScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD2AA7207A3CAC05AD60B608 /* MapScreen.swift */; };
@@ -327,6 +329,7 @@
 		7124D0F8D689B52D4BABBA2B /* BonusModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonusModels.swift; sourceTree = "<group>"; };
 		7297B8FE22E314C22CA9D7D8 /* BonusScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BonusScreen.swift; sourceTree = "<group>"; };
 		7498BAA9B71AC1649C4D2088 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		74A6F63453A89F2A48C19BE9 /* LiveRouteLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteLayout.swift; sourceTree = "<group>"; };
 		76948EF829EB585BA12510DC /* AccessibilityUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityUITests.swift; sourceTree = "<group>"; };
 		789E3FA15B29957EBBDF4CC4 /* UITestTripStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestTripStub.swift; sourceTree = "<group>"; };
 		7BC957D2AE795231563F5969 /* ChatModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModelTests.swift; sourceTree = "<group>"; };
@@ -417,6 +420,7 @@
 		E72548E61F4CE1DB2D8ADD9D /* LiveRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRoute.swift; sourceTree = "<group>"; };
 		E7AB95483B31C4F2E1CADFE2 /* CrowdModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrowdModel.swift; sourceTree = "<group>"; };
 		E7CD77B2A5CDCD2A86F4C0E9 /* SubmissionDraft+Validation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SubmissionDraft+Validation.swift"; sourceTree = "<group>"; };
+		E80CA185E55AD4E07B43243E /* LiveRouteLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteLayoutTests.swift; sourceTree = "<group>"; };
 		EAAF7DF2374D3BD13D2D0193 /* LiveRouteUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteUITests.swift; sourceTree = "<group>"; };
 		EB4FC3F9A4B61C739DEF14D7 /* SignInEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInEntryView.swift; sourceTree = "<group>"; };
 		EC5747BC4F382720E3F54A07 /* AnalyticsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsModels.swift; sourceTree = "<group>"; };
@@ -681,6 +685,7 @@
 				465DCDA2F30A680B189D67C4 /* DirectionsTests.swift */,
 				DC1761E118198B7933AF11CE /* FavoritesTests.swift */,
 				14A7F88387A01F91B1837FB2 /* FoundationTests.swift */,
+				E80CA185E55AD4E07B43243E /* LiveRouteLayoutTests.swift */,
 				B60401EFE131A7992C626FBC /* LiveRouteTests.swift */,
 				58743E1FB1B8815DF16834F0 /* OfflineTripTests.swift */,
 				D36A2A66B6ECB41663DB1671 /* PlaceActionsTests.swift */,
@@ -892,6 +897,7 @@
 				84DAB833243844B9C00E1390 /* ChatState.swift */,
 				6877EDD1D4ABA67A53AAA5ED /* ChatTranscriptView.swift */,
 				E72548E61F4CE1DB2D8ADD9D /* LiveRoute.swift */,
+				74A6F63453A89F2A48C19BE9 /* LiveRouteLayout.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -1072,6 +1078,7 @@
 				A3FF7EEB2095F2B2094359A8 /* DirectionsTests.swift in Sources */,
 				7EDED0BF212B19CA07E8D7CC /* FavoritesTests.swift in Sources */,
 				6BA2BE52AFF0D8761D927ACC /* FoundationTests.swift in Sources */,
+				139A05F233C5672D530BE109 /* LiveRouteLayoutTests.swift in Sources */,
 				577A623A34AEB8DD0D9FD402 /* LiveRouteTests.swift in Sources */,
 				F7ACD6F89670740716D4512F /* OfflineTripTests.swift in Sources */,
 				239F79F256E27063F24155FE /* PlaceActionsTests.swift in Sources */,
@@ -1151,6 +1158,7 @@
 				3CC0F12C47D3E4CFBF6E5BF2 /* JolApp.swift in Sources */,
 				89D91C394B44792D3824F79E /* L10n.swift in Sources */,
 				0D1F209FB30C4A7F56E060F9 /* LiveRoute.swift in Sources */,
+				1D4CC502CFB620A18210D9C3 /* LiveRouteLayout.swift in Sources */,
 				1400E7443A8ABD941852AF99 /* LiveRouteOverlay.swift in Sources */,
 				879204FC7179322CF89F1178 /* LocationProvider.swift in Sources */,
 				0AF5836797901E1569DC372A /* MapCamera.swift in Sources */,

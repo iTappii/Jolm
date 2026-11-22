@@ -9,10 +9,11 @@ import XCTest
 @MainActor
 final class LiveRouteUITests: XCTestCase {
     private func launch(dark: Bool = false, language: String = "en") -> XCUIApplication {
-        XCUIDevice.shared.appearance = dark ? .dark : .light
-        addTeardownBlock { XCUIDevice.shared.appearance = .light }
+        // `-JolForceTheme` draws the app in the wanted theme whatever the simulator's appearance is: other sessions on
+        // this Mac flip the shared appearance mid-test, which made the themed screenshots unreliable.
         let app = XCUIApplication()
-        app.launchArguments = ["-JolStubAPI", "-JolStubSignedIn", "-AppleLanguages", "(\(language))", "-AppleLocale",
+        app.launchArguments = ["-JolStubAPI", "-JolStubSignedIn", "-JolForceTheme", dark ? "dark" : "light",
+                               "-AppleLanguages", "(\(language))", "-AppleLocale",
                                language == "ru" ? "ru_RU" : "en_US", "-jol.language", "system"]
         app.launch()
         return app
@@ -68,8 +69,7 @@ final class LiveRouteUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 1.2)
     }
 
-    private func capture(_ name: String) {
-        let screenshot = XCUIScreen.main.screenshot()
+    private func capture(_ name: String, _ screenshot: XCUIScreenshot) {
         let attachment = XCTAttachment(screenshot: screenshot)
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -96,7 +96,7 @@ final class LiveRouteUITests: XCTestCase {
         XCTAssertFalse(element(app, "live-stop-2").exists)
         XCTAssertEqual(element(app, "live-stop-1").label, "Stop 1: Lan Zhou Noodle House")
         waitForAnswer(app)
-        capture("live-1-stop-light")
+        capture("live-1-stop-light", XCUIScreen.main.screenshot())
 
         // Turn 2: the second stop and a transit edge with the time.
         send(app, "First President park live2")
@@ -104,7 +104,7 @@ final class LiveRouteUITests: XCTestCase {
         waitFor(app, "live-edge-1-2")
         XCTAssertEqual(element(app, "live-edge-1-2").label, "From 1 to 2: by public transport 18 minutes")
         waitForAnswer(app)
-        capture("live-2-stops-light")
+        capture("live-2-stops-light", XCUIScreen.main.screenshot())
 
         // Turn 3: the third stop; the edge 2→3 is a car leg.
         send(app, "Green Bazaar live3")
@@ -114,7 +114,7 @@ final class LiveRouteUITests: XCTestCase {
         waitForValue(element(app, "live-route-stops"), "3")
         XCTAssertTrue(element(app, "live-stop-3").isHittable)
         waitForAnswer(app)
-        capture("live-3-stops-light")
+        capture("live-3-stops-light", XCUIScreen.main.screenshot())
 
         // Tapping a pale alternative offers "Choose this instead"; confirming swaps stop 1.
         let alternative = alternatives(app).firstMatch
@@ -123,13 +123,13 @@ final class LiveRouteUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(alternative.frame.height, 43.9)
         alternative.tap()
         waitFor(app, "live-choose-card")
-        capture("live-choose-card-light")
+        capture("live-choose-card-light", XCUIScreen.main.screenshot())
         element(app, "live-choose-confirm").tap()
         waitForLabel(element(app, "live-stop-1"), contains: "Dragon Pearl")
         waitForDisappearance(element(app, "live-choose-card"), timeout: 5)
         XCTAssertEqual(alternatives(app).count, 2, "the old stop became an alternative")
         waitForAnswer(app)
-        capture("live-after-choose-light")
+        capture("live-after-choose-light", XCUIScreen.main.screenshot())
 
         // route_ready: the live route goes, the trip by days takes over.
         send(app, "Build the route live4")
@@ -145,23 +145,23 @@ final class LiveRouteUITests: XCTestCase {
         waitFor(app, "live-stop-1")
         XCTAssertEqual(element(app, "live-stop-1").label, "Остановка 1: Lan Zhou Noodle House")
         waitForAnswer(app)
-        capture("live-1-stop-dark")
+        capture("live-1-stop-dark", XCUIScreen.main.screenshot())
         send(app, "First President park live2")
         waitFor(app, "live-edge-1-2")
         XCTAssertEqual(element(app, "live-edge-1-2").label, "От 1 до 2: на транспорте 18 минут")
         waitForAnswer(app)
-        capture("live-2-stops-dark")
+        capture("live-2-stops-dark", XCUIScreen.main.screenshot())
         send(app, "Green Bazaar live3")
         waitFor(app, "live-edge-2-3")
         XCTAssertEqual(element(app, "live-edge-2-3").label, "От 2 до 3: на машине 21 минута")
         waitForAnswer(app)
-        capture("live-3-stops-dark")
+        capture("live-3-stops-dark", XCUIScreen.main.screenshot())
         alternatives(app).firstMatch.tap()
         waitFor(app, "live-choose-card")
         element(app, "live-choose-confirm").tap()
         waitForLabel(element(app, "live-stop-1"), contains: "Dragon Pearl")
         waitForAnswer(app)
-        capture("live-after-choose-dark")
+        capture("live-after-choose-dark", XCUIScreen.main.screenshot())
     }
 
     func testTappingAStopOpensThePlaceCard() {
