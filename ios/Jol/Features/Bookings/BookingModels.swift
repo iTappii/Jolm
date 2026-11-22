@@ -28,7 +28,7 @@ enum BookingKind: String, CaseIterable, Identifiable, Sendable {
     var needsEnd: Bool { self == .room }
 }
 
-/// `POST /v1/bookings` body. `starts_at` / `ends_at` are ISO times with the Almaty offset.
+/// `POST /v1/bookings` body. `starts_at` / `ends_at` are ISO times with the region's offset.
 struct BookingRequest: Encodable, Equatable, Sendable {
     let placeID: UUID
     let kind: BookingKind

@@ -23,7 +23,7 @@ enum UITestSupport {
     /// the built trip is made of the same stops, no fixture pins or ad events on the map.
     static var isDemo: Bool { ProcessInfo.processInfo.arguments.contains("-JolDemo") }
 
-    /// Fixture place that sits exactly at `AlmatyCamera.center`, i.e. in the middle of the screen at launch.
+    /// Fixture place that sits exactly at `Region.current.center`, i.e. in the middle of the screen at launch.
     static let centerPlaceID = "11111111-1111-4111-8111-111111111111"
     static let secondPlaceID = "22222222-2222-4222-8222-222222222222"
     static let routeID = "33333333-3333-4333-8333-333333333333"
@@ -45,8 +45,8 @@ enum UITestSupport {
 
     static var placesJSON: String {
         if isDemo { return "{\"items\":[]}" }
-        let lat = AlmatyCamera.center.latitude
-        let lon = AlmatyCamera.center.longitude
+        let lat = Region.current.center.latitude
+        let lon = Region.current.center.longitude
         return "{\"items\":[\(summary(centerPlaceID, "Fixture Museum", "museum", lat, lon)),"
             + "\(summary(secondPlaceID, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012))]}"
     }
@@ -58,8 +58,8 @@ enum UITestSupport {
             ? "{\"slug\":\"coffee\",\"name\":\"Coffee\"}"
             : "{\"slug\":\"museum\",\"name\":\"Museum\"}"
         let prices = second ? "{\"avg_check_kzt\":3500}" : "{\"entry_price_kzt\":1500}"
-        let lat = AlmatyCamera.center.latitude + (second ? 0.01 : 0)
-        let lon = AlmatyCamera.center.longitude + (second ? 0.012 : 0)
+        let lat = Region.current.center.latitude + (second ? 0.01 : 0)
+        let lon = Region.current.center.longitude + (second ? 0.012 : 0)
         var days: [String] = []
         for day in 0..<7 {
             days.append("{\"weekday\":\(day),\"intervals\":[{\"opens\":\"09:00\",\"closes\":\"18:00\"}]}")
@@ -89,8 +89,8 @@ enum UITestSupport {
     /// A promoted event (the server sets `is_ad` only for non-public places) and an ordinary one.
     static var eventsItemsJSON: String {
         if isDemo { return "" }
-        let lat = AlmatyCamera.center.latitude
-        let lon = AlmatyCamera.center.longitude
+        let lat = Region.current.center.latitude
+        let lon = Region.current.center.longitude
         return """
         {"id":"\(adEventID)","title":"Fixture Jazz Night","title_lang":"en","description":"Live jazz.",\
         "starts_at":"2026-12-06T19:00:00+05:00","ends_at":"2026-12-06T22:00:00+05:00","price_kzt":5000,\
@@ -141,7 +141,7 @@ enum UITestSupport {
         case "unavailable": return .unavailable
         case "outside": return .located(GeoPoint(lat: 37.33, lon: -122.03))
         // Standing at the fixture museum (the crowd check-in needs to be within 200 m of the place).
-        case "near": return .located(GeoPoint(AlmatyCamera.center))
+        case "near": return .located(GeoPoint(Region.current.center))
         default: return home
         }
     }
@@ -153,8 +153,8 @@ enum UITestSupport {
     /// `GET /v1/me/favorites` for the stub user, newest first.
     static var favoritesJSON: String {
         favoritesLock.lock(); defer { favoritesLock.unlock() }
-        let lat = AlmatyCamera.center.latitude
-        let lon = AlmatyCamera.center.longitude
+        let lat = Region.current.center.latitude
+        let lon = Region.current.center.longitude
         let items = favoriteIDs.map { id -> String in
             let second = id == secondPlaceID
             let place = second ? summary(id, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012)
@@ -176,8 +176,8 @@ enum UITestSupport {
     }
 
     static var routeJSON: String {
-        let lat = AlmatyCamera.center.latitude
-        let lon = AlmatyCamera.center.longitude
+        let lat = Region.current.center.latitude
+        let lon = Region.current.center.longitude
         return "{\"id\":\"\(routeID)\",\"title\":\"Fixture Route\",\"description\":\"Two stops.\",\"items\":["
             + "\(summary(centerPlaceID, "Fixture Museum", "museum", lat, lon, ord: 1)),"
             + "\(summary(secondPlaceID, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012, ord: 2))]}"

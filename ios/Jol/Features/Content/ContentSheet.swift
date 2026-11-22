@@ -198,7 +198,7 @@ private extension ContentSheet {
             ForEach($draft.menuItems) { $item in
                 AdaptiveStack {
                     TextField("Dish", text: $item.name)
-                    TextField("Price, ₸", text: $item.price)
+                    TextField("Price, \(Region.current.currencySymbol)", text: $item.price)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(typeSize.isAccessibilitySize ? .leading : .trailing)
                         .frame(maxWidth: typeSize.isAccessibilitySize ? .infinity : 110)
@@ -228,14 +228,15 @@ private extension ContentSheet {
             TextField("Stop (optional)", text: $draft.stop)
             TextField("Direction (optional)", text: $draft.direction)
             TextField("Interval, minutes (optional)", text: $draft.interval).keyboardType(.numberPad)
-            TextField("Fare, ₸ (optional)", text: $draft.transitPrice).keyboardType(.numberPad)
+            TextField("Fare, \(Region.current.currencySymbol) (optional)", text: $draft.transitPrice)
+                .keyboardType(.numberPad)
             TextField("Note (optional)", text: $draft.transitNote)
         }
     }
 
     @ViewBuilder private var priceFields: some View {
         Section {
-            TextField("Entry price, ₸", text: $draft.price)
+            TextField("Entry price, \(Region.current.currencySymbol)", text: $draft.price)
                 .keyboardType(.numberPad)
                 .accessibilityIdentifier("content-price")
             Picker("Ticket", selection: $draft.audience) {

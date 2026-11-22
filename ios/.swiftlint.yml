@@ -21,3 +21,24 @@ function_body_length:
   warning: 60
 identifier_name:
   min_length: 2
+
+# Ш-57: the city is data (a region from the server), not code. Only the built-in default region and the UI-test
+# stubs may name it. Comments are not checked.
+custom_rules:
+  no_city_constants:
+    name: "City constant in code"
+    regex: 'Almaty|ALMATY|AlmatyPoint|AlmatyCamera|Asia/Almaty'
+    match_kinds:
+      - argument
+      - attribute.builtin
+      - identifier
+      - keyword
+      - number
+      - string
+      - typeidentifier
+      - objectliteral
+      - parameter
+    included: 'Jol/.*\.swift'
+    excluded: 'Jol/Core/Networking/UITest.*\.swift|Jol/Features/Regions/Region\+BuiltIn\.swift'
+    message: "Take the city from Region.current (Ш-57). The default region lives in Region+BuiltIn.swift."
+    severity: error

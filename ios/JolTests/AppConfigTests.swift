@@ -13,7 +13,7 @@ final class AppConfigTests: XCTestCase {
         XCTAssertEqual(url.absoluteString, "https://example.com/style.json")
     }
 
-    func testAlmatyCamera() {
-        XCTAssertEqual(AlmatyCamera.center.latitude, 43.2380, accuracy: 0.001)
+    func testBuiltInRegionCamera() {
+        XCTAssertEqual(Region.current.center.latitude, 43.2380, accuracy: 0.001)
     }
 }

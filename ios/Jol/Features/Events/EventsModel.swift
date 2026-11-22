@@ -6,7 +6,7 @@ import Observation
 @MainActor
 @Observable
 final class EventsModel {
-    /// The window of dates the map shows, counted from today (Almaty).
+    /// The window of dates the map shows, counted from today (region).
     static let windowDays = 14
 
     private(set) var items: [EventItem] = []
@@ -66,11 +66,11 @@ final class EventsModel {
         selected = nil
     }
 
-    /// `YYYY-MM-DD` of the Almaty calendar day.
+    /// `YYYY-MM-DD` of the region's calendar day.
     static func dateString(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = PlaceFormatting.almaty
+        formatter.timeZone = Region.current.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }

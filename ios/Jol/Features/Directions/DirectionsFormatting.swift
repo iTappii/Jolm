@@ -62,8 +62,9 @@ enum DirectionsFormatting {
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = "\u{00A0}"
         func number(_ value: Int) -> String { formatter.string(from: NSNumber(value: value)) ?? String(value) }
-        if low == high { return "≈ \(number(low))\u{00A0}₸" }
-        return "\(number(low))–\(number(high))\u{00A0}₸"
+        let symbol = Region.current.currencySymbol
+        if low == high { return "≈ \(number(low))\u{00A0}\(symbol)" }
+        return "\(number(low))–\(number(high))\u{00A0}\(symbol)"
     }
 
     /// "650 m" / "5.2 km".
@@ -82,12 +83,12 @@ enum DirectionsFormatting {
         }
     }
 
-    /// Arrival clock time in Almaty ("14:35"): the server's `arrive_at`, else departure + duration.
+    /// Arrival clock time in the region ("14:35"): the server's `arrive_at`, else departure + duration.
     static func arrival(_ option: DirectionOption, departedAt: Date) -> String {
         let date = option.arriveAt ?? departedAt.addingTimeInterval(option.durationS)
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = PlaceFormatting.almaty
+        formatter.timeZone = Region.current.timeZone
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Dates of a booking: the server writes ISO times with the Almaty offset; the screen shows them in Almaty time.
+/// Dates of a booking: the server writes ISO times with the region's offset; the screen shows them in the region's time.
 enum BookingFormatting {
     private static func date(_ iso: String?) -> Date? {
         guard let iso else { return nil }
@@ -12,7 +12,7 @@ enum BookingFormatting {
     private static func format(_ date: Date, template: String, locale: Locale) -> String {
         let formatter = DateFormatter()
         formatter.locale = locale
-        formatter.timeZone = PlaceFormatting.almaty
+        formatter.timeZone = Region.current.timeZone
         formatter.setLocalizedDateFormatFromTemplate(template)
         return formatter.string(from: date)
     }

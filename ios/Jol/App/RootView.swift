@@ -23,6 +23,7 @@ struct RootView: View {
                 // Ш-50: what is queued leaves when the app is put away (and again when it comes back).
                 Task { await container.analytics.flush() }
             }
+            .task { await container.regions.load() }
             .task {
                 container.analytics.trackLaunch()
                 await container.analytics.flush()

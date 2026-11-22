@@ -50,7 +50,7 @@ struct MapView: UIViewRepresentable {
     func makeUIView(context: Context) -> MLNMapView {
         let map = MLNMapView(frame: .zero, styleURL: styleURL)
         map.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        map.setCenter(AlmatyCamera.center, zoomLevel: AlmatyCamera.zoom, animated: false)
+        map.setCenter(Region.current.center, zoomLevel: Region.current.zoom, animated: false)
         map.showsUserLocation = true
         map.logoView.isHidden = false
         map.attributionButton.isHidden = false

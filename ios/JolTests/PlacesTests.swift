@@ -182,7 +182,7 @@ final class PlacesTests: XCTestCase {
     }
 
     func testNavigatorURLs() {
-        let coordinate = AlmatyCamera.center
+        let coordinate = Region.current.center
         let apple = Navigator.url(for: .appleMaps, name: "Cafe & Bar", coordinate: coordinate)?.absoluteString
         XCTAssertTrue(apple?.hasPrefix("https://maps.apple.com/?daddr=43.238000,76.945000") == true, apple ?? "")
         XCTAssertTrue(apple?.contains("Cafe") == true)
@@ -202,7 +202,7 @@ final class PlacesTests: XCTestCase {
 
     func testWeekdayIsMondayBasedInAlmaty() {
         // 2026-11-21 is a Saturday.
-        let date = DateComponents(calendar: .init(identifier: .gregorian), timeZone: PlaceFormatting.almaty,
+        let date = DateComponents(calendar: .init(identifier: .gregorian), timeZone: Region.current.timeZone,
                                   year: 2026, month: 11, day: 21, hour: 12).date!
         XCTAssertEqual(PlaceFormatting.weekday(of: date), 5)
     }

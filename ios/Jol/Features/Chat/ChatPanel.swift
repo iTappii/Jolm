@@ -217,14 +217,14 @@ enum BriefFormatting {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Asia/Almaty")
+        formatter.timeZone = Region.current.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: iso)
     }
 
     /// «5–8 дек.» / «5 – 8 Dec»; a single known date alone; nil when neither is known.
     static func dates(start: String?, end: String?, locale: Locale) -> String? {
-        let style = Date.FormatStyle(timeZone: TimeZone(identifier: "Asia/Almaty") ?? .current)
+        let style = Date.FormatStyle(timeZone: Region.current.timeZone)
             .day().month(.abbreviated).locale(locale)
         switch (day(start), day(end)) {
         case let (from?, to?):
@@ -236,6 +236,6 @@ enum BriefFormatting {
     }
 
     static func budget(_ kzt: Int, locale: Locale) -> String {
-        "\(kzt.formatted(.number.locale(locale))) ₸"
+        "\(kzt.formatted(.number.locale(locale))) \(Region.current.currencySymbol)"
     }
 }

@@ -24,6 +24,10 @@ enum UITestExtraStub {
             }
             return UITestPlaceActions.Answer(headers: ["ETag": offlineETag], body: offlineJSON(tripID: parts[2]))
         }
+        if method == "GET", path == "/v1/regions" {
+            let regions = (try? JSONEncoder().encode(RegionsResponse(regions: [Region.builtIn]))) ?? Data()
+            return UITestPlaceActions.Answer(body: String(bytes: regions, encoding: .utf8) ?? "{}")
+        }
         if method == "GET", path == "/v1/me/bonuses" {
             return signedIn ? UITestPlaceActions.Answer(body: bonusesJSON) : failure(401, "unauthorized")
         }
@@ -80,8 +84,8 @@ enum UITestExtraStub {
     static func offlineJSON(tripID: String) -> String {
         let (museum, cafe) = (TripStub.museumItem, TripStub.cafeItem)
         let (dayOne, dayTwo) = ("2026-12-05", "2026-12-06")
-        let lat = AlmatyCamera.center.latitude
-        let lon = AlmatyCamera.center.longitude
+        let lat = Region.current.center.latitude
+        let lon = Region.current.center.longitude
         return """
         {"trip_id":"\(tripID)","version":1,"locale":"en","timezone":"Asia/Almaty","geometry_encoding":"polyline6",\
         "start_date":"\(dayOne)","end_date":"\(dayTwo)","budget_kzt":100000,"total_cost_kzt":90000,"days":[\

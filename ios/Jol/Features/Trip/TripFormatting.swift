@@ -4,7 +4,7 @@ import Foundation
 enum TripFormatting {
     /// "120 000 ₸".
     static func kzt(_ amount: Int, locale: Locale) -> String {
-        "\(amount.formatted(.number.locale(locale)))\u{00A0}₸"
+        "\(amount.formatted(.number.locale(locale)))\u{00A0}\(Region.current.currencySymbol)"
     }
 
     /// "Day 2 · 6 Dec" parts: the date as the server wrote it (`2026-12-06`) in the app's language.

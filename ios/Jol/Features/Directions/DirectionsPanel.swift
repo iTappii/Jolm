@@ -24,6 +24,7 @@ struct DirectionsPanel: View {
     }
 
     var language: String { container.language.code }
+    private var regionName: String { Region.current.displayName(language: language) }
 
     /// The mode of the variant on screen: what "open in navigator" starts.
     private var selectedMode: TransportMode? {
@@ -117,7 +118,7 @@ struct DirectionsPanel: View {
                 .noticeStyle()
                 .accessibilityIdentifier("directions-notice-unavailable")
         case .outsideArea:
-            Text("You seem to be outside Almaty, so directions start from the map centre.")
+            Text("You seem to be outside \(regionName), so directions start from the map centre.")
                 .noticeStyle()
                 .accessibilityIdentifier("directions-notice-outside")
         case .chosen, nil:
@@ -153,7 +154,7 @@ struct DirectionsPanel: View {
     private func failureView(_ failure: DirectionsModel.Failure) -> some View {
         switch failure {
         case .outsideArea:
-            message("Directions work inside Almaty only. Move the map there and choose “From map centre”.",
+            message("Directions work inside \(regionName) only. Move the map there and choose “From map centre”.",
                     id: "directions-outside")
         case .network:
             retryMessage("No connection.")

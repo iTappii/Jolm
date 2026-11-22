@@ -3,7 +3,7 @@ import Foundation
 import Observation
 
 /// "Как добраться" (Ш-23, SSOT §6, §5.3): origin → `POST /v1/directions` → options → the chosen line on the map.
-/// Works for a guest. The origin is the user's location; without one (denied, no fix, outside Almaty)
+/// Works for a guest. The origin is the user's location; without one (denied, no fix, outside the region)
 /// it falls back to the map centre and says so (`fallback`), so the user is never left without an answer.
 @MainActor
 @Observable
@@ -17,7 +17,7 @@ final class DirectionsModel {
     }
 
     enum Failure: Equatable {
-        /// Origin or destination outside the area the server routes in (Almaty).
+        /// Origin or destination outside the area the server routes in (region).
         case outsideArea
         case network
         case serviceUnavailable

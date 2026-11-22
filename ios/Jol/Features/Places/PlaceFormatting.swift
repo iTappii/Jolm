@@ -2,21 +2,20 @@ import Foundation
 
 /// Display helpers for the place card.
 enum PlaceFormatting {
-    static let almaty = TimeZone(identifier: "Asia/Almaty") ?? .current
-
-    /// "≈ 1 500 ₸"
+    /// "≈ 1 500 ₸" (the symbol is the current region's currency).
     static func tenge(_ amount: Int) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.groupingSeparator = "\u{00A0}"
         formatter.usesGroupingSeparator = true
-        return "≈ \(formatter.string(from: NSNumber(value: amount)) ?? String(amount))\u{00A0}₸"
+        let number = formatter.string(from: NSNumber(value: amount)) ?? String(amount)
+        return "≈ \(number)\u{00A0}\(Region.current.currencySymbol)"
     }
 
-    /// Monday = 0 … Sunday = 6, in Almaty time (the server computes "open now" in that zone too).
+    /// Monday = 0 … Sunday = 6, in the region's time (the server computes "open now" in that zone too).
     static func weekday(of date: Date = Date()) -> Int {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = almaty
+        calendar.timeZone = Region.current.timeZone
         return (calendar.component(.weekday, from: date) + 5) % 7
     }
 

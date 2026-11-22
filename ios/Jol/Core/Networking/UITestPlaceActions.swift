@@ -82,8 +82,8 @@ enum UITestPlaceActions {
         guard signedIn else { return failure(401, "unauthorized") }
         let second = placeID == UITestSupport.secondPlaceID
         let target = CLLocation(
-            latitude: AlmatyCamera.center.latitude + (second ? 0.01 : 0),
-            longitude: AlmatyCamera.center.longitude + (second ? 0.012 : 0)
+            latitude: Region.current.center.latitude + (second ? 0.01 : 0),
+            longitude: Region.current.center.longitude + (second ? 0.012 : 0)
         )
         let here = CLLocation(latitude: payload["lat"] as? Double ?? 0, longitude: payload["lon"] as? Double ?? 0)
         let distance = Int(here.distance(from: target))
