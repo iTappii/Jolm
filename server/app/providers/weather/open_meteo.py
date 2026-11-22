@@ -1,8 +1,8 @@
 """Open-Meteo Forecast API client with a database cache (Ш-39).
 
 Request: hourly temperature_2m, precipitation_probability, precipitation, wind_speed_10m,
-weather_code in Asia/Almaty for a date range; for mountain places the point AND its elevation
-are sent (`elevation`), so the temperature is corrected to the place's height.
+weather_code in the region time zone for a date range; for mountain places the point AND its
+elevation are sent (`elevation`), so the temperature is corrected to the place's height.
 
 Cache (table `weather_cache`, migration 0013): key = coordinates rounded to 0.01 degree (about
 1 km; the request itself uses the rounded point, so the cached data matches its key), elevation
@@ -28,7 +28,7 @@ from psycopg.types.json import Jsonb
 from app.config import get_settings
 from app.db import execute, fetch_all
 from app.providers.weather.base import DayWeather, HourWeather, WeatherUnavailable
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 
 log = logging.getLogger("app.weather")
 
@@ -134,7 +134,7 @@ class OpenMeteoProvider:
         return cls(db, url, key, client)
 
     def _today(self) -> date:
-        return self.clock().astimezone(ALMATY_TZ).date()
+        return self.clock().astimezone(default_region().tz).date()
 
     async def forecast(
         self, lat: float, lon: float, days: Sequence[date], elevation_m: Optional[float] = None
@@ -191,7 +191,7 @@ class OpenMeteoProvider:
             "latitude": lat_e2 / 100.0,
             "longitude": lon_e2 / 100.0,
             "hourly": HOURLY,
-            "timezone": "Asia/Almaty",
+            "timezone": default_region().timezone,
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
         }

@@ -1,7 +1,7 @@
 """Weather data and the provider interface (Ш-39, SSOT §7.1).
 
 `WeatherProvider.forecast(lat, lon, days, elevation_m)` returns hourly weather for local
-(Asia/Almaty) days. The planner reads it through `ForecastView`, which implements
+(region time zone) days. The planner reads it through `ForecastView`, which implements
 `planner.weather.Forecast` (rain probability of a local hour); the weather re-check of Ш-40
 reads the hours directly.
 """

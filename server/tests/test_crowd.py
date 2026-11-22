@@ -6,7 +6,7 @@ import pytest
 from pydantic import SecretStr
 
 from app import worker
-from app.chat.brief import today_almaty
+from app.chat.brief import today_in_region
 from app.config import get_settings
 from app.crowd import service
 from app.crowd.service import ProfileCrowd
@@ -233,7 +233,7 @@ async def test_build_plan_reads_the_profile(conn):
     await fill_profile(conn, medeu, 8, level=1.0, hour=12)
 
     db = TransactionalDatabase(conn)
-    start = today_almaty() + timedelta(days=10)
+    start = today_in_region() + timedelta(days=10)
     base = {
         "start_date": start, "end_date": start + timedelta(days=1), "budget_kzt": 900000,
         "has_accommodation": True, "must_haves": [], "interests": [], "pace": "normal",

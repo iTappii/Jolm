@@ -2,7 +2,8 @@
 
 `load_prompt(name, locale)` returns the highest version for the locale (unknown locale -> en).
 HTML comments in the files are notes for developers and are stripped; `{{today}}` is filled in
-by `render`. To change a prompt, add a new `vN+1` file instead of editing a released one, so
+by `render`, and so are `{{region}}` (the region name in the prompt language) and `{{currency}}`
+(its currency code). To change a prompt, add a new `vN+1` file instead of editing a released one, so
 stored chats can say which prompt version produced an answer.
 """
 
@@ -11,6 +12,8 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Optional
+
+from app.regions import Region, default_region
 
 DIR = Path(__file__).resolve().parent
 LOCALES = ("ru", "en")
@@ -33,8 +36,13 @@ class Prompt:
         """Stable id to store next to an answer, e.g. `trip_brief.ru.v1`."""
         return f"{self.name}.{self.locale}.v{self.version}"
 
-    def render(self, today: Optional[date] = None) -> str:
-        return self.text.replace("{{today}}", (today or date.today()).isoformat())
+    def render(self, today: Optional[date] = None, region: Optional[Region] = None) -> str:
+        region = region or default_region()  # Ш-57: the city and the currency come from the region
+        return (
+            self.text.replace("{{today}}", (today or date.today()).isoformat())
+            .replace("{{region}}", region.name(self.locale))
+            .replace("{{currency}}", region.currency)
+        )
 
 
 def versions(name: str, locale: str) -> "list[int]":

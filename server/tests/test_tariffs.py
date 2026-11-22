@@ -5,7 +5,7 @@ import psycopg
 import pytest
 
 from app.admin.service import validate_tariff
-from app.places.service import ALMATY_TZ
+from app.regions import default_region
 from app.routing.costs import Tariff, calculate_cost, load_tariffs, recommend
 from tests.conftest import ROOT
 from tests.test_admin import logged_in
@@ -99,7 +99,7 @@ async def test_tariff_versions_seed_and_history(conn):
 async def test_admin_appends_tariffs(client, conn):
     assert (await client.get("/admin/tariffs")).status_code == 303
     csrf = await logged_in(client, conn)
-    today = datetime.now(ALMATY_TZ).date()
+    today = datetime.now(default_region().tz).date()
     form = {
         "mode": "bus",
         "valid_from": today.isoformat(),

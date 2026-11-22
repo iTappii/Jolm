@@ -1,4 +1,4 @@
-"""Public directions endpoint for Almaty."""
+"""Public directions endpoint inside the region."""
 
 import logging
 from datetime import datetime
@@ -11,10 +11,11 @@ from pydantic import ValidationError
 
 from app.db import fetch_one
 from app.errors import AppError
+from app.regions import default_region
 from app.routing import RoutingUnavailable, get_network
 from app.routing.costs import load_tariffs
-from app.routing.schemas import AlmatyPoint, DirectionOption, DirectionsRequest
-from app.routing.service import ALMATY_TZ, get_directions
+from app.routing.schemas import DirectionOption, DirectionsRequest, RoutePoint
+from app.routing.service import get_directions
 from app.routing.sql import DESTINATION_BY_ID
 
 log = logging.getLogger("app.routing")
@@ -34,15 +35,21 @@ async def directions(payload: DirectionsRequest, request: Request):
         if row is None:
             raise AppError(404, "not_found")
         try:
-            destination = AlmatyPoint.model_validate(row)
+            destination = RoutePoint.model_validate(row)
         except ValidationError:
             raise AppError(422, "validation_error") from None
 
+    region = default_region()
+    if not (
+        region.contains(*payload.origin.as_point()) and region.contains(*destination.as_point())
+    ):
+        raise AppError(422, "validation_error")  # a point outside the region: no routing there yet
+
     try:
         depart_at = (
-            payload.depart_at.astimezone(ALMATY_TZ)
+            payload.depart_at.astimezone(default_region().tz)
             if payload.depart_at is not None
-            else datetime.now(ALMATY_TZ)
+            else datetime.now(default_region().tz)
         )
     except OverflowError:
         raise AppError(422, "validation_error") from None

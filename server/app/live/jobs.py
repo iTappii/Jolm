@@ -2,13 +2,13 @@
 
     weather.scan   (every hour)   trips due for a re-check -> `weather.recheck` jobs
     weather.recheck {trip_id}      forecast -> at most one proposal (+ chat message + push job)
-    mountain.scan  (every 15 min)  from 07:00 Almaty: today's mountain stops -> `mountain.notify`
+    mountain.scan  (every 15 min)  from 07:00: today's mountain stops -> `mountain.notify`
     mountain.notify {trip_id, day} fresh forecast at the place -> chat message + push job
     push.send {notification_id}    deliver the outbox row to the user's devices
 
 Re-check cadence: a trip is due when `weather_checked_at` is empty or at least RECHECK_INTERVAL
 (2 days) old; it is stamped on every finished re-check and when the plan is built. Active =
-status 'active' and not ended (`end_date >= today` in Almaty). Mountains: MOUNTAIN_NOTIFY_AT
+status 'active' and not ended (`end_date >= today` in the region). Mountains: MOUNTAIN_NOTIFY_AT
 (07:00) is the earliest local time of the message, and it is sent only while the day's first
 mountain stop is still ahead. All times come from `live.clock` (a fake clock in tests).
 Idempotency: `trip_day_notices` (one mountain message per trip day), `push_notifications.dedupe_key`
@@ -24,17 +24,16 @@ from app import worker
 from app.db import Database, execute, fetch_all, fetch_one
 from app.live import clock, deps, engine, messages, proposals, rules
 from app.live import store as live_store
-from app.planner.area import ALMATY_CENTRE
 from app.providers.weather.base import ForecastView, WeatherUnavailable
 from app.providers.weather.open_meteo import HORIZON_DAYS
 from app.push import PushError, PushMessage
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 from app.trips import store as trips_store
 
 log = logging.getLogger("app.live")
 
 RECHECK_INTERVAL = timedelta(days=2)
-MOUNTAIN_NOTIFY_AT = time(7, 0)  # Asia/Almaty
+MOUNTAIN_NOTIFY_AT = time(7, 0)  # region time zone
 SCAN_LIMIT = 500
 RECHECK_ATTEMPTS = 3  # plan attempts before the job gives up and is retried by the worker
 
@@ -83,7 +82,9 @@ async def weather_recheck(db: Database, payload: dict) -> None:
     if not force and checked is not None and now - checked < RECHECK_INTERVAL:
         return  # a duplicate job: someone checked recently
     days = _days_ahead(today, trip["end_date"])
-    forecast = ForecastView(await deps.weather(db).forecast(*ALMATY_CENTRE, days))  # may raise
+    forecast = ForecastView(
+        await deps.weather(db).forecast(*default_region().centre, days)
+    )  # may raise
     # plan-then-apply: routing runs WITHOUT the trip lock; the result is applied under the lock
     # only if the plan version is unchanged, else it is recomputed (a few times, then the job
     # is retried later by the worker, and `weather_checked_at` stays as it was)
@@ -131,7 +132,7 @@ async def _user_locale(conn, user_id: UUID) -> str:
 @worker.register("mountain.scan")
 async def mountain_scan(conn, payload: dict) -> None:
     now = clock.now()
-    local = now.astimezone(ALMATY_TZ)
+    local = now.astimezone(default_region().tz)
     if local.time() < MOUNTAIN_NOTIFY_AT:
         return
     rows = await fetch_all(
@@ -216,8 +217,8 @@ async def mountain_notify(db: Database, payload: dict) -> None:
         for place in places:
             weather = forecasts[place["id"]].get(day)
             hours = list(weather.hours) if weather else []
-            start = place["starts_at"].astimezone(ALMATY_TZ)
-            end = place["ends_at"].astimezone(ALMATY_TZ)
+            start = place["starts_at"].astimezone(default_region().tz)
+            end = place["ends_at"].astimezone(default_region().tz)
             s_min, e_min = start.hour * 60 + start.minute, end.hour * 60 + end.minute
             problem = (
                 rules.stop_problem(

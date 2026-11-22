@@ -18,8 +18,8 @@ from app.clientip import client_ip
 from app.config import get_settings
 from app.db import execute, fetch_all, fetch_one
 from app.live import clock
-from app.places.service import ALMATY_TZ
 from app.providers.storage import StorageError, make_storage, media_url
+from app.regions import default_region
 from app.submissions import bonus_policy, bonuses, moderation
 from app.submissions.service import EXTENSIONS, MAX_IMAGE_BYTES, sniff_image
 
@@ -303,7 +303,9 @@ async def analytics_page(
         places = await analytics.place_visits_report(conn, lo, hi)
     for row in places:
         last = row["last_visit_at"]
-        row["last_visit"] = last.astimezone(ALMATY_TZ).strftime("%Y-%m-%d %H:%M") if last else "—"
+        row["last_visit"] = (
+            last.astimezone(default_region().tz).strftime("%Y-%m-%d %H:%M") if last else "—"
+        )
     return render(
         request,
         "analytics.html",
@@ -719,7 +721,7 @@ async def route_delete(request: Request, route_id: str, ctx: PostCtx = POST_ADMI
 
 
 async def _tariff_page(request, session, form=None, errors=None):
-    today = datetime.now(ALMATY_TZ).date()
+    today = datetime.now(default_region().tz).date()
     async with db(request) as conn:
         rows = await fetch_all(conn, sql.TARIFFS_LIST, (today,))
     return render(
@@ -782,7 +784,7 @@ async def _event_form_ctx(conn, form: Dict[str, str]) -> Dict[str, Any]:
 @router.get("/events", response_class=HTMLResponse)
 async def events_list(request: Request, session: auth.AdminSession = GET_ADMIN):
     async with db(request) as conn:
-        rows = await fetch_all(conn, sql.EVENTS_LIST)
+        rows = await fetch_all(conn, sql.EVENTS_LIST, {"tz": default_region().timezone})
     return render(request, "events.html", session, rows=rows)
 
 
@@ -799,7 +801,9 @@ async def event_create(request: Request, ctx: PostCtx = POST_ADMIN):
     async with db(request) as conn:
         await service.check_event_refs(conn, values, errors)
         if not errors:
-            row = await fetch_one(conn, sql.EVENT_INSERT, values)
+            row = await fetch_one(
+                conn, sql.EVENT_INSERT, dict(values, tz=default_region().timezone)
+            )
         extra = await _event_form_ctx(conn, ctx.form)
     if errors:
         return render(
@@ -824,7 +828,9 @@ async def event_edit(
 ):
     event_id = need_uuid(event_id)
     async with db(request) as conn:
-        event = await fetch_one(conn, sql.EVENT_GET, (event_id,))
+        event = await fetch_one(
+            conn, sql.EVENT_GET, {"id": event_id, "tz": default_region().timezone}
+        )
         if event is None:
             raise AdminError(404, "Мероприятие не найдено")
         form = {
@@ -860,12 +866,16 @@ async def event_save(request: Request, event_id: str, ctx: PostCtx = POST_ADMIN)
     event_id = need_uuid(event_id)
     values, errors = service.validate_event(ctx.form)
     async with db(request) as conn:
-        event = await fetch_one(conn, sql.EVENT_GET, (event_id,))
+        event = await fetch_one(
+            conn, sql.EVENT_GET, {"id": event_id, "tz": default_region().timezone}
+        )
         if event is None:
             raise AdminError(404, "Мероприятие не найдено")
         await service.check_event_refs(conn, values, errors)
         if not errors:
-            await execute(conn, sql.EVENT_UPDATE, dict(values, id=event_id))
+            await execute(
+                conn, sql.EVENT_UPDATE, dict(values, id=event_id, tz=default_region().timezone)
+            )
         extra = await _event_form_ctx(conn, ctx.form)
     if errors:
         return render(

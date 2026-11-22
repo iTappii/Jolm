@@ -15,7 +15,7 @@ from uuid import UUID
 
 from app.db import execute, fetch_all, fetch_one
 from app.errors import AppError
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 
 CHECKIN_RADIUS_M = 200  # places are points; a park or a mall is large, a phone is not exact
 CHECKIN_REPEAT = timedelta(minutes=30)  # the same person at the same place: one check-in
@@ -58,8 +58,8 @@ VALUES (%s, %s, %s, %s, %s, %s)
 AGGREGATE = """
 INSERT INTO place_crowd_profile (place_id, weekday, hour, level, samples, updated_at)
 SELECT r.place_id,
-       (extract(isodow FROM r.created_at AT TIME ZONE 'Asia/Almaty')::int - 1)::smallint,
-       extract(hour FROM r.created_at AT TIME ZONE 'Asia/Almaty')::smallint,
+       (extract(isodow FROM r.created_at AT TIME ZONE %(tz)s)::int - 1)::smallint,
+       extract(hour FROM r.created_at AT TIME ZONE %(tz)s)::smallint,
        sum(CASE r.level WHEN 0 THEN 0.0 WHEN 1 THEN 0.5 ELSE 1.0 END
            * power(0.5, extract(epoch FROM (%(now)s - r.created_at)) / 86400.0 / %(half)s))
          / sum(power(0.5, extract(epoch FROM (%(now)s - r.created_at)) / 86400.0 / %(half)s)),
@@ -146,7 +146,14 @@ async def aggregate(conn, now: datetime) -> int:
     )
     await execute(conn, "DELETE FROM place_crowd_profile")
     return await execute(
-        conn, AGGREGATE, {"now": now, "half": HALF_LIFE_DAYS, "window": WINDOW_DAYS}
+        conn,
+        AGGREGATE,
+        {
+            "now": now,
+            "half": HALF_LIFE_DAYS,
+            "window": WINDOW_DAYS,
+            "tz": default_region().timezone,
+        },
     )
 
 
@@ -162,7 +169,7 @@ def card_block(rows: List[Dict[str, Any]], now: datetime) -> Optional[Dict[str, 
     total = sum(r["samples"] for r in rows)
     if total < MIN_PLACE_SAMPLES:
         return None
-    local = now.astimezone(ALMATY_TZ)
+    local = now.astimezone(default_region().tz)
     today = [
         r for r in rows if r["weekday"] == local.weekday() and r["samples"] >= MIN_CELL_SAMPLES
     ]

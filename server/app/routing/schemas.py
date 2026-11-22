@@ -14,11 +14,11 @@ def group_of(mode: str) -> str:
     return "transit" if mode in ("bus", "metro") else mode
 
 
-class AlmatyPoint(BaseModel):
+class RoutePoint(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    lat: float = Field(ge=43.0, le=43.45, strict=True)
-    lon: float = Field(ge=76.70, le=77.20, strict=True)
+    lat: float = Field(ge=-90, le=90, strict=True)  # inside the region: checked by the API
+    lon: float = Field(ge=-180, le=180, strict=True)
 
     def as_point(self) -> Point:
         return self.lat, self.lon
@@ -27,9 +27,9 @@ class AlmatyPoint(BaseModel):
 class DirectionsRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    origin: AlmatyPoint = Field(alias="from")
+    origin: RoutePoint = Field(alias="from")
     to_place_id: Optional[UUID] = None
-    to: Optional[AlmatyPoint] = None
+    to: Optional[RoutePoint] = None
     depart_at: Optional[AwareDatetime] = None
 
     @field_validator("depart_at", mode="before")
@@ -78,7 +78,7 @@ class DirectionOption(BaseModel):
     # Ш-22a: several path variants per transport group (the client shows them as alternatives).
     group: Optional[Group] = None  # filled from `mode` when not given
     variant: int = 0  # 0 = the optimal variant of its group, then 1, 2 (see service._rank)
-    arrive_at: Optional[str] = None  # ISO datetime with offset, Asia/Almaty
+    arrive_at: Optional[str] = None  # ISO datetime with offset, region time zone
     # OPEN(SSOT §16.14): no traffic/crowding source yet; the API always sends null.
     congestion: Optional[float] = None
 

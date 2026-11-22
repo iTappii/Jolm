@@ -18,15 +18,15 @@ from app.db import fetch_all, fetch_one
 from app.memory.affinity import W_FAVORITE_CATEGORY, W_FAVORITE_PLACE, Memory
 from app.places import service
 from app.planner import scoring, sql
-from app.planner.area import ALMATY_BBOX
 from app.planner.interests import resolve
 from app.planner.model import Place, place_from_row
 from app.planner.outside import OutsidePlace, outside_wish
 from app.planner.signals import CrowdSource, EventBonus, UnknownCrowd, no_event_bonus
+from app.regions import default_region
 
 log = logging.getLogger(__name__)
 
-POOL_QUERY_LIMIT = 5000  # most popular places read for scoring; Almaty has far fewer real sights
+POOL_QUERY_LIMIT = 5000  # most popular places read for scoring; a region has far fewer real sights
 MUST_HAVE_FETCH = 20
 NAME_ONLY_MIN_SIM = 0.4  # a name search for words that are not a known category
 NAME_STRICT_MIN_SIM = 0.8  # a name found alongside a category reading of the same words
@@ -90,7 +90,7 @@ def places_per_must_have(days: int) -> int:
 
 
 def _area() -> Dict[str, Any]:
-    west, south, east, north = ALMATY_BBOX
+    west, south, east, north = default_region().bbox
     return {"west": west, "south": south, "east": east, "north": north}
 
 
@@ -104,7 +104,7 @@ async def _resolve_must_have(
     again only when nothing else fits, so every wish still gets a place.
     """
     far = None if chosen is not None else outside_wish(text)
-    if far is not None:  # Ш-56: never stand in an Almaty park for Charyn Canyon
+    if far is not None:  # Ш-56: never stand in a park of the region for Charyn Canyon
         return MustHave(text, [], "outside", far)
     reading = resolve([text])
     name = " ".join(text.split())

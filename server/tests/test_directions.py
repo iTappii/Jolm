@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -93,8 +93,8 @@ async def test_directions_motor_range_for_local_departure(departure, factor, dir
 @pytest.mark.parametrize(
     "changes",
     [
-        {"from": {"lat": 42.99, "lon": 77.0}},
-        {"to": {"lat": 43.25, "lon": 77.21}},
+        {"from": {"lat": 42.9, "lon": 77.0}},  # outside the region
+        {"to": {"lat": 43.25, "lon": 77.31}},  # outside the region
         {"to": {"lat": "43.25", "lon": 77.0}},
         {"to": None},
         {"to_place_id": str(uuid4())},
@@ -283,6 +283,8 @@ async def test_directions_lifespan_closes_provider(monkeypatch):
     db = AsyncMock()
     provider = AsyncMock()
     monkeypatch.setattr(main, "Database", lambda *args: db)
+    db.transaction = MagicMock(return_value=AsyncMock())  # an async context manager
+    monkeypatch.setattr(main, "refresh_regions", AsyncMock())  # Ш-57: needs a real connection
     monkeypatch.setattr(main, "make_router", lambda url: provider)
     app = create_app()
     async with app.router.lifespan_context(app):

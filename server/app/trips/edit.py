@@ -35,11 +35,11 @@ from app.errors import AppError
 from app.places import service
 from app.planner import hours as hrs
 from app.planner import sql as planner_sql
-from app.planner.area import ALMATY_BBOX, ALMATY_CENTRE
 from app.planner.build import leg_tools
 from app.planner.layout import NON_MEAL_CATEGORIES, KeptStop, RetimedDay, retime_day
 from app.planner.model import Place, place_from_row
 from app.planner.travel import PreferredLegs
+from app.regions import default_region
 from app.routing.base import Point, RoutingUnavailable
 from app.routing.fake import haversine_m
 from app.routing.service import get_directions
@@ -370,7 +370,7 @@ async def _candidates(
 ) -> List[Place]:
     """Replacement candidates, best first. Active non-accommodation places only; a place that
     is already in the trip is never a candidate."""
-    west, south, east, north = ALMATY_BBOX
+    west, south, east, north = default_region().bbox
     area = {"west": west, "south": south, "east": east, "north": north}
     if place_id is not None:
         active = await fetch_one(
@@ -636,7 +636,9 @@ async def _fetch_variant(
     by_id = {r["id"]: r for r in items}
     destination = by_id[leg["to_item_id"]]
     origin = by_id.get(leg["from_item_id"]) if leg["from_item_id"] else None
-    start = _point(origin) if origin else ALMATY_CENTRE  # the day's start point (no lodging yet)
+    start = (
+        _point(origin) if origin else default_region().centre
+    )  # the day's start point (no lodging yet)
     _, legs = await leg_tools(conn, router, trip["start_date"])
     try:
         options = await get_directions(

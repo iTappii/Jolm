@@ -4,8 +4,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from zoneinfo import ZoneInfo
 
+from app.regions import default_region
 from app.routing.base import NoRoute, Point, RouteResult, RoutingProvider, RoutingUnavailable
 from app.routing.costs import Tariff, calculate_cost, recommend
 from app.routing.fake import FakeRouter, encode_polyline6, haversine_m
@@ -17,7 +17,6 @@ log = logging.getLogger("app.routing")
 
 # Five kilometres limits the standalone walk to about an hour at city walking pace.
 MAX_WALK_M = 5000
-ALMATY_TZ = ZoneInfo("Asia/Almaty")
 # Ш-22a: up to this many path variants per transport group (variant 0 = the optimal one).
 MAX_VARIANTS = 3
 # A variant slower than this multiple of its group's best is not a reasonable alternative.
@@ -33,7 +32,7 @@ PATH_SAMPLES = 24
 
 
 def _traffic_max(depart_at: datetime) -> float:
-    local = depart_at.astimezone(ALMATY_TZ)
+    local = depart_at.astimezone(default_region().tz)
     peak = 7 <= local.hour < 10 or 17 <= local.hour < 20
     return 1.6 if local.weekday() < 5 and peak else 1.25
 
@@ -307,12 +306,12 @@ async def get_directions(
             options.extend(_finish_group(groups[group], variants, per_mode=per_mode))
     if not options and data_unavailable:
         raise RoutingUnavailable("directions unavailable")
-    base = depart_at if depart_at.tzinfo else depart_at.replace(tzinfo=ALMATY_TZ)
+    base = depart_at if depart_at.tzinfo else depart_at.replace(tzinfo=default_region().tz)
     for option in options:
         # motor modes: the upper estimate (traffic), the person should not be told too early
         option.arrive_at = (
             (base + timedelta(seconds=option.duration_s_max or option.duration_s))
-            .astimezone(ALMATY_TZ)
+            .astimezone(default_region().tz)
             .isoformat(timespec="seconds")
         )
     best = [o for o in options if o.variant == 0 or variants <= 1]

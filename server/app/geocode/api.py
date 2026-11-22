@@ -19,11 +19,10 @@ from app.places import service
 from app.places import sql as places_sql
 from app.places.api import _summary
 from app.ratelimit import acquire_own
+from app.regions import default_region
 
 router = APIRouter(prefix="/v1/geocode", tags=["geocode"])
 
-# Same bbox as the OSM places import (data/osm/import_places.py BBOX): Almaty and its mountains.
-WEST, SOUTH, EAST, NORTH = 76.70, 43.00, 77.20, 43.45
 PLACE_RADIUS_M = 30
 ADDRESS_RADIUS_M = 50
 LIMIT_PER_MINUTE = 120  # per client address; a tap is one request, a dragged pin is debounced
@@ -72,8 +71,8 @@ async def reverse(
     lat: float = Query(..., ge=-90, le=90),
     lon: float = Query(..., ge=-180, le=180),
 ) -> Dict[str, Any]:
-    if not (WEST <= lon <= EAST and SOUTH <= lat <= NORTH):
-        raise AppError(422, "validation_error", "The point is outside Almaty")
+    if not default_region().contains(lat, lon):
+        raise AppError(422, "validation_error", "The point is outside the region")
     wait = await acquire_own(
         request.app.state.db, [(request.app.state.geocode_limiter, client_ip(request))]
     )

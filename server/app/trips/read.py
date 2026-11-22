@@ -1,8 +1,8 @@
 """JSON shapes of the trips read API (Ш-37). Pure functions over rows from `trips.store`.
 
-Times are returned in Asia/Almaty (offset +05:00 since 2024), `day` / `date` are local calendar
-dates. Money is integer tenge for one traveller. Names follow Accept-Language (ru: ru, en, kk;
-en: en, ru, kk).
+Times are returned in the region time zone (see the `timezone` field), `day` / `date` are local
+calendar dates. Money is integer tenge for one traveller. Names follow Accept-Language (ru: ru,
+en, kk; en: en, ru, kk).
 """
 
 from datetime import date, datetime, timedelta
@@ -11,11 +11,11 @@ from typing import Any, Dict, List, Optional
 from app.events.service import event_json
 from app.places import service
 from app.providers.storage import media_url
-from app.routing.service import ALMATY_TZ
+from app.regions import default_region
 
 
 def local(value: Optional[datetime]) -> Optional[str]:
-    return value.astimezone(ALMATY_TZ).isoformat() if value else None
+    return value.astimezone(default_region().tz).isoformat() if value else None
 
 
 def place_ref(row: Dict[str, Any], locale: str) -> Dict[str, Any]:
@@ -204,12 +204,11 @@ MONTHS = {
     "ru": ("янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"),
     "en": ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
 }
-CITY = {"ru": "Алматы", "en": "Almaty"}  # SSOT §15: Almaty is the only city of the first version
 
 
 def trip_title(start: date, end: date, locale: str) -> str:
-    """Human title derived from the city and dates, in the request's language: «Алматы, 5–7 дек»,
-    «Алматы, 28 ноя – 2 дек», «Almaty, Dec 5–7», «Almaty, Nov 28 – Dec 2». The year is added only
+    """Human title derived from the city and dates, in the request's language: «<город>, 5–7 дек»,
+    «<город>, 28 ноя – 2 дек», «<city>, Dec 5–7». The year is added only
     when the trip crosses a year boundary. Not stored: it follows Accept-Language."""
     lang = "ru" if locale == "ru" else "en"
     months = MONTHS[lang]
@@ -233,7 +232,7 @@ def trip_title(start: date, end: date, locale: str) -> str:
     else:
         crossing = start.year != end.year
         span = "%s – %s" % (one(start, crossing), one(end, crossing))
-    return "%s, %s" % (CITY[lang], span)
+    return "%s, %s" % (default_region().name(lang), span)
 
 
 def trip_json(
@@ -381,7 +380,7 @@ def offline_json(
         "trip_id": str(trip["id"]),
         "version": trip["version"],
         "locale": locale,
-        "timezone": "Asia/Almaty",
+        "timezone": default_region().timezone,
         "geometry_encoding": "polyline6",
         "start_date": trip["start_date"].isoformat(),
         "end_date": trip["end_date"].isoformat(),

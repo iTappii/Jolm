@@ -248,11 +248,11 @@ ROUTE_LOCK = "SELECT id FROM curated_routes WHERE id = %s FOR UPDATE"
 
 # ---------------------------------------------------------------- events
 
-# starts_at/ends_at are shown and entered in Almaty local time (UTC+5, single zone).
+# starts_at/ends_at are shown and entered in the region's local time (`tz` parameter, Ш-57).
 EVENTS_LIST = """
 SELECT e.id, e.title_ru, e.title_en, e.is_promoted, e.sponsor, e.price_kzt,
-       e.starts_at AT TIME ZONE 'Asia/Almaty' AS starts_local,
-       e.ends_at AT TIME ZONE 'Asia/Almaty' AS ends_local,
+       e.starts_at AT TIME ZONE %(tz)s AS starts_local,
+       e.ends_at AT TIME ZONE %(tz)s AS ends_local,
        p.name_ru AS place_name_ru, p.name_en AS place_name_en
 FROM events e
 LEFT JOIN places p ON p.id = e.place_id
@@ -264,9 +264,9 @@ EVENT_GET = """
 SELECT e.id, e.place_id, e.title_ru, e.title_en, e.description_ru, e.description_en, e.price_kzt,
        e.category_id, e.is_promoted, e.sponsor,
        ST_Y(e.geom::geometry) AS lat, ST_X(e.geom::geometry) AS lon,
-       e.starts_at AT TIME ZONE 'Asia/Almaty' AS starts_local,
-       e.ends_at AT TIME ZONE 'Asia/Almaty' AS ends_local
-FROM events e WHERE e.id = %s
+       e.starts_at AT TIME ZONE %(tz)s AS starts_local,
+       e.ends_at AT TIME ZONE %(tz)s AS ends_local
+FROM events e WHERE e.id = %(id)s
 """
 
 EVENT_INSERT = """
@@ -275,8 +275,8 @@ INSERT INTO events (place_id, title_ru, title_en, description_ru, description_en
 VALUES (%(place_id)s, %(title_ru)s, %(title_en)s, %(description_ru)s, %(description_en)s,
         CASE WHEN %(lat)s::float8 IS NULL THEN NULL
              ELSE ST_SetSRID(ST_MakePoint(%(lon)s::float8, %(lat)s::float8), 4326)::geography END,
-        %(starts_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
-        %(ends_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
+        %(starts_at)s::timestamp AT TIME ZONE %(tz)s,
+        %(ends_at)s::timestamp AT TIME ZONE %(tz)s,
         %(price_kzt)s, %(category_id)s, %(is_promoted)s, %(sponsor)s)
 RETURNING id
 """
@@ -287,8 +287,8 @@ UPDATE events SET place_id = %(place_id)s, title_ru = %(title_ru)s, title_en = %
     geom = CASE WHEN %(lat)s::float8 IS NULL THEN NULL
                 ELSE ST_SetSRID(ST_MakePoint(%(lon)s::float8, %(lat)s::float8), 4326)::geography
            END,
-    starts_at = %(starts_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
-    ends_at = %(ends_at)s::timestamp AT TIME ZONE 'Asia/Almaty',
+    starts_at = %(starts_at)s::timestamp AT TIME ZONE %(tz)s,
+    ends_at = %(ends_at)s::timestamp AT TIME ZONE %(tz)s,
     price_kzt = %(price_kzt)s, category_id = %(category_id)s,
     is_promoted = %(is_promoted)s, sponsor = %(sponsor)s
 WHERE id = %(id)s

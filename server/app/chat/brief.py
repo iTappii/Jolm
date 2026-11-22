@@ -3,11 +3,11 @@
 import json
 from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional, Tuple
-from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field, field_validator
 
-ALMATY_TZ = ZoneInfo("Asia/Almaty")
+from app.regions import default_region
+
 MAX_BUDGET_KZT = 1_000_000_000
 # OPEN(SSOT §16.2): budget is tenge only; other currencies are not accepted here.
 MAX_TRIP_DAYS = 60  # sanity bound, not a product rule
@@ -16,8 +16,8 @@ MAX_ITEM_CHARS = 80
 REQUIRED = ("dates", "budget", "accommodation")  # order of questions (SSOT §4, §5.2)
 
 
-def today_almaty() -> date:
-    return datetime.now(ALMATY_TZ).date()
+def today_in_region() -> date:
+    return datetime.now(default_region().tz).date()
 
 
 class BriefError(ValueError):
@@ -126,7 +126,7 @@ def apply_update(
 ) -> Tuple[Dict[str, Any], List[str]]:
     """Validate `update` and merge it onto `current`; returns (new brief, changed field names).
 
-    Dates sent now must not be in the past in Asia/Almaty; the merged range must satisfy
+    Dates sent now must not be in the past in the region time zone; the merged range must satisfy
     end >= start. Dates already stored are not re-checked, so a chat reopened later can still
     change the budget. Raises `BriefError` with a message for the model.
     """
