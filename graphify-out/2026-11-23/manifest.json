@@ -1122,9 +1122,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatPanel.swift": {
-    "mtime": 1795349616.8206687,
-    "seen": 1795368142.614896,
-    "ast_hash": "b31218cf5aff3ba34041f9ab34b55871",
+    "mtime": 1795375031.0904658,
+    "seen": 1795375039.017717,
+    "ast_hash": "f90732f15ebf8f71a1a13d9953d439eb",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatScreen.swift": {
@@ -1134,9 +1134,9 @@
     "semantic_hash": "91cd931ae2383b10894a72a8cbec44f3"
   },
   "ios/Jol/Features/Home/HomeScreen.swift": {
-    "mtime": 1795352486.535398,
-    "seen": 1795368142.61494,
-    "ast_hash": "b8f0147bd4a56d1a38f77ff807b249ac",
+    "mtime": 1795375031.093294,
+    "seen": 1795375039.018344,
+    "ast_hash": "a5aaa2b4cc52dde0c06a0b3c1886febc",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Places/PlacesScreen.swift": {
@@ -2022,9 +2022,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatGraphView.swift": {
-    "mtime": 1795282860.921691,
-    "seen": 1795368142.614892,
-    "ast_hash": "20da425ff92e5999a4740853854853a5",
+    "mtime": 1795375031.0888498,
+    "seen": 1795375039.0176342,
+    "ast_hash": "934a772cb185bb34b933849dc0e32199",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatModel.swift": {
@@ -2052,9 +2052,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChatTranscriptView.swift": {
-    "mtime": 1795352436.9602795,
-    "seen": 1795368142.614901,
-    "ast_hash": "2914d8697d596378447b6b53f7bdcc10",
+    "mtime": 1795375031.0912282,
+    "seen": 1795375039.017777,
+    "ast_hash": "61de5585e60b654723f18dbddc961b6a",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Crowd/CrowdModel.swift": {
@@ -2268,9 +2268,9 @@
     "semantic_hash": "e954e09796f56b235f19f00deedc1cd4"
   },
   "ios/JolUITests/ChatUITests.swift": {
-    "mtime": 1795353368.241873,
-    "seen": 1795368142.615065,
-    "ast_hash": "d122db669e0228faa8c524c20c71d99f",
+    "mtime": 1795375031.0956297,
+    "seen": 1795375039.0201018,
+    "ast_hash": "098e61d48c3f5c989d0dda0d214ad62d",
     "semantic_hash": ""
   },
   "ios/JolUITests/DirectionsUITests.swift": {
@@ -2286,10 +2286,10 @@
     "semantic_hash": "8de9e0cae90aa9b6b32faeef6fc069c5"
   },
   "ios/JolUITests/SignInGateUITests.swift": {
-    "mtime": 1795252128.3067355,
-    "seen": 1795368142.615082,
-    "ast_hash": "a40dcebf54fd0760c516a6bdf04428c2",
-    "semantic_hash": "a40dcebf54fd0760c516a6bdf04428c2"
+    "mtime": 1795375031.0982795,
+    "seen": 1795375039.020285,
+    "ast_hash": "3a5afb921ae2101307bc413edf31ed52",
+    "semantic_hash": ""
   },
   "server/app/analytics/__init__.py": {
     "mtime": 1795262886.8514135,
@@ -2874,9 +2874,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChainLabels.swift": {
-    "mtime": 1795276302.2128677,
-    "seen": 1795368142.614889,
-    "ast_hash": "91e0864f7623e298cd1dad830b60c2af",
+    "mtime": 1795375031.0876749,
+    "seen": 1795375039.017612,
+    "ast_hash": "4a63be7c395cf04a211cc35d8c60ce93",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Chat/ChainNodes.swift": {
@@ -2922,9 +2922,9 @@
     "semantic_hash": ""
   },
   "ios/JolUITests/ChatChainUITests.swift": {
-    "mtime": 1795349616.8211088,
-    "seen": 1795368142.6150641,
-    "ast_hash": "b8a41b3f3840f397373dba4db177532b",
+    "mtime": 1795375031.0951147,
+    "seen": 1795375039.020101,
+    "ast_hash": "ad54d008e951e22efb63a06bf5c90fd5",
     "semantic_hash": ""
   },
   "ios/JolUITests/PlaceActionsUITests.swift": {
@@ -3048,87 +3048,87 @@
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-1node-dark.png": {
-    "mtime": 1795353547.9599438,
-    "seen": 1795368142.6155782,
-    "ast_hash": "ab6c8d3738c501d9bc7d194f88466a63",
+    "mtime": 1795373128.2718434,
+    "seen": 1795375039.026568,
+    "ast_hash": "101c00f51ec46cb2303deec9926bb3b2",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-1node-light.png": {
-    "mtime": 1795353547.9618156,
-    "seen": 1795368142.6155798,
-    "ast_hash": "252c6839f6a2ceefcbe8a5496d878cc6",
+    "mtime": 1795373058.9627643,
+    "seen": 1795375039.026569,
+    "ast_hash": "a25d683aa6ce371547b748bffcc241f0",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-2nodes-dark.png": {
-    "mtime": 1795353547.9633503,
-    "seen": 1795368142.615581,
-    "ast_hash": "dea339e4974d475b0d3bbdaa0cf006d8",
+    "mtime": 1795373136.5798392,
+    "seen": 1795375039.02657,
+    "ast_hash": "daef6ed95e70c252c61eae24f9292e6b",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-2nodes-light.png": {
-    "mtime": 1795353547.9649,
-    "seen": 1795368142.615582,
-    "ast_hash": "6b0eb8af18ccdad9de3db69fef0069c6",
+    "mtime": 1795373067.194353,
+    "seen": 1795375039.02657,
+    "ast_hash": "5b343fcf60953894590c460079ef4471",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-4nodes-dark.png": {
-    "mtime": 1795353547.9672482,
-    "seen": 1795368142.615583,
-    "ast_hash": "f19abc9f464016204d356fbfd3e27da4",
+    "mtime": 1795373149.6642451,
+    "seen": 1795375039.026571,
+    "ast_hash": "1be6f0461eb98c29f38fb003bbaefe6c",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-4nodes-light.png": {
-    "mtime": 1795353547.9688356,
-    "seen": 1795368142.615585,
-    "ast_hash": "eb57d912022712fafb1a49be51adf133",
+    "mtime": 1795373080.3988378,
+    "seen": 1795375039.026571,
+    "ast_hash": "82f7475d85a9e317df387cea9ea19324",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-8nodes-ready-dark.png": {
-    "mtime": 1795353547.970494,
-    "seen": 1795368142.615586,
-    "ast_hash": "a80b13e6383baa26f12ad6203d398991",
+    "mtime": 1795373172.4739926,
+    "seen": 1795375039.026572,
+    "ast_hash": "9a0d058654ff87244725c0866b216c0f",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-8nodes-ready-light.png": {
-    "mtime": 1795353547.9722188,
-    "seen": 1795368142.615587,
-    "ast_hash": "1eeeb9c955c4550d49860e0905f7cf67",
+    "mtime": 1795373105.4392333,
+    "seen": 1795375039.026573,
+    "ast_hash": "6d7a46508b903f79bf6a4c5ab466e896",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-collapsed-light.png": {
-    "mtime": 1795353547.9727223,
-    "seen": 1795368142.6155882,
-    "ast_hash": "d4ef4345352ef854268ea57c56dfbdd7",
+    "mtime": 1795373085.6727593,
+    "seen": 1795375039.026573,
+    "ast_hash": "3fda46329b8bba7484b16ec10f9c1391",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-empty-light.png": {
-    "mtime": 1795353547.9736114,
-    "seen": 1795368142.6155899,
-    "ast_hash": "cc6109c47d857faff240fbc3131c5a1a",
+    "mtime": 1795373045.2126305,
+    "seen": 1795375039.0265741,
+    "ast_hash": "1441cb7d9c5b5da913e3d0378ebfc11b",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-keyboard-dark.png": {
-    "mtime": 1795353547.974801,
-    "seen": 1795368142.6155908,
-    "ast_hash": "3f67f492160e93101c7bf7e0e6505af0",
+    "mtime": 1795373152.194927,
+    "seen": 1795375039.0265741,
+    "ast_hash": "16496d10f0e41f9d3f3a5fad75a9217e",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-keyboard-light.png": {
-    "mtime": 1795353547.976341,
-    "seen": 1795368142.615593,
-    "ast_hash": "e51377dd50013bb9bf4bf9c6dec3211f",
+    "mtime": 1795373082.898327,
+    "seen": 1795375039.026575,
+    "ast_hash": "0c0a546c56a2141be97e4b2cc3f413d7",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-route-ready-dark.png": {
-    "mtime": 1795353547.9777105,
-    "seen": 1795368142.615594,
-    "ast_hash": "0d05750569d30f43c86b747072a6548b",
+    "mtime": 1795373164.567805,
+    "seen": 1795375039.0265758,
+    "ast_hash": "6d2717238415136c3d26af9f0ceda9fd",
     "semantic_hash": ""
   },
   "docs/reviews/img/chain-route-ready-light.png": {
-    "mtime": 1795353547.979354,
-    "seen": 1795368142.615595,
-    "ast_hash": "ff43783032152e6fa7ef09ab528347ae",
+    "mtime": 1795373097.089639,
+    "seen": 1795375039.0265758,
+    "ast_hash": "1fe2d7f91ba10ad2f4e3df7918dae799",
     "semantic_hash": ""
   },
   "ios/Jol/Core/Design/Accessibility.swift": {
@@ -3384,9 +3384,9 @@
     "semantic_hash": ""
   },
   "ios/JolUITests/SidebarUITests.swift": {
-    "mtime": 1795285992.5530124,
-    "seen": 1795368142.615081,
-    "ast_hash": "1ffa4e06f029b4eec3814ce191c11bf4",
+    "mtime": 1795375031.0966558,
+    "seen": 1795375039.020284,
+    "ast_hash": "82688d59f46dea3b85d77fe132863b7c",
     "semantic_hash": ""
   },
   "ios/JolUITests/TapPointUITests.swift": {
@@ -4242,9 +4242,9 @@
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/LiveRouteOverlay.swift": {
-    "mtime": 1795347721.7323444,
-    "seen": 1795368142.614941,
-    "ast_hash": "45dba20da506d5dfadfc3d50714c922d",
+    "mtime": 1795375035.4066882,
+    "seen": 1795375039.0183449,
+    "ast_hash": "c6d582f5f0951548e9986a83e4e2a6c1",
     "semantic_hash": ""
   },
   "ios/Jol/Features/Map/MapProjection.swift": {
@@ -4473,6 +4473,72 @@
     "mtime": 1795365517.6215644,
     "seen": 1795368142.615577,
     "ast_hash": "8363acf8b9776878b51a40d59e45b9d3",
+    "semantic_hash": ""
+  },
+  "ios/Jol/Features/Chat/ChatAnnouncements.swift": {
+    "mtime": 1795375031.08803,
+    "seen": 1795375039.017633,
+    "ast_hash": "d63fda1fc896774b486f0fde40035892",
+    "semantic_hash": ""
+  },
+  "ios/JolUITests/A11yHomeUITests.swift": {
+    "mtime": 1795375031.0947855,
+    "seen": 1795375039.02003,
+    "ast_hash": "bce8d8aaedca33ec3809705b3aafc864",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-52-a11y-home.md": {
+    "mtime": 1795375031.0415921,
+    "seen": 1795375039.0255659,
+    "ast_hash": "e2497f1fcdf269c2e7c0f441d7e3aab5",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/chat-axxxl-dark.png": {
+    "mtime": 1795375031.0341394,
+    "seen": 1795375039.027104,
+    "ast_hash": "cfad872b7d1033c9c19ba71a8f680e12",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/chat-chain-light.png": {
+    "mtime": 1795375031.035563,
+    "seen": 1795375039.027105,
+    "ast_hash": "921fea5b107bc9bfd184e649564608ec",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/chat-dark.png": {
+    "mtime": 1795375031.0364902,
+    "seen": 1795375039.027106,
+    "ast_hash": "32aacaab35e55937e35adb5543afcceb",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/collapsed-axxxl-dark.png": {
+    "mtime": 1795375031.037383,
+    "seen": 1795375039.027106,
+    "ast_hash": "a3a2273eba580c2056b4772b2f56303c",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/home-axxxl-dark.png": {
+    "mtime": 1795375031.0381553,
+    "seen": 1795375039.027107,
+    "ast_hash": "1ba79470f4b1fc78b17b292c2c34949e",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/home-light.png": {
+    "mtime": 1795375031.0391128,
+    "seen": 1795375039.0271082,
+    "ast_hash": "9648957bfbb7dd1e62e86e832764a7c1",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/live-axxxl-dark.png": {
+    "mtime": 1795375031.040219,
+    "seen": 1795375039.0271082,
+    "ast_hash": "2dfcb58abb60c621ed6dc0f6edaf235c",
+    "semantic_hash": ""
+  },
+  "docs/reviews/img/\u0428-52-a11y-home/live-choose-axxxl-dark.png": {
+    "mtime": 1795375031.041373,
+    "seen": 1795375039.0271091,
+    "ast_hash": "c2633454be28ff15dc6bf987b3d0a4a1",
     "semantic_hash": ""
   }
 }
