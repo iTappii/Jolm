@@ -16,12 +16,13 @@ retried on the next change. Stored in `chat_live_stops` / `chat_live_alternative
 the chosen stop place for its wish (`chosen_places`).
 """
 
+from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
 from uuid import UUID
 
 from app.chat import tools
-from app.db import execute, fetch_all, fetch_one
+from app.db import execute, fetch_all
 from app.live import clock
 from app.planner.travel import DirectionsLegs
 from app.routing import RoutingError, get_network
@@ -29,6 +30,36 @@ from app.routing.costs import load_tariffs
 
 MAX_PLACES_PER_WISH = 3  # the best one is the stop, the rest are alternatives
 WALK_MAX_S = 20 * 60
+
+LOCK_CLASS = 54  # first key of the advisory lock; the second one is the hash of the chat id
+
+
+class _Locked:
+    """`db` stand-in that runs everything on the connection holding the chat lock (savepoints)."""
+
+    def __init__(self, conn) -> None:
+        self.conn = conn
+
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator[Any]:
+        async with self.conn.transaction():
+            yield self.conn
+
+
+@asynccontextmanager
+async def chat_lock(db, chat_id: UUID) -> AsyncIterator[_Locked]:
+    """Serialise live-route changes of one chat (Ш-63): `choose` and `sync` read the stops,
+    ask the router and write them back, so two of them at once would lose one of the changes.
+
+    A transaction-level advisory lock keyed by the chat id (the chat row itself stays free for
+    other writers, e.g. messages). Everything inside runs on this one connection, so it is one
+    transaction: it commits when the block ends and rolls back if it raises."""
+    async with db.transaction() as conn:
+        await execute(
+            conn, "SELECT pg_advisory_xact_lock(%s, hashtext(%s))", (LOCK_CLASS, str(chat_id))
+        )
+        yield _Locked(conn)
+
 
 PLACES_BY_ID = """
 SELECT p.id, p.name_ru, p.name_en, p.name_kk, c.slug AS category,
@@ -230,6 +261,13 @@ async def sync(
     searched (up to 3 places); wishes that are gone lose their stop; legs are recomputed where
     the neighbours changed. A wish without any place gets no stop (and is searched again next time).
     """
+    async with chat_lock(db, chat_id) as locked:
+        return await _sync_locked(locked, chat_id, locale, router, wishes)
+
+
+async def _sync_locked(
+    db, chat_id: UUID, locale: str, router: Any, wishes: Sequence[str]
+) -> Tuple[Optional[Dict[str, Any]], bool, Dict[str, Dict[str, Any]]]:
     async with db.transaction() as conn:
         old = await _load_stops(conn, chat_id)
     by_wish = {stop.wish.casefold(): stop for stop in old}
@@ -261,7 +299,6 @@ async def sync(
         places = await _places(conn, ids)
     await _fill_legs(db, router, stops, places, old)
     async with db.transaction() as conn:
-        await fetch_one(conn, "SELECT id FROM chats WHERE id = %s FOR UPDATE", (chat_id,))
         await _save_stops(conn, chat_id, stops)
     changed = shape(stops) != before
     return render(stops, places, locale) if stops else None, changed, new_pins
@@ -304,7 +341,16 @@ async def choose(
     """Make an alternative the stop at `ord_` (the old stop place becomes an alternative).
 
     404 no such stop; 422 the place is neither the stop nor one of its alternatives.
+    Serialised per chat (`chat_lock`): the stops are read under the lock, so a concurrent choose or
+    sync is never overwritten.
     """
+    async with chat_lock(db, chat_id) as locked:
+        return await _choose_locked(locked, chat_id, locale, router, ord_, place_id)
+
+
+async def _choose_locked(
+    db, chat_id: UUID, locale: str, router: Any, ord_: int, place_id: UUID
+) -> Dict[str, Any]:
     async with db.transaction() as conn:
         old = await _load_stops(conn, chat_id)
     if not 1 <= ord_ <= len(old):
@@ -324,7 +370,6 @@ async def choose(
             places = await _places(conn, ids)
         await _fill_legs(db, router, stops, places, old)
         async with db.transaction() as conn:
-            await fetch_one(conn, "SELECT id FROM chats WHERE id = %s FOR UPDATE", (chat_id,))
             await _save_stops(conn, chat_id, stops)
     result = await _render(db, chat_id, stops, locale)
     assert result is not None

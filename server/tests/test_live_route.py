@@ -1,8 +1,10 @@
 """Live route of a chat (Ш-54): stops, alternatives, legs, choose, restore, removal, generator."""
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
+from psycopg.rows import dict_row
 
 from app.chat import live_route
 from app.db import fetch_all, fetch_one
@@ -352,3 +354,203 @@ async def test_select_candidates_puts_the_chosen_place_first(conn):
     assert wish.places[0].id == chosen["id"] and wish.how == "chosen"
     plain = await select_candidates(conn, cand_brief(must_haves=["Плов-центр"]))
     assert plain.must_haves[0].places[0].id != chosen["id"]
+
+
+# --- races (Ш-63) --------------------------------------------------------------------------------
+
+SUSHI = "Sushi"
+RACE_PLACES = PLACES + [
+    ("Sushi Alpha", 76.9500, 43.2500, "cafe_japanese", 90),
+    ("Sushi Beta", 76.9510, 43.2502, "cafe_japanese", 70),
+    ("Sushi Gamma", 76.9520, 43.2504, "cafe_japanese", 50),
+]
+
+
+class SlowRouter(FakeRouter):
+    """Every route takes a moment, so concurrent requests really overlap."""
+
+    async def route(self, from_point, to_point, mode):
+        await asyncio.sleep(0.05)
+        return await super().route(from_point, to_point, mode)
+
+
+@pytest.fixture
+async def race(committed_auth_db_url):
+    """Real pool on a committed database: two requests really run on two connections."""
+    from httpx import ASGITransport, AsyncClient
+    from psycopg import AsyncConnection
+
+    from app.auth import sessions
+    from app.db import Database
+    from app.main import create_app
+
+    async with await AsyncConnection.connect(
+        committed_auth_db_url, autocommit=True, row_factory=dict_row
+    ) as setup:
+        await load_categories(setup)
+        ids = {}
+        for name, lon, lat, cat, pop in RACE_PLACES:
+            ids[name] = await add_place(setup, name, lon, lat, cat, "active", pop)
+        tokens = await sessions.sign_in(setup, "email", "race@example.com", "en")
+        chat = await fetch_one(
+            setup,
+            "INSERT INTO chats (user_id, locale) SELECT id, 'en' FROM users LIMIT 1 RETURNING id",
+        )
+    app = create_app()
+    db = Database(committed_auth_db_url, min_size=1, max_size=8)
+    app.state.db = db
+    app.state.routing_provider = SlowRouter()
+    await db.open()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield SimpleNamespace(
+            db=db,
+            client=client,
+            ids=ids,
+            chat_id=chat["id"],
+            headers={"Authorization": "Bearer %s" % tokens.access_token},
+            router=app.state.routing_provider,
+        )
+    await db.close()
+    async with await AsyncConnection.connect(committed_auth_db_url, autocommit=True) as cleanup:
+        await cleanup.execute("TRUNCATE places, place_categories CASCADE")
+
+
+async def race_choose(r, ord_, place_id):
+    return await r.client.post(
+        "/v1/chats/%s/live-route/choose" % r.chat_id,
+        headers=r.headers,
+        json={"ord": ord_, "place_id": str(place_id)},
+    )
+
+
+async def read_route(r):
+    async with r.db.transaction() as conn:
+        return await live_route.load(conn, r.chat_id, "en")
+
+
+def place_ids(route):
+    return [s["place"]["id"] for s in route["stops"]]
+
+
+async def test_two_concurrent_chooses_on_different_stops_keep_both(race):
+    await live_route.sync(race.db, race.chat_id, "en", race.router, [CHINESE, SUSHI])
+    before = await read_route(race)
+    assert [s["wish"] for s in before["stops"]] == [CHINESE, SUSHI]
+    alt1 = before["stops"][0]["alternatives"][0]["id"]
+    alt2 = before["stops"][1]["alternatives"][0]["id"]
+
+    first, second = await asyncio.gather(race_choose(race, 1, alt1), race_choose(race, 2, alt2))
+    assert (first.status_code, second.status_code) == (200, 200), (first.text, second.text)
+
+    after = await read_route(race)
+    assert place_ids(after) == [alt1, alt2]  # neither choice was lost
+    for stop, old in zip(after["stops"], before["stops"]):  # the old stops became alternatives
+        assert len(stop["alternatives"]) == 2
+        assert old["place"]["id"] in [a["id"] for a in stop["alternatives"]]
+    assert [(g["from_ord"], g["to_ord"]) for g in after["legs"]] == [(1, 2)]
+
+
+async def test_two_concurrent_chooses_on_one_stop_stay_consistent(race):
+    await live_route.sync(race.db, race.chat_id, "en", race.router, [CHINESE])
+    before = await read_route(race)
+    everything = {before["stops"][0]["place"]["id"]} | {
+        a["id"] for a in before["stops"][0]["alternatives"]
+    }
+    alt1, alt2 = [a["id"] for a in before["stops"][0]["alternatives"]]
+
+    first, second = await asyncio.gather(race_choose(race, 1, alt1), race_choose(race, 1, alt2))
+    assert (first.status_code, second.status_code) == (200, 200)
+
+    after = await read_route(race)
+    (stop,) = after["stops"]
+    now = [stop["place"]["id"]] + [a["id"] for a in stop["alternatives"]]
+    assert len(now) == 3 and set(now) == everything  # no place lost or duplicated
+    assert stop["place"]["id"] in (alt1, alt2)
+
+
+async def test_choose_and_sync_of_a_new_wish_do_not_lose_each_other(race):
+    await live_route.sync(race.db, race.chat_id, "en", race.router, [CHINESE])
+    before = await read_route(race)
+    alt = before["stops"][0]["alternatives"][0]["id"]
+
+    response, _ = await asyncio.gather(
+        race_choose(race, 1, alt),
+        live_route.sync(race.db, race.chat_id, "en", race.router, [CHINESE, SUSHI]),
+    )
+    assert response.status_code == 200, response.text
+
+    after = await read_route(race)
+    assert [s["wish"] for s in after["stops"]] == [CHINESE, SUSHI]  # the new stop survived
+    assert after["stops"][0]["place"]["id"] == alt  # and so did the choice
+    assert len(after["legs"]) == 1
+
+
+# --- real Valhalla (Ш-63) ---------------------------------------------------------------------
+
+REPUBLIC_SQUARE = (43.2389, 76.9452)  # lat, lon
+CENTRAL_MOSQUE = (43.2427, 76.9467)  # ~0.8 km on foot
+PANFILOV_PARK = (43.2587, 76.9565)  # ~3 km: more than a 20-minute walk
+MEDEU = (43.1575, 77.0589)  # ~14 km, far outside walking
+
+
+@pytest.fixture
+async def valhalla():
+    """Router on the Valhalla of docker-compose; skips the test when it is not reachable."""
+    import httpx
+
+    from app.config import get_settings
+    from app.routing import ValhallaRouter
+
+    url = get_settings().valhalla_url or "http://127.0.0.1:8002"
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as http:
+            if (await http.get(url.rstrip("/") + "/status")).status_code != 200:
+                pytest.skip("Valhalla at %s is not healthy" % url)
+    except httpx.HTTPError:
+        pytest.skip("Valhalla at %s is not reachable" % url)
+    router = ValhallaRouter(url)
+    yield router
+    await router.aclose()
+
+
+async def real_leg(conn, router, origin, destination):
+    from tests.conftest import TransactionalDatabase
+
+    await conn.execute(
+        "INSERT INTO transport_tariffs (mode, valid_from, base_kzt, per_min_kzt, per_km_kzt, "
+        "source) VALUES ('taxi', '2026-01-01', 500, 0, 150, 'test')"
+    )
+    return await live_route.compute_leg(TransactionalDatabase(conn), router, origin, destination)
+
+
+async def test_real_valhalla_short_leg_is_a_walk(conn, valhalla):
+    leg = await real_leg(conn, valhalla, REPUBLIC_SQUARE, CENTRAL_MOSQUE)
+    assert leg is not None and leg["mode"] == "walk"
+    assert 300 <= leg["duration_s"] <= 20 * 60  # 0.8 km at walking speed
+    assert 500 <= leg["distance_m"] <= 1500
+
+
+async def test_real_valhalla_mid_leg_is_a_car_when_the_walk_is_long(conn, valhalla):
+    leg = await real_leg(conn, valhalla, REPUBLIC_SQUARE, PANFILOV_PARK)
+    assert leg is not None and leg["mode"] == "car"  # the walk takes over 20 minutes
+    assert 2000 <= leg["distance_m"] <= 8000
+    assert 3 * 60 <= leg["duration_s"] <= 25 * 60
+
+
+async def test_real_valhalla_far_leg_is_a_car_with_sane_time(conn, valhalla):
+    leg = await real_leg(conn, valhalla, REPUBLIC_SQUARE, MEDEU)
+    assert leg is not None and leg["mode"] == "car"
+    assert 8000 <= leg["distance_m"] <= 30000
+    assert 10 * 60 <= leg["duration_s"] <= 90 * 60
+
+
+async def test_real_valhalla_leg_in_a_live_route(world, valhalla):
+    """Through the chat: the leg between two stops comes from the real engine."""
+    world.env.app.state.routing_provider = valhalla
+    route = live_events(await add_wishes(world, CHINESE, PARK))[0]
+    (leg,) = route["legs"]
+    assert (leg["from_ord"], leg["to_ord"], leg["mode"]) == (1, 2, "car")  # ~5 km, long walk
+    assert 5 * 60 <= leg["duration_s"] <= 40 * 60
+    assert 3000 <= leg["distance_m"] <= 12000
+    stored = (await get_chat(world))["live_route"]["legs"]
+    assert stored == route["legs"]
