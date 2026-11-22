@@ -2,7 +2,8 @@
 
     POST /chats                    {"locale"?: "ru"|"en"} -> 201 chat
     GET  /chats?limit=&before=     -> {"items": [chat + preview]}, newest first
-    GET  /chats/{id}               -> chat + messages + brief + graph_nodes
+    GET  /chats/{id}               -> chat + messages + brief + graph_nodes + live_route (or null)
+    POST /chats/{id}/live-route/choose  {"ord", "place_id"} -> live_route (Ш-54)
     POST /chats/{id}/messages      {"content": "..."} -> text/event-stream
 
 Stream events (`event: <name>` + `data: <json>`); the stream ends with `done` or `error`:
@@ -10,6 +11,8 @@ Stream events (`event: <name>` + `data: <json>`); the stream ends with `done` or
 - `graph_node`    {"ord", "kind", "text"}                      one node appended to the graph
 - `brief_updated` {"brief": {...}, "changed": ["budget_kzt", ...]}
 - `map_places`    {"reason": "must_have"|"chosen", "places": [{id, name, category, lat, lon}]}
+- `live_route`    {"stops": [...], "legs": [...]} the whole live route after a must-have wish was
+                  added or removed (exact shape and rules: chat/live_route.py, Ш-54)
 - `route_ready`   {"trip_id", "version", "days", "warnings", "must_have_unmet", "budget"}
                   after `build_trip` (exact shape: chat/build_tool.py)
 - `trip_updated`  {"trip_id", "version", "action", "changed_days", "budget"}
@@ -37,7 +40,7 @@ message before it, and only when there is something to say.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, List, Optional, Set
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request
@@ -45,7 +48,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.auth import sessions
 from app.auth.api import bearer_token
-from app.chat import build_tool, edit_tools, store, tools
+from app.chat import build_tool, edit_tools, live_route, store, tools
 from app.chat.brief import (
     BriefError,
     BriefUpdate,
@@ -60,6 +63,7 @@ from app.chat.engine import ToolOutcome, TurnRecord, run_turn
 from app.chat.prompts import TRIP_BRIEF, load_prompt
 from app.chat.sse import format_event, sse_response
 from app.config import get_settings
+from app.db import fetch_one
 from app.errors import AppError
 from app.memory import affinity
 from app.memory.notes import latest_notes, memory_data_block
@@ -155,6 +159,7 @@ async def get_chat(chat_id: UUID, request: Request):
         brief = await store.get_brief(conn, chat_id)
         filled_order = await store.get_filled_order(conn, chat_id)
         nodes = await store.graph_nodes(conn, chat_id)
+        live = await live_route.load(conn, chat_id, chat["locale"])
     return dict(
         _chat_json(chat),
         messages=[
@@ -163,7 +168,38 @@ async def get_chat(chat_id: UUID, request: Request):
         ],
         brief=dict(public_brief(brief), filled_order=filled_order),
         graph_nodes=nodes,
+        live_route=live,
     )
+
+
+class ChooseStop(BaseModel):
+    ord: int = Field(ge=1)
+    place_id: UUID
+
+
+@router.post("/chats/{chat_id}/live-route/choose")
+async def choose_live_stop(chat_id: UUID, payload: ChooseStop, request: Request):
+    """An alternative becomes the stop; legs are recomputed. 404 unknown chat/ord, 409 while a
+    turn is running on the chat, 422 the place is not that stop's place or alternative."""
+    access = bearer_token(request)
+    db = request.app.state.db
+    async with db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        chat = await _own_chat(conn, user["id"], chat_id)
+        busy = await fetch_one(
+            conn,
+            "SELECT 1 AS busy FROM chats WHERE id = %s AND turn_lease_until > clock_timestamp()",
+            (chat_id,),
+        )
+    if busy:
+        raise AppError(409, "chat_busy")
+    routing = getattr(request.app.state, "routing_provider", None) or FakeRouter()
+    try:
+        return await live_route.choose(
+            db, chat_id, chat["locale"], routing, payload.ord, payload.place_id
+        )
+    except live_route.ChoiceError as exc:
+        raise AppError(exc.status, exc.code) from None
 
 
 def _trim_history(rows: List[dict]) -> List[Message]:
@@ -217,7 +253,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
 
     async def handle_tool(call: ToolCall) -> ToolOutcome:
         handler = {
-            tools.UPDATE_TRIP_BRIEF: _update_trip_brief,
+            tools.UPDATE_TRIP_BRIEF: lambda *a: _update_trip_brief(*a, router),
             tools.ADD_GRAPH_NODE: _add_graph_node,
             tools.SEARCH_PLACES: _search_places,
             tools.SEARCH_EVENTS: _search_events,
@@ -321,7 +357,9 @@ async def _finish(turn, coro) -> None:
 # --- tools ----------------------------------------------------------------------------------
 
 
-async def _update_trip_brief(db, chat_id: UUID, locale: str, call: ToolCall) -> ToolOutcome:
+async def _update_trip_brief(
+    db, chat_id: UUID, locale: str, call: ToolCall, router: Any = None
+) -> ToolOutcome:
     args = parse_tool_args(call, BriefUpdate)
     async with db.transaction() as conn:
         current = await store.lock_brief(conn, chat_id)
@@ -336,17 +374,15 @@ async def _update_trip_brief(db, chat_id: UUID, locale: str, call: ToolCall) -> 
     events = []
     if changed:
         events.append(("brief_updated", {"brief": public_brief(new), "changed": changed}))
-        known = {item.casefold() for item in current["must_haves"]}
-        pins: List[Dict[str, Any]] = []
-        for wish in new["must_haves"]:
-            if wish.casefold() in known:
-                continue
-            _, found = await tools.search_places(
-                db, tools.SearchPlacesArgs(query=wish, limit=1), locale
+        if "must_haves" in changed:  # Ш-54: stops and legs of the live route follow the wishes
+            route, route_changed, best = await live_route.sync(
+                db, chat_id, locale, router or FakeRouter(), new["must_haves"]
             )
-            pins.extend(dict(pin, must_have=wish) for pin in found)
-        if pins:
-            events.append(("map_places", {"reason": "must_have", "places": pins}))
+            pins = [dict(pin, must_have=wish) for wish, pin in best.items()]
+            if pins:  # old clients: the best match of every new wish
+                events.append(("map_places", {"reason": "must_have", "places": pins}))
+            if route_changed:
+                events.append(("live_route", route or {"stops": [], "legs": []}))
     return ToolOutcome(result, events)
 
 

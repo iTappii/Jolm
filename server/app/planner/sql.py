@@ -122,3 +122,7 @@ ORDER BY (p.setting = 'indoor') DESC NULLS LAST,
 LIMIT %(limit)s
 """
 )
+
+# One place by id for a chosen must-have (Ш-54). params: id plus the area (kept so the same
+# `_COLS` shape and the same "only plannable places" rules apply as everywhere in this file).
+PLACE_BY_ID = "SELECT" + _COLS + _FROM_WHERE + "  AND p.id = %(id)s\n"
