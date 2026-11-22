@@ -142,6 +142,17 @@ struct LiveRouteOverlay: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .ignoresSafeArea()
+        // Labels on a map keep a bounded size (the capsules are laid out by an estimate of the text width); what they
+        // say is in the VoiceOver labels, and the cards below scale freely.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("Route on the map"))
+    }
+
+    /// VoiceOver walks the route in its own order: stop 1, its alternatives, the leg to stop 2, stop 2, … (higher
+    /// priority is read first). Stops are spaced 10 apart so the alternatives and the leg fit between them.
+    private func order(stop number: Int, offset: Int = 0) -> Double {
+        Double(10_000 - number * 10 - offset)
     }
 
     private func stopPin(_ stop: LiveStop, at point: CGPoint) -> some View {
@@ -164,6 +175,8 @@ struct LiveRouteOverlay: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: LiveRouteFormatting.spokenStop(
             number: number, name: stop.place.name, language: language)))
+        .accessibilityHint(Text("Shows the place card"))
+        .accessibilitySortPriority(order(stop: number))
         .accessibilityIdentifier("live-stop-\(number)")
         .offset(x: point.x - 22, y: point.y - 22)
     }
@@ -205,6 +218,7 @@ struct LiveRouteOverlay: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: LiveRouteFormatting.spokenAlternative(name: place.name, language: language)))
         .accessibilityHint(Text("Choose this instead"))
+        .accessibilitySortPriority(order(stop: route.number(of: stop), offset: 1))
         .accessibilityIdentifier("live-alt-\(stop.ord)-\(place.id.uuidString.lowercased())")
         .offset(x: point.x - 22, y: point.y - 22)
     }
@@ -230,6 +244,7 @@ struct LiveRouteOverlay: View {
             .allowsHitTesting(false)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: LiveRouteFormatting.spokenEdge(edge, language: language)))
+            .accessibilitySortPriority(order(stop: edge.fromNumber, offset: 5))
             .accessibilityIdentifier("live-edge-\(edge.fromNumber)-\(edge.toNumber)")
         }
     }
@@ -244,7 +259,7 @@ extension LiveRouteOverlay {
         VStack(alignment: .leading, spacing: JolSpacing.sm) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: picked.place.name).font(JolFont.headline)
+                    Text(verbatim: picked.place.name).font(JolFont.headline).accessibilityAddTraits(.isHeader)
                     if let category = picked.place.category {
                         Text(verbatim: category).font(.caption).foregroundStyle(JolColor.textSecondary)
                     }
@@ -256,9 +271,10 @@ extension LiveRouteOverlay {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Close"))
+                .accessibilityHint(Text("Keeps the current stop"))
                 .accessibilityIdentifier("live-choose-close")
             }
-            HStack(spacing: JolSpacing.sm) {
+            AdaptiveStack(spacing: JolSpacing.sm) {
                 Button { onChoose(picked.stop, picked.place) } label: {
                     HStack {
                         if isChoosing { ProgressView().controlSize(.small) }
@@ -274,7 +290,7 @@ extension LiveRouteOverlay {
                 .accessibilityIdentifier("live-choose-confirm")
                 Button { self.picked = nil; onOpenPlace(picked.place) } label: {
                     Text("Details").font(.subheadline.weight(.semibold)).foregroundStyle(JolColor.brandText)
-                        .padding(.horizontal, 10).frame(minHeight: 44)
+                        .padding(.horizontal, 10).frame(minHeight: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("live-choose-details")
@@ -282,6 +298,8 @@ extension LiveRouteOverlay {
         }
         .padding(JolSpacing.md)
         .frame(maxWidth: 420, alignment: .leading)
+        // The card hangs over the map above the chat card: past xxxLarge it would reach the chat (seen at AX3).
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
         .transition(.move(edge: .top).combined(with: .opacity))

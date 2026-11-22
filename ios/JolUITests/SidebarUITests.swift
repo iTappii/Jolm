@@ -47,7 +47,7 @@ final class SidebarUITests: XCTestCase {
         row.tap()
         XCTAssertTrue(element(app, "sidebar-panel").waitForNonExistence(timeout: 5), "the panel closes")
         XCTAssertTrue(element(app, "chat-transcript").waitForExistence(timeout: 15), "the chat is shown for rereading")
-        XCTAssertTrue(app.staticTexts["Rain is forecast on Dec 6. Move the museum to Dec 7?"].exists)
+        XCTAssertTrue(app.staticTexts["Jol: Rain is forecast on Dec 6. Move the museum to Dec 7?"].exists)
 
         openSidebar(app)
         app.buttons["sidebar-new-chat"].tap()

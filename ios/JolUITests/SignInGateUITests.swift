@@ -67,7 +67,7 @@ final class SignInGateUITests: XCTestCase {
         // The flow continues: the draft became the first message of a saved chat and the field is empty again.
         let message = element(app, "chat-message-user")
         XCTAssertTrue(message.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(message.label, "Three days in Almaty")
+        XCTAssertEqual(message.label, "You: Three days in Almaty")
         XCTAssertNotEqual(element(app, "chat-input").value as? String, "Three days in Almaty")
     }
 

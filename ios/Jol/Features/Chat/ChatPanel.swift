@@ -15,6 +15,7 @@ struct ChatPanel: View {
     let onOpenRoute: () -> Void
     let onGuestSignIn: () -> Void
     @FocusState private var focused: Bool
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedNode: String?
 
     private var isActive: Bool { !model.state.isEmpty || model.isOpening || model.openFailed }
@@ -39,6 +40,7 @@ struct ChatPanel: View {
             if model.isOpening {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 80)
+                    .accessibilityLabel(Text("Loading"))
                     .accessibilityIdentifier("chat-opening")
             } else if model.openFailed {
                 Text("Couldn't open this chat.")
@@ -71,31 +73,40 @@ struct ChatPanel: View {
                 Text(verbatim: "Jol")
                     .font(JolFont.title)
                     .foregroundStyle(JolColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("chat-title")
             } else {
                 Text("Shall we start the journey?")
                     .font(JolFont.largeTitle)
                     .foregroundStyle(JolColor.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("chat-greeting")
             }
             Spacer(minLength: JolSpacing.sm)
             Button(action: onCollapse) {
                 Image(systemName: "chevron.down")
                     .font(.body.weight(.semibold))
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // the icon sits in a fixed circle
                     .frame(width: 36, height: 36)
                     .background(JolColor.surface, in: Circle())
                     .foregroundStyle(JolColor.textPrimary)
+                    .minTapTarget()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Collapse chat"))
+            .accessibilityHint(Text("Hides the chat and shows the map"))
             .accessibilityIdentifier("chat-collapse")
         }
     }
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: JolSpacing.sm) {
-            TextField(isActive ? "Message" : "Where do you want to go?", text: $draft, axis: .vertical)
+        // At accessibility sizes the field takes the whole row and «send» goes under it, so the prompt is not cut.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .trailing, spacing: JolSpacing.xs))
+            : AnyLayout(HStackLayout(alignment: .bottom, spacing: JolSpacing.sm))
+        return layout {
+            TextField(inputPrompt, text: $draft, axis: .vertical)
                 .lineLimit(1...4)
                 .focused($focused)
                 .submitLabel(.send)
@@ -107,21 +118,32 @@ struct ChatPanel: View {
                     draft.removeLast()
                     submit()
                 }
+                .frame(maxWidth: .infinity, minHeight: JolTarget.minimum, alignment: .leading)
+                .contentShape(Rectangle())
+                .accessibilityLabel(Text(inputPrompt))
                 .accessibilityIdentifier("chat-input")
             Button(action: submit) {
                 Image(systemName: "arrow.up")
                     .font(.body.weight(.bold))
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .frame(width: 32, height: 32)
                     .background(JolColor.brand.opacity(canSend ? 1 : 0.35), in: Circle())
                     .foregroundStyle(JolColor.onBrand)
+                    .minTapTarget()
             }
             .buttonStyle(.plain)
             .disabled(!canSend)
             .accessibilityLabel(Text("Send"))
+            .accessibilityHint(Text("Sends your message to Jol"))
             .accessibilityIdentifier("chat-send")
         }
-        .padding(JolSpacing.md)
+        .padding(.horizontal, JolSpacing.md)
+        .padding(.vertical, JolSpacing.xs)
         .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+    }
+
+    private var inputPrompt: LocalizedStringKey {
+        isActive ? LocalizedStringKey("Message") : LocalizedStringKey("Where do you want to go?")
     }
 
     private var canSend: Bool {
@@ -145,6 +167,15 @@ struct CollapsedChatBar: View {
     let draft: String
     var isTyping = false
     let onExpand: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    /// What VoiceOver adds to «Expand chat»: the unsent draft, and that the answer is still being written.
+    private var spokenValue: Text {
+        var parts: [Text] = []
+        if !draft.isEmpty { parts.append(Text(verbatim: draft)) }
+        if isTyping { parts.append(Text("Jol is typing")) }
+        return .spoken(parts)
+    }
 
     var body: some View {
         Button(action: onExpand) {
@@ -162,16 +193,20 @@ struct CollapsedChatBar: View {
                 }
                 Image(systemName: "chevron.up")
                     .font(.body.weight(.semibold))
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .foregroundStyle(JolColor.textPrimary)
+                    .accessibilityHidden(true)
             }
-            .lineLimit(1)
+            .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
             .padding(.horizontal, JolSpacing.lg)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(.thinMaterial, in: Capsule())
+            .padding(.vertical, JolSpacing.sm)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Expand chat"))
+        .accessibilityValue(spokenValue)
+        .accessibilityHint(Text("Opens the chat"))
         .accessibilityIdentifier("chat-collapsed-bar")
     }
 }
