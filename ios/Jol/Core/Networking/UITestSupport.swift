@@ -19,6 +19,9 @@ enum UITestSupport {
     }
 
     static var isStubbed: Bool { ProcessInfo.processInfo.arguments.contains("-JolStubAPI") }
+    /// `-JolDemo` (with `-JolStubAPI`): a clean demo for a screen recording — plain phrases drive the live route,
+    /// the built trip is made of the same stops, no fixture pins or ad events on the map.
+    static var isDemo: Bool { ProcessInfo.processInfo.arguments.contains("-JolDemo") }
 
     /// Fixture place that sits exactly at `AlmatyCamera.center`, i.e. in the middle of the screen at launch.
     static let centerPlaceID = "11111111-1111-4111-8111-111111111111"
@@ -41,6 +44,7 @@ enum UITestSupport {
     }
 
     static var placesJSON: String {
+        if isDemo { return "{\"items\":[]}" }
         let lat = AlmatyCamera.center.latitude
         let lon = AlmatyCamera.center.longitude
         return "{\"items\":[\(summary(centerPlaceID, "Fixture Museum", "museum", lat, lon)),"
@@ -84,6 +88,7 @@ enum UITestSupport {
 
     /// A promoted event (the server sets `is_ad` only for non-public places) and an ordinary one.
     static var eventsItemsJSON: String {
+        if isDemo { return "" }
         let lat = AlmatyCamera.center.latitude
         let lon = AlmatyCamera.center.longitude
         return """

@@ -137,6 +137,7 @@
 		994068EF363F560943ED8CC9 /* chat-dlg-7.sse in Resources */ = {isa = PBXBuildFile; fileRef = BFEAF2C63E695B7C4DCA9485 /* chat-dlg-7.sse */; };
 		998236C86ECC25372EB5EE7C /* chat-guest.sse in Resources */ = {isa = PBXBuildFile; fileRef = CB273D8C83B7FC613B1F4EDB /* chat-guest.sse */; };
 		9C53CF3751E040F3CB5FC410 /* Polyline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07C066B94132BDB2C9F34759 /* Polyline.swift */; };
+		9E388B7BB909644F691EBADE /* UITestDemoTrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3122E2DA092D01F078D44276 /* UITestDemoTrip.swift */; };
 		9E84C9EDA002000A0C91266F /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA181C1312BE222A8DD76E3 /* ProfileScreen.swift */; };
 		A1F828F7F1CB24FCCAEC5C22 /* SignInEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB4FC3F9A4B61C739DEF14D7 /* SignInEntryView.swift */; };
 		A209B9C74F9C5BEFCE5B21F3 /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CD9698D28414244B22F82E1 /* ChatService.swift */; };
@@ -284,6 +285,7 @@
 		2E0F33A8025521E128A461E3 /* placeholder-style.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "placeholder-style.json"; sourceTree = "<group>"; };
 		2F2B8856B92A067007319602 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		3111B5557089024A7672A29F /* BookingModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingModel.swift; sourceTree = "<group>"; };
+		3122E2DA092D01F078D44276 /* UITestDemoTrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITestDemoTrip.swift; sourceTree = "<group>"; };
 		333020C184C7E3ABC75F802B /* PlaceCardTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceCardTabs.swift; sourceTree = "<group>"; };
 		33F2B7525FB5888311968ED8 /* SidebarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarScreen.swift; sourceTree = "<group>"; };
 		34BB8C2B3F1BFFAAF33BE839 /* stub-style-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "stub-style-dark.json"; sourceTree = "<group>"; };
@@ -568,6 +570,7 @@
 				B9DC06F15DCBF91F19813697 /* TokenStore.swift */,
 				B16B75CD0846965574FA337D /* UITestChatStub.swift */,
 				A47A1FC125F68DBBBE14BBF7 /* UITestContentStub.swift */,
+				3122E2DA092D01F078D44276 /* UITestDemoTrip.swift */,
 				2938F1C9EE8469197C51919E /* UITestExtraStub.swift */,
 				198C3516017D5B079D74FE9B /* UITestGeocodeStub.swift */,
 				6B94D3165B22B182726ACC32 /* UITestPlaceActions.swift */,
@@ -1265,6 +1268,7 @@
 				63BB766E665D5978C0E42F38 /* Typography.swift in Sources */,
 				C8F8F7BEC3D42E9DA459DB37 /* UITestChatStub.swift in Sources */,
 				CBEB3DF7267A902D9A212CB8 /* UITestContentStub.swift in Sources */,
+				9E388B7BB909644F691EBADE /* UITestDemoTrip.swift in Sources */,
 				8D875E109BA94C2D36559C09 /* UITestExtraStub.swift in Sources */,
 				334DD9BAA48268813D57BE39 /* UITestGeocodeStub.swift in Sources */,
 				1A764FAEC398E4651548FF3A /* UITestPlaceActions.swift in Sources */,

@@ -31,6 +31,19 @@ enum ChatStub {
     /// Stop `ord` → id of the alternative the tester chose for it.
     private nonisolated(unsafe) static var liveChoices: [Int: String] = [:]
 
+    /// The place chosen for a live-route stop (an alternative the person picked), if any.
+    static func liveChoice(ord: Int) -> String? { liveChoices[ord] }
+
+    /// `-JolDemo`: plain phrases instead of the `live1`…`live4` tags.
+    private static func demoTurn(_ lowered: String) -> Int? {
+        guard UITestSupport.isDemo else { return nil }
+        if lowered.contains("chinese") { return 1 }
+        if lowered.contains("president") { return 2 }
+        if lowered.contains("bazaar") { return 3 }
+        if lowered.contains("build") || lowered.contains("route") || lowered.contains("ready") { return 4 }
+        return nil
+    }
+
     static func handles(_ path: String) -> Bool {
         path.hasPrefix("/v1/chat") || path.hasPrefix("/v1/trips") || path.hasPrefix("/v1/proposals")
     }
@@ -102,7 +115,7 @@ enum ChatStub {
         if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
         if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
         // Live route (Ш-54): "live2" replays the second turn of the recorded live dialog.
-        for turn in 1...4 where lowered.contains("live\(turn)") {
+        for turn in 1...4 where lowered.contains("live\(turn)") || demoTurn(lowered) == turn {
             sent.append(text)
             liveTurn = turn
             if turn == 4 { tripBuilt = true }

@@ -48,7 +48,7 @@ enum TripStub {
         let id = parts[2]
         switch (method, parts.count) {
         case ("GET", 3):
-            return ChatStub.Answer(body: json(id: id))
+            return ChatStub.Answer(body: UITestSupport.isDemo ? DemoTrip.json(id: id) : json(id: id))
         case ("POST", 4) where parts[3] == "budget-choice":
             guard choice == nil else { return error(409, "budget_choice_unavailable") }
             choice = body["choice"] as? String
