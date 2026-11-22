@@ -69,7 +69,8 @@ final class BonusTests: XCTestCase {
         await model.load()
         XCTAssertEqual(model.phase, .idle)
         XCTAssertNil(model.balance)
-        XCTAssertTrue(StubURLProtocol.requests.isEmpty)
+        // Only the bonus endpoint: the shared stub log can also hold a late request of an earlier test.
+        XCTAssertTrue(StubURLProtocol.requests.filter { $0.url?.path.hasPrefix("/v1/me/bonuses") == true }.isEmpty)
     }
 
     func testNextPageUsesTheCursorAndSkipsRepeats() async throws {

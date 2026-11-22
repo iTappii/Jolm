@@ -17,8 +17,9 @@ struct GeoPoint: Codable, Equatable, Sendable {
         self.init(lat: coordinate.latitude, lon: coordinate.longitude)
     }
 
-    /// The area the server routes in: the current region's box.
-    var isInServiceArea: Bool { Region.current.contains(lat: lat, lon: lon) }
+    /// The area the server routes in: any known region's box (Ш-59: the whole country, not only the city the trips are
+    /// planned in). The server checks the exact boundary and answers 422 outside it.
+    var isInServiceArea: Bool { Region.anyContains(lat: lat, lon: lon) }
 }
 
 /// `POST /v1/directions` body (SSOT §6): from the user's point to one place, or (Ш-23c) to a tapped point that is not a

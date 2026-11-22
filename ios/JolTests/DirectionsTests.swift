@@ -244,10 +244,10 @@ final class DirectionsTests: XCTestCase {
         XCTAssertEqual(StubURLProtocol.requests.filter { $0.url?.path == "/v1/directions" }.count, 1)
     }
 
-    func testMapCenterOutsideAlmatyFailsLocally() async {
+    func testMapCenterOutsideEveryRegionFailsLocally() async {
         StubURLProtocol.install { okDirections($0) }
         let model = makeModel(FakeLocator(.unavailable))
-        model.start(to: place, mapCenter: GeoPoint(lat: 51.1, lon: 71.4))
+        model.start(to: place, mapCenter: GeoPoint(lat: 55.75, lon: 37.62)) // Moscow: outside every region (Ш-59)
         await wait { model.phase != .locating }
         XCTAssertEqual(model.phase, .failed(.outsideArea))
         XCTAssertTrue(StubURLProtocol.requests.filter { $0.url?.path == "/v1/directions" }.isEmpty)
@@ -338,5 +338,16 @@ private final class Counter: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         value += 1
         return value
+    }
+}
+
+/// Ш-59: an intercity taxi (3 h 41 min – 4 h 37 min) shows both ends in hours, not "221–4 h 37 min".
+final class LongTripFormattingTests: XCTestCase {
+    func testLongRangeShowsHoursOnBothEnds() throws {
+        let json = UITestSupport.directionsJSON.replacingOccurrences(
+            of: "\"duration_s_min\":420,\"duration_s_max\":660",
+            with: "\"duration_s_min\":13260,\"duration_s_max\":16620")
+        let options = try JSONDecoder().decode(DirectionsPayload.self, from: Data(json.utf8)).options
+        XCTAssertEqual(DirectionsFormatting.duration(options[4], language: "en"), "3 h 41 min – 4 h 37 min")
     }
 }

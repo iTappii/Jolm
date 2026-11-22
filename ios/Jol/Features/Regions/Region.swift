@@ -63,6 +63,20 @@ struct Region: Codable, Equatable, Identifiable, Sendable {
         get { storage.withLock { $0 } }
         set { storage.withLock { $0 = newValue } }
     }
+
+    private static let knownStorage = OSAllocatedUnfairLock<[Region]>(initialState: [Region.builtIn])
+
+    /// Every region the server routes in (Ш-59: "how to get there" works across all of them, planning stays in
+    /// `current`). The built-in one until `RegionModel` loads the list.
+    static var known: [Region] {
+        get { knownStorage.withLock { $0 } }
+        set { knownStorage.withLock { $0 = newValue.isEmpty ? [Region.builtIn] : newValue } }
+    }
+
+    /// Inside one of the `known` regions.
+    static func anyContains(lat: Double, lon: Double) -> Bool {
+        known.contains { $0.contains(lat: lat, lon: lon) }
+    }
 }
 
 /// Parts of the `GET /v1/regions` answer.

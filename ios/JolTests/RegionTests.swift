@@ -20,10 +20,12 @@ final class RegionTests: XCTestCase {
         super.setUp()
         defaults = UserDefaults(suiteName: "RegionTests-\(UUID().uuidString)")
         Region.current = .builtIn
+        Region.known = [.builtIn]
     }
 
     override func tearDown() {
         Region.current = .builtIn
+        Region.known = [.builtIn]
         super.tearDown()
     }
 
@@ -127,5 +129,27 @@ final class RegionTests: XCTestCase {
         XCTAssertEqual(region.zoom, 11)
         XCTAssertTrue(region.contains(lat: 43.25, lon: 76.9))
         XCTAssertFalse(region.contains(lat: 51.1, lon: 71.4))
+    }
+
+    /// Ш-59: "how to get there" works in every region the server knows, not only the one trips are planned in.
+    func testServiceAreaCoversEveryKnownRegion() async {
+        let turkestan = GeoPoint(lat: 43.297, lon: 68.272)
+        let moscow = GeoPoint(lat: 55.75, lon: 37.62)
+        XCTAssertFalse(turkestan.isInServiceArea, "only the built-in city before the list is loaded")
+        let country = """
+        {"regions":[
+          {"id":"almaty","name":{"ru":"Алматы","en":"Almaty"},"timezone":"Asia/Almaty","currency":"KZT",
+           "languages":["ru","en"],"centre":{"lat":43.2389,"lon":76.9455},"camera":{"zoom":11.0},
+           "bbox":[76.7,42.95,77.3,43.45],"is_default":true},
+          {"id":"kazakhstan","name":{"ru":"Казахстан","en":"Kazakhstan"},"timezone":"Asia/Almaty",
+           "currency":"KZT","languages":["ru","en"],"centre":{"lat":48.0,"lon":66.9},"camera":{"zoom":4.5},
+           "bbox":[46.4,40.5,87.4,55.5],"is_default":false}]}
+        """
+        StubURLProtocol.install { request in (StubURLProtocol.response(request.url!), Data(country.utf8)) }
+        let model = makeModel()
+        await model.load()
+        XCTAssertEqual(Region.current.id, "almaty", "planning stays in the default region")
+        XCTAssertTrue(turkestan.isInServiceArea)
+        XCTAssertFalse(moscow.isInServiceArea)
     }
 }

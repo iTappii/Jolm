@@ -21,6 +21,7 @@ final class RegionModel {
             apply(cached.regions, current: region)
         } else {
             Region.current = .builtIn
+            Region.known = [.builtIn]
         }
     }
 
@@ -40,5 +41,6 @@ final class RegionModel {
         regions = all
         current = region
         Region.current = region
+        Region.known = all
     }
 }

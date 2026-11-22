@@ -29,13 +29,16 @@ enum DirectionsFormatting {
     /// Whole minutes, never below 1 ("1 min" for a 20-second hop).
     static func minutes(_ seconds: Double) -> Int { max(1, Int((seconds / 60).rounded())) }
 
-    /// "18 min", "1 h 05 min", "12–20 min" for a range. Units come from the String Catalog.
+    /// "18 min", "1 h 05 min", "12–20 min" for a range; past an hour both ends are full ("3 h 41 min – 4 h 37 min",
+    /// Ш-59: intercity trips), since a bare "221–4 h 37 min" reads as nonsense. Units come from the String Catalog.
     static func duration(_ option: DirectionOption, language: String) -> String {
         let low = option.durationSMin.map(minutes)
         let high = option.durationSMax.map(minutes)
         let base: String
         if let low, let high, high > low {
-            base = "\(low)–\(clock(high, language: language))"
+            base = high >= 60
+                ? "\(clock(low, language: language)) – \(clock(high, language: language))"
+                : "\(low)–\(clock(high, language: language))"
         } else {
             base = clock(minutes(option.durationS), language: language)
         }
