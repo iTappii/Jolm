@@ -33,6 +33,9 @@ struct TripMapOverlay: View {
         .sheet(item: legBinding) { leg in
             TripLegSheet(model: model, leg: leg)
         }
+        .sheet(item: replaceBinding) { _ in
+            TripReplaceSheet(model: model)
+        }
         .sheet(item: $offlineCard) { card in
             TripOfflinePlaceSheet(card: card)
         }
@@ -60,6 +63,10 @@ struct TripMapOverlay: View {
         }
     }
 
+    private var replaceBinding: Binding<TripMapModel.ReplaceTarget?> {
+        Binding(get: { model.replacing }, set: { if $0 == nil { model.closeReplace() } })
+    }
+
     private var legBinding: Binding<TripLeg?> {
         Binding(
             get: { model.selectedLegID.flatMap { model.leg(id: $0) } },
@@ -83,6 +90,7 @@ struct TripMapOverlay: View {
             .accessibilityIdentifier("trip-map-close")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: JolSpacing.xs) {
+                    if model.days.count > 1 { allDaysChip }
                     ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
                         dayChip(index: index, day: day)
                     }
@@ -95,8 +103,31 @@ struct TripMapOverlay: View {
         .padding(.top, JolSpacing.sm)
     }
 
+    /// «All days»: every day's stops on the map at once, the list grouped by day.
+    private var allDaysChip: some View {
+        let selected = model.showsAllDays
+        return Button { model.selectAllDays() } label: {
+            HStack(spacing: JolSpacing.xs) {
+                Image(systemName: "square.stack.3d.up").font(.caption).accessibilityHidden(true)
+                Text("All days").font(JolFont.callout.weight(.semibold))
+            }
+            .padding(.horizontal, JolSpacing.md)
+            .padding(.vertical, JolSpacing.sm)
+            .frame(minHeight: JolTarget.minimum)
+            .foregroundStyle(JolColor.textPrimary)
+            .background(
+                selected ? AnyShapeStyle(JolColor.surfaceElevated) : AnyShapeStyle(.thinMaterial), in: Capsule()
+            )
+            .overlay(Capsule().stroke(selected ? JolColor.brand : .clear, lineWidth: 2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityIdentifier("trip-day-chip-all")
+    }
+
     private func dayChip(index: Int, day: TripDay) -> some View {
-        let selected = index == model.dayIndex
+        let selected = index == model.dayIndex && !model.showsAllDays
         return Button { model.selectDay(index) } label: {
             HStack(spacing: JolSpacing.xs) {
                 Circle().fill(Color(TripMapModel.dayColor(index))).frame(width: 10, height: 10)
@@ -167,7 +198,9 @@ struct TripMapOverlay: View {
     static let panelFraction: CGFloat = 0.45
 
     @ViewBuilder private var loadedPanel: some View {
-        if let day = model.day {
+        if model.showsAllDays {
+            allDaysPanel
+        } else if let day = model.day {
             if typeSize.isAccessibilitySize {
                 // Large type: header, warnings and stops scroll together so the list is never squeezed out.
                 ScrollView {
@@ -233,8 +266,61 @@ struct TripMapOverlay: View {
     }
 }
 
-// Budget, warnings and problem texts of the panel.
+// The all-days list, budget, warnings and problem texts of the panel.
 extension TripMapOverlay {
+    /// All days, grouped: a coloured heading per day and its stops under it.
+    @ViewBuilder private var allDaysPanel: some View {
+        if typeSize.isAccessibilitySize {
+            ScrollView {
+                VStack(alignment: .leading, spacing: JolSpacing.sm) {
+                    allDaysHeader
+                    warnings
+                    allDaysList
+                }
+            }
+            .accessibilityIdentifier("trip-day-list")
+        } else {
+            allDaysHeader
+            warnings
+            ScrollView { allDaysList }
+                .accessibilityIdentifier("trip-day-list")
+        }
+    }
+
+    private var allDaysHeader: some View {
+        AdaptiveStack(rowAlignment: .firstTextBaseline) {
+            Text("All days")
+                .font(JolFont.headline)
+                .foregroundStyle(JolColor.textPrimary)
+                .accessibilityIdentifier("trip-all-title")
+                .accessibilityAddTraits(.isHeader)
+            if !typeSize.isAccessibilitySize { Spacer() }
+            budgetChip
+        }
+    }
+
+    private var allDaysList: some View {
+        LazyVStack(alignment: .leading, spacing: JolSpacing.md) {
+            ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
+                VStack(alignment: .leading, spacing: JolSpacing.xs) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Day \(index + 1)")
+                            .font(JolFont.callout.weight(.bold))
+                            .foregroundStyle(Color(TripMapModel.dayColor(index)))
+                            .accessibilityAddTraits(.isHeader)
+                        Text(verbatim: TripFormatting.dayDate(day.date, locale: locale))
+                            .font(JolFont.caption)
+                            .foregroundStyle(JolColor.textSecondary)
+                    }
+                    .accessibilityIdentifier("trip-all-day-\(index + 1)")
+                    TripDayListView(
+                        model: model, day: day, dayIndex: index, identifiesDay: true, onSelectPlace: select
+                    )
+                }
+            }
+        }
+    }
+
     private func budgetLabel(total: Int?, over: Bool) -> Text {
         var parts = [Text("Budget")]
         if let total { parts.append(Text(verbatim: TripFormatting.kzt(total, locale: locale))) }
@@ -306,6 +392,7 @@ extension TripMapOverlay {
         switch problem {
         case .network: Text("No connection. Try again.")
         case .outdated: Text("The plan has changed, so it was reloaded.")
+        case .noReplacement: Text("No other place fits this day.")
         case .server(let message): Text(verbatim: message)
         }
     }

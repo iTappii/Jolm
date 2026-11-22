@@ -3,20 +3,6 @@ import Foundation
 import Observation
 import UIKit
 
-/// A numbered stop of the shown day, as the map draws it.
-struct TripMapStop {
-    let placeID: UUID
-    let number: Int
-    let coordinate: CLLocationCoordinate2D
-}
-
-/// One leg of the shown day. `approximate`: no route geometry, a straight line between the stops.
-struct TripMapLine {
-    let legID: UUID
-    let coordinates: [CLLocationCoordinate2D]
-    let approximate: Bool
-}
-
 /// The full route map (SSOT §11.3, Ш-37): one trip, a day at a time. Edits go to the server (mode of a leg,
 /// budget choice, removal of a stop) and the plan is re-read afterwards, so the screen shows what is stored.
 @MainActor
@@ -32,6 +18,21 @@ final class TripMapModel {
         case server(String)
         /// The plan changed under us (409/404): it was reloaded.
         case outdated
+        /// Replacing: no other place fits the day (409 `no_replacement`).
+        case noReplacement
+    }
+
+    /// The stop being replaced, with the places it can be swapped for (Ш-55).
+    struct ReplaceTarget: Equatable, Identifiable {
+        let itemID: UUID
+        let name: String
+
+        var id: UUID { itemID }
+    }
+
+    /// A replacement of a must-have the server wants confirmed (409 `must_have`).
+    struct PendingReplacement: Equatable {
+        let alternative: TripAlternative
     }
 
     /// A removal the server wants confirmed (the stop is a must-have of the brief, 409 `must_have`).
@@ -60,6 +61,12 @@ final class TripMapModel {
     private(set) var isWorking = false
     private(set) var problem: Problem?
     private(set) var pendingRemoval: PendingRemoval?
+    /// The stop whose replacement sheet is open, its candidates, and a must-have replacement awaiting the answer.
+    private(set) var replacing: ReplaceTarget?
+    private(set) var alternatives: ChatModel.Load<[TripAlternative]> = .idle
+    private(set) var pendingReplacement: PendingReplacement?
+    /// "All days": every day's stops and legs on the map at once, in the days' colours.
+    private(set) var showsAllDays = false
     /// The leg whose transport options are open (tap on a leg of the map or of the day's list).
     private(set) var selectedLegID: UUID?
     /// Seconds a chosen mode arrives after the next stop starts (`late_by_s`), by leg.
@@ -76,6 +83,7 @@ final class TripMapModel {
     @ObservationIgnored private let offline: OfflineTripsModel?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var listTask: Task<Void, Never>?
+    @ObservationIgnored private var alternativesTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
 
     init(api: APIClient, offline: OfflineTripsModel? = nil) {
@@ -87,7 +95,7 @@ final class TripMapModel {
     var tripID: UUID? { trip?.id }
     var days: [TripDay] { trip?.days ?? [] }
     var day: TripDay? { days.indices.contains(dayIndex) ? days[dayIndex] : nil }
-    var dayColor: UIColor { Self.dayColor(dayIndex) }
+    var dayColor: UIColor { showsAllDays ? JolColor.brandUIColor : Self.dayColor(dayIndex) }
 
     // MARK: - Open / close
 
@@ -101,10 +109,12 @@ final class TripMapModel {
             events = []
             lateBy = [:]
             dayIndex = 0
+            showsAllDays = false
             drawVersion += 1
         }
         problem = nil
         pendingRemoval = nil
+        closeReplace()
         load(tripID: tripID, initial: true)
     }
 
@@ -115,6 +125,7 @@ final class TripMapModel {
         task?.cancel()
         problem = nil
         pendingRemoval = nil
+        closeReplace()
         isWorking = false
     }
 
@@ -183,32 +194,58 @@ final class TripMapModel {
     // MARK: - Days
 
     func selectDay(_ index: Int) {
-        guard days.indices.contains(index), index != dayIndex else { return }
+        guard days.indices.contains(index), index != dayIndex || showsAllDays else { return }
         dayIndex = index
+        showsAllDays = false
+        drawVersion += 1
+        fitVersion += 1
+    }
+
+    /// Shows every day at once; the camera fits all of them.
+    func selectAllDays() {
+        guard !days.isEmpty, !showsAllDays else { return }
+        showsAllDays = true
         drawVersion += 1
         fitVersion += 1
     }
 
     // MARK: - Drawing
 
+    /// The days drawn: the shown one, or all of them.
+    private var drawnDays: [(index: Int, day: TripDay)] {
+        if showsAllDays { return days.enumerated().map { (index: $0.offset, day: $0.element) } }
+        guard let day else { return [] }
+        return [(index: dayIndex, day: day)]
+    }
+
     var stops: [TripMapStop] {
-        (day?.items ?? []).enumerated().map { index, item in
-            TripMapStop(placeID: item.place.id, number: index + 1, coordinate: item.place.coordinate)
+        drawnDays.flatMap { index, day in
+            day.items.enumerated().map { number, item in
+                TripMapStop(
+                    placeID: item.place.id, number: number + 1, coordinate: item.place.coordinate,
+                    colorHex: Self.dayColors[index % Self.dayColors.count]
+                )
+            }
         }
     }
 
     var lines: [TripMapLine] {
-        guard let day else { return [] }
-        let byID = Dictionary(day.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        return day.legs.compactMap { leg in
-            guard let from = leg.fromItemID.flatMap({ byID[$0] }), let to = byID[leg.toItemID] else { return nil }
-            if let option = leg.activeOption {
-                let line = option.line
-                if line.count >= 2 { return TripMapLine(legID: leg.id, coordinates: line, approximate: false) }
+        drawnDays.flatMap { index, day in
+            let hex = Self.dayColors[index % Self.dayColors.count]
+            let byID = Dictionary(day.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return day.legs.compactMap { leg -> TripMapLine? in
+                guard let from = leg.fromItemID.flatMap({ byID[$0] }), let to = byID[leg.toItemID] else { return nil }
+                if let option = leg.activeOption {
+                    let line = option.line
+                    if line.count >= 2 {
+                        return TripMapLine(legID: leg.id, coordinates: line, approximate: false, colorHex: hex)
+                    }
+                }
+                return TripMapLine(
+                    legID: leg.id, coordinates: [from.place.coordinate, to.place.coordinate], approximate: true,
+                    colorHex: hex
+                )
             }
-            return TripMapLine(
-                legID: leg.id, coordinates: [from.place.coordinate, to.place.coordinate], approximate: true
-            )
         }
     }
 
@@ -295,6 +332,73 @@ extension TripMapModel {
         }
     }
 
+    // MARK: Replace a stop (Ш-55)
+
+    /// Opens the replacement sheet of a stop and loads the places it can be swapped for.
+    func beginReplace(_ item: TripDayItem) {
+        guard let tripID, !isWorking, !isSavedCopy else { return }
+        replacing = ReplaceTarget(itemID: item.id, name: item.place.name)
+        pendingReplacement = nil
+        alternatives = .loading
+        alternativesTask?.cancel()
+        let target = item.id
+        alternativesTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let list = try await service.alternatives(tripID: tripID, itemID: target)
+                guard replacing?.itemID == target, !Task.isCancelled else { return }
+                alternatives = .loaded(list)
+            } catch {
+                guard replacing?.itemID == target, !Task.isCancelled else { return }
+                alternatives = .failed
+            }
+        }
+    }
+
+    func retryAlternatives() {
+        guard let target = replacing, let item = days.flatMap(\.items).first(where: { $0.id == target.itemID })
+        else { return }
+        beginReplace(item)
+    }
+
+    func closeReplace() {
+        alternativesTask?.cancel()
+        replacing = nil
+        alternatives = .idle
+        pendingReplacement = nil
+    }
+
+    /// Swaps the stop for a candidate. A must-have asks first (409 `must_have`); a day where nothing else fits
+    /// answers 409 `no_replacement`, shown in the sheet. On success the sheet closes and the plan is re-read.
+    func replace(with alternative: TripAlternative, force: Bool = false) {
+        guard let tripID, let target = replacing, !isWorking, !isSavedCopy else { return }
+        pendingReplacement = nil
+        run { [self] in
+            do {
+                _ = try await service.replace(tripID: tripID, itemID: target.itemID, with: alternative.id, force: force)
+            } catch APIError.server(409, "must_have", _) where !force {
+                pendingReplacement = PendingReplacement(alternative: alternative)
+                return
+            } catch APIError.server(409, "no_replacement", _) {
+                problem = .noReplacement
+                return
+            }
+            closeReplace()
+            lateBy = [:]
+            editRevision += 1
+            try await refresh(tripID)
+        }
+    }
+
+    func confirmReplacement() {
+        guard let pending = pendingReplacement else { return }
+        replace(with: pending.alternative, force: true)
+    }
+
+    func cancelReplacement() {
+        pendingReplacement = nil
+    }
+
     func confirmRemoval() {
         guard let pending = pendingRemoval, let item = days.flatMap(\.items).first(where: { $0.id == pending.itemID })
         else { return }
@@ -322,7 +426,10 @@ extension TripMapModel {
                 guard generation == self.generation else { return }
                 let reason = Self.problem(for: error)
                 problem = reason
-                if reason == .outdated, let id = tripID { try? await refresh(id) }
+                if reason == .outdated {
+                    closeReplace()
+                    if let id = tripID { try? await refresh(id) }
+                }
             }
             if generation == self.generation { isWorking = false }
         }
@@ -340,6 +447,7 @@ extension TripMapModel {
         guard let error = error as? APIError else { return .network }
         switch error {
         case .network: return .network
+        case .server(409, "no_replacement", _): return .noReplacement
         case .server(404, _, _), .server(409, _, _): return .outdated
         case .server(_, _, let message) where !message.isEmpty: return .server(message)
         case .rateLimited(_, let message) where !message.isEmpty: return .server(message)

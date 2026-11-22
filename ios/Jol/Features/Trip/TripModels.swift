@@ -121,7 +121,7 @@ struct TripLeg: Decodable, Equatable, Identifiable, Sendable {
     }
 }
 
-private struct Lossy<Value: Decodable>: Decodable {
+struct Lossy<Value: Decodable>: Decodable {
     let value: Value?
 
     init(from decoder: Decoder) throws {
@@ -444,5 +444,55 @@ struct ItemRemoval: Decodable, Equatable, Sendable {
         version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 0
         changedDays = try values.decodeIfPresent([String].self, forKey: .changedDays) ?? []
         dropped = try values.decodeIfPresent([DroppedStop].self, forKey: .dropped) ?? []
+    }
+}
+
+// MARK: - Replacing a stop (Ш-55)
+
+/// A place the stop can be swapped for: `GET /v1/trips/{id}/items/{item_id}/alternatives` (up to 5, nearby, similar,
+/// not yet in the trip).
+struct TripAlternative: Decodable, Equatable, Identifiable, Sendable {
+    let id: UUID
+    let name: String
+    let category: String?
+    let categoryName: String?
+    let lat: Double
+    let lon: Double
+    let priceKzt: Int?
+    let distanceM: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, category, lat, lon
+        case categoryName = "category_name"
+        case priceKzt = "price_kzt"
+        case distanceM = "distance_m"
+    }
+}
+
+struct TripAlternatives: Decodable, Equatable, Sendable {
+    let items: [TripAlternative]
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        items = (try values.decodeIfPresent([Lossy<TripAlternative>].self, forKey: .items) ?? []).compactMap(\.value)
+    }
+
+    enum CodingKeys: String, CodingKey { case items }
+}
+
+/// `POST /v1/trips/{id}/items/{item_id}/replace` body: exactly one of `place_id`, `category`, `query` (here the id).
+struct ItemReplacement: Encodable, Equatable, Sendable {
+    let placeID: UUID
+    let force: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case force
+        case placeID = "place_id"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(placeID.uuidString.lowercased(), forKey: .placeID)
+        try container.encode(force, forKey: .force)
     }
 }
