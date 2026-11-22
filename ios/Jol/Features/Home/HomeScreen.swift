@@ -103,6 +103,7 @@ struct HomeScreen: View {
             withAnimation(.easeOut(duration: 0.25)) { keyboardHeight = 0 }
         }
         .animation(.snappy(duration: 0.3), value: chatExpanded)
+        .announcingChatChanges(container.chat, language: container.language.code)
         .sheet(isPresented: $profileOpen) {
             ProfileMenuSheet()
         }
@@ -250,11 +251,13 @@ struct HomeScreen: View {
             } label: {
                 Image(systemName: "sidebar.left")
                     .font(.title3)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // fixed 44 pt button
                     .frame(width: 44, height: 44)
                     .background(.thinMaterial, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Recent chats"))
+            .accessibilityHint(Text("Opens the list of chats, trips and favourites"))
             .accessibilityIdentifier("open-sidebar")
             .padding(.leading, JolSpacing.sm)
             .padding(.top, JolSpacing.sm)
@@ -271,9 +274,12 @@ extension HomeScreen {
             Spacer(minLength: 0)
             Text("© OpenStreetMap contributors")
                 .font(.caption2)
+                .foregroundStyle(JolColor.textPrimary)
+                // A legal line that must stay readable but must not grow over the map: capped like the full map.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(.thinMaterial, in: Capsule())
+                .background(.regularMaterial, in: Capsule())
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.horizontal, JolSpacing.sm)
                 .accessibilityIdentifier("osm-attribution")
@@ -289,11 +295,13 @@ extension HomeScreen {
         } label: {
             Image(systemName: "person.crop.circle")
                 .font(.title3)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge) // fixed 44 pt button
                 .frame(width: 44, height: 44)
                 .background(.thinMaterial, in: Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Profile"))
+        .accessibilityHint(Text("Opens the account menu"))
         .accessibilityIdentifier("open-profile-menu")
         .padding(.trailing, JolSpacing.sm)
         .padding(.top, JolSpacing.sm)
@@ -333,6 +341,8 @@ extension HomeScreen {
     /// visible above it while the person keeps typing wishes.
     private static let liveKeyboardCardShare: CGFloat = 0.5
     private static let liveKeyboardCardMin: CGFloat = 250
+    /// At accessibility text sizes the header, the chain and the two-row field need more than that (Ш-52).
+    private static let liveKeyboardCardMinLarge: CGFloat = 400
 
     private var liveRouteUnderKeyboard: Bool {
         keyboardHeight > 0 && container.chat.state.liveRoute != nil
@@ -342,7 +352,8 @@ extension HomeScreen {
         let normal = screenHeight * conversationFraction
         guard liveRouteUnderKeyboard else { return normal }
         let aboveKeyboard = screenHeight - keyboardHeight
-        return min(normal, max(Self.liveKeyboardCardMin, aboveKeyboard * Self.liveKeyboardCardShare))
+        let floor = typeSize.isAccessibilitySize ? Self.liveKeyboardCardMinLarge : Self.liveKeyboardCardMin
+        return min(normal, max(floor, aboveKeyboard * Self.liveKeyboardCardShare))
     }
 
     private var chatIsActive: Bool {

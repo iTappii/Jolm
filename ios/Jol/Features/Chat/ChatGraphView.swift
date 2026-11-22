@@ -82,9 +82,13 @@ struct ChatGraphView: View {
                 .frame(width: ChainGeometry.nodeRadius * 2, height: ChainGeometry.nodeRadius * 2)
                 .background(JolColor.brand, in: Circle())
                 .overlay(Circle().stroke(isSelected ? JolColor.textPrimary : JolColor.surfaceElevated, lineWidth: 1.5))
+                // The dot stays small, the finger gets 44 pt (the nodes are 66 pt apart, so they do not overlap).
+                .minTapTarget()
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: full(node)))
+        .accessibilityLabel(Text(verbatim: ChainLabels.spoken(node, index: index, brief: brief, locale: locale)))
+        .accessibilityHint(Text(isSelected ? "Hides the full value" : "Shows the full value"))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("graph-node-\(index + 1)")
         .position(center)
         .transition(.opacity.combined(with: .offset(x: ChainGeometry.step, y: 0)))
@@ -108,7 +112,7 @@ struct ChatGraphView: View {
         let center = ChainGeometry.nodeCenter(index: Double(index), count: count, viewport: viewport)
         return Image(systemName: "flag.checkered")
             .font(.system(size: 9, weight: .bold))
-            .foregroundStyle(JolColor.brand)
+            .foregroundStyle(JolColor.brandText)
             .frame(width: ChainGeometry.nodeRadius * 2, height: ChainGeometry.nodeRadius * 2)
             .background(JolColor.surface, in: Circle())
             .overlay(Circle().stroke(JolColor.brand, lineWidth: 1.8))
@@ -172,6 +176,7 @@ struct ChatChainFooter: View {
             Text(verbatim: full(node))
                 .font(JolFont.caption.weight(.semibold))
                 .foregroundStyle(JolColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("graph-node-detail")
             if let thesis = theses.first(where: { $0.ord == index + 1 })?.text, thesis != full(node) {
                 Text(verbatim: thesis)
@@ -188,6 +193,8 @@ struct ChatChainFooter: View {
             RoundedRectangle(cornerRadius: JolRadius.md).stroke(JolColor.brand.opacity(0.7), lineWidth: 1)
         }
         .onTapGesture { onDeselect() }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(named: Text("Hide details")) { onDeselect() }
     }
 
     private var openButton: some View {
@@ -197,10 +204,12 @@ struct ChatChainFooter: View {
                 .foregroundStyle(JolColor.onBrand)
                 .padding(.horizontal, JolSpacing.md)
                 .padding(.vertical, JolSpacing.sm)
+                .frame(minHeight: JolTarget.minimum)
                 .background(JolColor.brand, in: Capsule())
         }
         .buttonStyle(.plain)
         .transition(.scale(scale: 0.8, anchor: .trailing).combined(with: .opacity))
+        .accessibilityHint(Text("Opens the whole route on the map"))
         .accessibilityIdentifier("chat-open-route")
     }
 }

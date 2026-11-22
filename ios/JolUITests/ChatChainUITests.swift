@@ -50,13 +50,19 @@ final class ChatChainUITests: XCTestCase {
     }
 
     private func label(_ app: XCUIApplication, _ index: Int) -> String {
-        element(app, "graph-node-\(index)").label
+        stripStep(element(app, "graph-node-\(index)").label)
             .replacingOccurrences(of: "\u{00A0}", with: " ").replacingOccurrences(of: "\u{202F}", with: " ")
+    }
+
+    /// A node is read «Step N: value» (EN) / «Шаг N: value» (RU); the tests compare the value.
+    private func stripStep(_ label: String) -> String {
+        guard let colon = label.firstIndex(of: ":") else { return label }
+        return String(label[label.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
     }
 
     private func waitForLabel(_ app: XCUIApplication, _ index: Int, _ expected: String) {
         let node = element(app, "graph-node-\(index)")
-        let predicate = NSPredicate(format: "label == %@", expected)
+        let predicate = NSPredicate(format: "label ENDSWITH %@", expected)
         XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: predicate, object: node)],
                                         timeout: 10), .completed, "label is \(node.label), expected \(expected)")
     }

@@ -38,10 +38,12 @@ struct ChatTranscriptView: View {
                                 .foregroundStyle(JolColor.textPrimary)
                                 .padding(.horizontal, JolSpacing.md)
                                 .padding(.vertical, JolSpacing.sm)
-                                .background(JolColor.surface, in: Capsule())
-                                .overlay(Capsule().stroke(JolColor.brand, lineWidth: 1))
+                                .frame(minHeight: JolTarget.minimum)
+                                .background(JolColor.surface, in: RoundedRectangle(cornerRadius: 22))
+                                .overlay(RoundedRectangle(cornerRadius: 22).stroke(JolColor.brand, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityHint(Text("Opens sign-in"))
                         .accessibilityIdentifier("chat-guest-signin")
                     }
                     Color.clear.frame(height: 1).id("chat-bottom")
@@ -85,6 +87,11 @@ private struct MessageRow: View {
     let state: ProposalState?
     let onDecide: (Bool) -> Void
 
+    /// «You: …» / «Jol: …» — the bubbles are told apart by side on screen, VoiceOver needs the speaker in words.
+    private func spoken(_ role: ChatMessage.Role) -> Text {
+        role == .user ? Text("You: \(message.text)") : Text("Jol: \(message.text)")
+    }
+
     var body: some View {
         switch message.role {
         case .user:
@@ -96,6 +103,7 @@ private struct MessageRow: View {
                 .background(JolColor.brand, in: RoundedRectangle(cornerRadius: JolRadius.lg))
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.leading, JolSpacing.xxl)
+                .accessibilityLabel(spoken(.user))
                 .accessibilityIdentifier("chat-message-user")
         case .assistant:
             VStack(alignment: .leading, spacing: JolSpacing.sm) {
@@ -103,6 +111,7 @@ private struct MessageRow: View {
                     .font(JolFont.body)
                     .foregroundStyle(JolColor.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(spoken(.assistant))
                     .accessibilityIdentifier("chat-message-assistant")
                 if message.proposalID != nil, let state {
                     ProposalButtons(state: state, onDecide: onDecide)
@@ -122,15 +131,17 @@ private struct ProposalButtons: View {
         switch state {
         case .pending, .failed:
             VStack(alignment: .leading, spacing: JolSpacing.xs) {
-                HStack(spacing: JolSpacing.sm) {
+                AdaptiveStack(spacing: JolSpacing.sm) {
                     Button { onDecide(true) } label: {
                         Text("Accept")
                             .font(JolFont.callout.weight(.semibold))
                             .foregroundStyle(JolColor.onBrand)
                             .padding(.horizontal, JolSpacing.lg)
                             .padding(.vertical, JolSpacing.sm)
+                            .frame(minHeight: JolTarget.minimum)
                             .background(JolColor.brand, in: Capsule())
                     }
+                    .accessibilityHint(Text("Applies the suggested change to the route"))
                     .accessibilityIdentifier("proposal-accept")
                     Button { onDecide(false) } label: {
                         Text("Decline")
@@ -138,8 +149,10 @@ private struct ProposalButtons: View {
                             .foregroundStyle(JolColor.textPrimary)
                             .padding(.horizontal, JolSpacing.lg)
                             .padding(.vertical, JolSpacing.sm)
+                            .frame(minHeight: JolTarget.minimum)
                             .background(JolColor.surface, in: Capsule())
                     }
+                    .accessibilityHint(Text("Keeps the route as it is"))
                     .accessibilityIdentifier("proposal-decline")
                 }
                 .buttonStyle(.plain)
@@ -151,9 +164,11 @@ private struct ProposalButtons: View {
                 }
             }
         case .working:
-            ProgressView().accessibilityIdentifier("proposal-working")
+            ProgressView()
+                .accessibilityLabel(Text("Loading"))
+                .accessibilityIdentifier("proposal-working")
         case .accepted:
-            status("Accepted", systemImage: "checkmark.circle.fill", tint: JolColor.brand)
+            status("Accepted", systemImage: "checkmark.circle.fill", tint: JolColor.brandText)
         case .declined:
             status("Declined", systemImage: "xmark.circle", tint: JolColor.textSecondary)
         case .expired:
@@ -187,6 +202,7 @@ private struct FailureRow: View {
                         .foregroundStyle(JolColor.textPrimary)
                         .padding(.horizontal, JolSpacing.md)
                         .padding(.vertical, JolSpacing.sm)
+                        .frame(minHeight: JolTarget.minimum)
                         .background(JolColor.surface, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -198,6 +214,7 @@ private struct FailureRow: View {
                         .foregroundStyle(JolColor.onBrand)
                         .padding(.horizontal, JolSpacing.md)
                         .padding(.vertical, JolSpacing.sm)
+                        .frame(minHeight: JolTarget.minimum)
                         .background(JolColor.brand, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -237,6 +254,7 @@ private struct RouteCard: View {
             Label("Route ready", systemImage: "checkmark.seal.fill")
                 .font(JolFont.headline)
                 .foregroundStyle(JolColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
             if route.days > 0 {
                 Text("\(route.days) days")
                     .font(JolFont.callout)
@@ -259,6 +277,7 @@ private struct RouteCard: View {
 /// Three pulsing dots: the assistant is writing.
 struct TypingDots: View {
     @State private var phase = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 4) {
@@ -266,9 +285,12 @@ struct TypingDots: View {
                 Circle()
                     .fill(JolColor.textSecondary)
                     .frame(width: 6, height: 6)
-                    .scaleEffect(phase ? 1 : 0.55)
-                    .opacity(phase ? 1 : 0.4)
-                    .animation(.easeInOut(duration: 0.55).repeatForever().delay(Double(index) * 0.18), value: phase)
+                    .scaleEffect(phase || reduceMotion ? 1 : 0.55)
+                    .opacity(phase || reduceMotion ? 1 : 0.4)
+                    .animation(
+                        reduceMotion ? nil : .easeInOut(duration: 0.55).repeatForever().delay(Double(index) * 0.18),
+                        value: phase
+                    )
             }
         }
         .onAppear { phase = true }

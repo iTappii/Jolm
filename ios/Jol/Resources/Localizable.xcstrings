@@ -4328,6 +4328,186 @@
           }
         }
       }
+    },
+    "Step %lld: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шаг %lld: %@"
+          }
+        }
+      }
+    },
+    "You: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вы: %@"
+          }
+        }
+      }
+    },
+    "Jol: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jol: %@"
+          }
+        }
+      }
+    },
+    "Hides the chat and shows the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрывает чат и показывает карту"
+          }
+        }
+      }
+    },
+    "Sends your message to Jol" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправляет сообщение в Jol"
+          }
+        }
+      }
+    },
+    "Opens the chat" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает чат"
+          }
+        }
+      }
+    },
+    "Shows the full value" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает значение полностью"
+          }
+        }
+      }
+    },
+    "Hides the full value" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрывает полное значение"
+          }
+        }
+      }
+    },
+    "Hide details" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скрыть подробности"
+          }
+        }
+      }
+    },
+    "Opens the whole route on the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает весь маршрут на карте"
+          }
+        }
+      }
+    },
+    "Opens sign-in" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает вход"
+          }
+        }
+      }
+    },
+    "Applies the suggested change to the route" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Применяет предложенное изменение маршрута"
+          }
+        }
+      }
+    },
+    "Keeps the route as it is" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставляет маршрут как есть"
+          }
+        }
+      }
+    },
+    "Route on the map" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Маршрут на карте"
+          }
+        }
+      }
+    },
+    "Shows the place card" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает карточку места"
+          }
+        }
+      }
+    },
+    "Keeps the current stop" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставляет текущую остановку"
+          }
+        }
+      }
+    },
+    "Opens the list of chats, trips and favourites" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает список чатов, поездок и избранного"
+          }
+        }
+      }
+    },
+    "Opens the account menu" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает меню аккаунта"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

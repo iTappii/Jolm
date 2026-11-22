@@ -21,6 +21,12 @@ enum ChainLabels {
         return text
     }
 
+    /// What VoiceOver says for a node: «Step 2: 200,000 ₸» (the number is the place in the chain, 1-based).
+    static func spoken(_ node: ChainNode, index: Int, brief: ChatBrief, locale: Locale) -> String {
+        let value = full(node, brief: brief, locale: locale)
+        return String(localized: LocalizedStringResource("Step \(index + 1): \(value)", locale: locale))
+    }
+
     static func truncated(_ text: String, limit: Int) -> String {
         guard text.count > limit else { return text }
         return String(text.prefix(limit - 1)).trimmingCharacters(in: .whitespaces) + "…"

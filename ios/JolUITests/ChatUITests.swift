@@ -74,7 +74,7 @@ final class ChatUITests: XCTestCase {
 
         // Text streams into one assistant bubble under the user's message.
         waitFor(app, "chat-message-user")
-        XCTAssertEqual(element(app, "chat-message-user").label, "Plan 3 days in Almaty")
+        XCTAssertEqual(element(app, "chat-message-user").label, "You: Plan 3 days in Almaty")
 
         // The chain (see ChatChainUITests) grows node by node; no finish node until the route is ready.
         waitFor(app, "graph-node-1")
@@ -83,17 +83,18 @@ final class ChatUITests: XCTestCase {
         waitFor(app, "graph-node-4")
         waitFor(app, "graph-chain-finish")
         // The nodes are the answers (the brief), in the order they were given — not the AI's theses.
-        XCTAssertTrue(element(app, "graph-node-1").label.hasPrefix("3 days"), element(app, "graph-node-1").label)
+        XCTAssertTrue(
+            element(app, "graph-node-1").label.hasPrefix("Step 1: 3 days"), element(app, "graph-node-1").label)
         XCTAssertTrue(element(app, "graph-node-2").label.contains("900"), element(app, "graph-node-2").label)
-        XCTAssertEqual(element(app, "graph-node-3").label, "Have accommodation")
-        XCTAssertEqual(element(app, "graph-node-4").label, "Fixture Museum")
+        XCTAssertEqual(element(app, "graph-node-3").label, "Step 3: Have accommodation")
+        XCTAssertEqual(element(app, "graph-node-4").label, "Step 4: Fixture Museum")
 
         let answer = element(app, "chat-message-assistant")
         waitForLabel(answer, contains: "Your route is ready.")
         capture("chat-route-ready")
         XCTAssertEqual(
             answer.label,
-            "Three days in Almaty, sounds great. I put the museum on your map. Your route is ready."
+            "Jol: Three days in Almaty, sounds great. I put the museum on your map. Your route is ready."
         )
 
         // The finish node of the chain, the places behind the chat and the offer to open the full map.
@@ -128,7 +129,8 @@ final class ChatUITests: XCTestCase {
         input.typeText("\n")
         let users = app.descendants(matching: .any).matching(identifier: "chat-message-user")
         XCTAssertTrue(users.element(boundBy: 1).waitForExistence(timeout: 15), "sent with return, no tap")
-        XCTAssertEqual(users.element(boundBy: 1).label, "live2 First President park", "no new line left in the text")
+        XCTAssertEqual(
+            users.element(boundBy: 1).label, "You: live2 First President park", "no new line left in the text")
         XCTAssertTrue(waitForFocus(input), "the field keeps the keyboard after the return key")
     }
 
@@ -175,12 +177,12 @@ final class ChatUITests: XCTestCase {
         send(app, "boom, plan 3 days")
         waitFor(app, "chat-error")
         XCTAssertTrue(element(app, "chat-error").label.contains("unavailable"), element(app, "chat-error").label)
-        XCTAssertEqual(element(app, "chat-message-assistant").label, "Let me think")
+        XCTAssertEqual(element(app, "chat-message-assistant").label, "Jol: Let me think")
 
         app.buttons["chat-retry"].tap()
         waitFor(app, "graph-chain-finish")
         XCTAssertFalse(element(app, "chat-error").exists)
-        XCTAssertFalse(app.staticTexts["Let me think"].exists, "the failed half answer is replaced")
+        XCTAssertFalse(app.staticTexts["Jol: Let me think"].exists, "the failed half answer is replaced")
     }
 
     func testFullChatOffersOnlyANewChat() {
@@ -208,11 +210,12 @@ final class ChatUITests: XCTestCase {
         // Messages, the rebuilt graph (converged: the chat has a trip) and the pins restored from the trip.
         waitFor(app, "chat-transcript")
         waitFor(app, "graph-chain-finish")
-        XCTAssertTrue(element(app, "graph-node-1").label.hasPrefix("3 days"), element(app, "graph-node-1").label)
+        XCTAssertTrue(
+            element(app, "graph-node-1").label.hasPrefix("Step 1: 3 days"), element(app, "graph-node-1").label)
         XCTAssertTrue(element(app, "graph-node-2").label.contains("900"), element(app, "graph-node-2").label)
-        XCTAssertEqual(element(app, "graph-node-4").label, "Fixture Museum", "restored from filled_order")
+        XCTAssertEqual(element(app, "graph-node-4").label, "Step 4: Fixture Museum", "restored from filled_order")
         waitForValue(element(app, "chat-map-places"), "2")
-        XCTAssertTrue(app.staticTexts["Rain is forecast on Dec 6. Move the museum to Dec 7?"].exists)
+        XCTAssertTrue(app.staticTexts["Jol: Rain is forecast on Dec 6. Move the museum to Dec 7?"].exists)
         XCTAssertTrue(app.buttons["proposal-accept"].exists)
         XCTAssertTrue(app.buttons["proposal-decline"].exists)
 
@@ -224,7 +227,7 @@ final class ChatUITests: XCTestCase {
         XCTAssertEqual(element(app, "proposal-status").label, "Accepted")
         XCTAssertFalse(app.buttons["proposal-accept"].exists)
         // The chat was reloaded: the assistant's follow-up is there.
-        XCTAssertTrue(app.staticTexts["Done: the museum is now on Dec 7."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Jol: Done: the museum is now on Dec 7."].waitForExistence(timeout: 5))
     }
 
     func testDecliningAProposalRemovesTheButtons() {
