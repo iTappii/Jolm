@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0060DC1640BB45239C20E491 /* stub-style-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = 34BB8C2B3F1BFFAAF33BE839 /* stub-style-dark.json */; };
 		00799F5426D062AFCEF36ADB /* PlaceFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B6D87597C8482806DF49013 /* PlaceFormatting.swift */; };
 		02FE35E5BBCA125CA6B86A5B /* TripMapColorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B256AE505BD0CD537E1B2221 /* TripMapColorTests.swift */; };
 		036A46A3193850588536A707 /* ChainNodesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E27A4CF8727688AA3A175AA /* ChainNodesTests.swift */; };
@@ -285,6 +286,7 @@
 		3111B5557089024A7672A29F /* BookingModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingModel.swift; sourceTree = "<group>"; };
 		333020C184C7E3ABC75F802B /* PlaceCardTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceCardTabs.swift; sourceTree = "<group>"; };
 		33F2B7525FB5888311968ED8 /* SidebarScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarScreen.swift; sourceTree = "<group>"; };
+		34BB8C2B3F1BFFAAF33BE839 /* stub-style-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "stub-style-dark.json"; sourceTree = "<group>"; };
 		34E77AA1921A2C7A6353E843 /* AnalyticsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsUITests.swift; sourceTree = "<group>"; };
 		34EA7D904B22983583FE3013 /* SignInGateUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInGateUITests.swift; sourceTree = "<group>"; };
 		3716D3F921790C5504B3EB7A /* ContentModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentModel.swift; sourceTree = "<group>"; };
@@ -604,6 +606,7 @@
 				D0790836F5C3CD0636AFCE42 /* InfoPlist.xcstrings */,
 				242662C679242D7F427DB8DB /* Localizable.xcstrings */,
 				2E0F33A8025521E128A461E3 /* placeholder-style.json */,
+				34BB8C2B3F1BFFAAF33BE839 /* stub-style-dark.json */,
 				B17FCEAC170B61F302FE0CB5 /* stub-style.json */,
 				3FAF7039E5CEEFC5A4F4985C /* Fixtures */,
 			);
@@ -1082,6 +1085,7 @@
 				165266F6F7078C8B8E0DE1BE /* chat-live-4.sse in Resources */,
 				B1F5B117B8177E04F1F57D1B /* chat-trip.sse in Resources */,
 				CAA339B125350FA8EA7FCD28 /* placeholder-style.json in Resources */,
+				0060DC1640BB45239C20E491 /* stub-style-dark.json in Resources */,
 				B1D976CCABA71E7ED7969B5D /* stub-style.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

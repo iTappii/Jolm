@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The live route on the map behind the chat (Ш-54, SSOT §11.1): numbered stops in the brand colour, the other
 /// candidates as small pale pins, straight edges between consecutive stops, and over each edge a capsule with the
@@ -12,6 +13,12 @@ struct LiveRouteOverlay: View {
     var onChoose: (LiveStop, LivePlace) -> Void = { _, _ in }
     var onOpenPlace: (LivePlace) -> Void = { _ in }
     var onDismissError: () -> Void = {}
+
+    /// The chat keeps the keyboard after sending; a tap on the map means the person is looking there, so the
+    /// keyboard goes away and the «Choose this instead» card is not hidden under it.
+    @MainActor static func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
 
     @State private var picked: Picked?
 
@@ -139,7 +146,10 @@ struct LiveRouteOverlay: View {
 
     private func stopPin(_ stop: LiveStop, at point: CGPoint) -> some View {
         let number = route.number(of: stop)
-        return Button { onOpenPlace(stop.place) } label: {
+        return Button {
+            Self.hideKeyboard()
+            onOpenPlace(stop.place)
+        } label: {
             ZStack {
                 Circle().fill(JolColor.brand)
                 Circle().stroke(Color.white, lineWidth: 2.5)
@@ -181,7 +191,10 @@ struct LiveRouteOverlay: View {
     }
 
     private func alternativePin(stop: LiveStop, place: LivePlace, at point: CGPoint) -> some View {
-        Button { picked = Picked(stop: stop, place: place) } label: {
+        Button {
+            Self.hideKeyboard()
+            picked = Picked(stop: stop, place: place)
+        } label: {
             Circle()
                 .fill(JolColor.brand.opacity(0.4))
                 .overlay(Circle().stroke(JolColor.brand, lineWidth: 2))

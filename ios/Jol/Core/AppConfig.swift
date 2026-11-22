@@ -11,8 +11,8 @@ enum AppConfig {
         #if DEBUG
         let realStyle = ProcessInfo.processInfo.arguments.contains("-JolRealMapStyle")  // screenshots on real tiles
         if UITestSupport.isStubbed, !realStyle,
-           let url = Bundle.main.url(forResource: "stub-style", withExtension: "json") {
-            return url  // UI tests: offline, no tiles server needed
+           let url = Bundle.main.url(forResource: dark ? "stub-style-dark" : "stub-style", withExtension: "json") {
+            return url  // UI tests: offline, no tiles server needed; the background follows the theme like jol-dark
         }
         #endif
         let base = resolveStyleURL(

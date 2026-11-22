@@ -50,6 +50,9 @@ struct ChatPanel: View {
                     model: model, onRetry: onRetry, onNewChat: onNewChat,
                     onGuestSignIn: onGuestSignIn, showsGuestBanner: showsGuestBanner
                 )
+                // The field keeps the keyboard after sending; a tap on the conversation puts it away, like in a
+                // messenger (buttons in the messages still get their taps).
+                .simultaneousGesture(TapGesture().onEnded { focused = false })
             }
             inputBar
         }
@@ -97,6 +100,13 @@ struct ChatPanel: View {
                 .focused($focused)
                 .submitLabel(.send)
                 .onSubmit(submit)
+                // A multi-line field takes the keyboard's «send» key as a new line; one typed new line at the end
+                // sends instead (a pasted multi-line text stays as it is).
+                .onChange(of: draft) { old, new in
+                    guard new.hasSuffix("\n"), new.count == old.count + 1 else { return }
+                    draft.removeLast()
+                    submit()
+                }
                 .accessibilityIdentifier("chat-input")
             Button(action: submit) {
                 Image(systemName: "arrow.up")
@@ -118,10 +128,14 @@ struct ChatPanel: View {
         !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !model.isStreaming && !model.isOpening
     }
 
+    /// Sends the draft and keeps the cursor in the field, like a messenger: the next wish follows without a tap
+    /// (owner, 2026-11-22). The keyboard closes only when the person collapses the chat or drags the transcript.
     private func submit() {
         guard canSend else { return }
-        focused = false
+        let hadFocus = focused
         onSend()
+        // The return key resigns the field by itself; give the focus back once that has happened.
+        if hadFocus { DispatchQueue.main.async { focused = true } }
     }
 }
 

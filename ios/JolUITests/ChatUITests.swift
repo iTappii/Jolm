@@ -112,6 +112,30 @@ final class ChatUITests: XCTestCase {
         waitForDisappearance(element(app, "trip-map"))
     }
 
+    /// The cursor stays in the field after sending (owner, 2026-11-22): the next wish is typed without a tap, both
+    /// after the send button and after the keyboard's return key.
+    func testInputKeepsFocusAfterSending() {
+        let app = launch()
+        let input = element(app, "chat-input")
+        send(app, "live1 Chinese restaurant")
+        waitFor(app, "chat-message-user")
+        XCTAssertTrue(waitForFocus(input), "the field keeps the keyboard after the send button")
+        // A new message is accepted once the answer has finished streaming.
+        let answered = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Chinese places"))
+        XCTAssertTrue(answered.firstMatch.waitForExistence(timeout: 15))
+        input.typeText("live2 First President park\n")
+        let users = app.descendants(matching: .any).matching(identifier: "chat-message-user")
+        XCTAssertTrue(users.element(boundBy: 1).waitForExistence(timeout: 15), "sent with return, no tap")
+        XCTAssertEqual(users.element(boundBy: 1).label, "live2 First President park", "no new line left in the text")
+        XCTAssertTrue(waitForFocus(input), "the field keeps the keyboard after the return key")
+    }
+
+    private func waitForFocus(_ input: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+        let focused = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hasKeyboardFocus == true"),
+                                                object: input)
+        return XCTWaiter().wait(for: [focused], timeout: timeout) == .completed
+    }
+
     func testCollapsingKeepsTheStreamRunningAndShowsTypingInTheBar() {
         let app = launch()
         send(app, "Plan 3 days in Almaty")

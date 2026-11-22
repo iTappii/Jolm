@@ -203,6 +203,12 @@ final class ChatChainUITests: XCTestCase {
 
     /// The home layout around the card: profile top-right, the card between the top buttons and the attribution.
     private func assertHomeLayout(_ app: XCUIApplication, nodes: Int) {
+        // The field keeps the keyboard after sending; the resting layout is checked with it closed.
+        if !app.keyboards.allElementsBoundByIndex.isEmpty {
+            element(app, "chat-transcript").tap()
+            let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 0"), object: app.keyboards)
+            XCTAssertEqual(XCTWaiter().wait(for: [closed], timeout: 5), .completed, "the keyboard closes")
+        }
         let card = element(app, "chat-panel").frame
         let attribution = element(app, "osm-attribution").frame
         XCTAssertLessThanOrEqual(attribution.minY - card.maxY, 16, "\(nodes) nodes: card reaches attribution")
