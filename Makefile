@@ -22,7 +22,7 @@ venv: $(VENV)/.installed
 $(VENV)/.installed: server/pyproject.toml
 	@test -x "$(PY)" || "$(PYTHON)" -m venv "$(VENV)"
 	$(VENV)/bin/pip install -q --upgrade pip
-	$(VENV)/bin/pip install -q -e "server[dev]"
+	$(VENV)/bin/pip install -q -e "server[dev,osm]"
 	touch $@
 
 migrate: venv
