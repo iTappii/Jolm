@@ -9,7 +9,8 @@ import XCTest
 final class BackgroundRouteUITests: XCTestCase {
     private func launch(dark: Bool, language: String = "en") -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["-JolStubAPI", "-JolStubSignedIn", "-JolStubBuildDelay", "6", "-JolForceTheme", dark ? "dark" : "light",
+        app.launchArguments = ["-JolStubAPI", "-JolStubSignedIn", "-JolStubBuildDelay", "6",
+                               "-JolForceTheme", dark ? "dark" : "light",
                                "-AppleLanguages", "(\(language))", "-AppleLocale",
                                language == "ru" ? "ru_RU" : "en_US", "-jol.language", "system"]
         app.launch()
