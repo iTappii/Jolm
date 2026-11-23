@@ -57,6 +57,8 @@ struct ChatState: Equatable, Sendable {
     var liveRoute: LiveRoute?
     /// Bumped on every change to `liveRoute`: the map refits and animates.
     var liveVersion = 0
+    /// Ш-64: the live route is being built in the background (`live_route_status`); the text does not wait for it.
+    var liveStatus: LiveRouteStatus?
     /// Set by `route_ready`: the graph converges into the final node.
     var route: RouteReady?
     /// Bumped on every `trip_updated`; the model refreshes the trip when it changes.
@@ -69,6 +71,7 @@ struct ChatState: Equatable, Sendable {
     /// The nodes of the chain (SSOT §11.2): one per answered brief field, in the order of the answers.
     var chainNodes: [ChainNode] { ChainNodes.nodes(brief: brief, order: chainOrder) }
 
+    var isBuildingRoute: Bool { liveStatus == .building }
     var isConverged: Bool { route != nil }
     var isEmpty: Bool { messages.isEmpty && graph.isEmpty && chainOrder.isEmpty }
 
@@ -111,9 +114,8 @@ struct ChatState: Equatable, Sendable {
             addMapPlaces(places, replacing: reason == "search")
         case .liveRoute(let live):
             setLiveRoute(live)
-        case .routeReady(let route):
-            self.route = route
-            setLiveRoute(nil)
+        case .liveRouteStatus, .routeReady:
+            applyRouteState(event)
         case .tripUpdated:
             tripRevision += 1
         case .done:
@@ -123,6 +125,14 @@ struct ChatState: Equatable, Sendable {
         case .unknown:
             break
         }
+    }
+
+    private mutating func applyRouteState(_ event: ChatEvent) {
+        if case .liveRouteStatus(let status) = event { liveStatus = status }
+        guard case .routeReady(let route) = event else { return }
+        self.route = route
+        liveStatus = nil
+        setLiveRoute(nil)
     }
 
     private mutating func addGraphNode(_ node: GraphNode) {

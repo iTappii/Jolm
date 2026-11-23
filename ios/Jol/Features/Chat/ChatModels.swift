@@ -273,6 +273,11 @@ struct ProposalsList: Decodable, Sendable {
 
 // MARK: - SSE
 
+/// State of the live route's background build (`live_route_status`, Ш-64).
+enum LiveRouteStatus: String, Equatable, Sendable {
+    case building, ready, failed
+}
+
 /// One decoded server-sent event of a chat stream. Unknown events — and known ones whose payload does not
 /// decode — become `.unknown` and are ignored by the reducer, so a newer server never breaks an older app.
 enum ChatEvent: Equatable, Sendable {
@@ -282,6 +287,8 @@ enum ChatEvent: Equatable, Sendable {
     case briefUpdated(ChatBrief, changed: [String])
     case mapPlaces(reason: String, places: [MapPlace])
     case liveRoute(LiveRoute)
+    /// Ш-64: the background build of the live route started / finished / failed.
+    case liveRouteStatus(LiveRouteStatus)
     case routeReady(RouteReady)
     case tripUpdated(TripUpdated)
     case done
@@ -305,8 +312,7 @@ enum ChatEvent: Equatable, Sendable {
             return (try? decoder.decode(MapPlacesPayload.self, from: data))
                 .map { .mapPlaces(reason: $0.reason ?? "chosen", places: $0.places) }
         case "live_route": return (try? decoder.decode(LiveRoute.self, from: data)).map { .liveRoute($0) }
-        case "route_ready": return (try? decoder.decode(RouteReady.self, from: data)).map { .routeReady($0) }
-        case "trip_updated": return (try? decoder.decode(TripUpdated.self, from: data)).map { .tripUpdated($0) }
+        case "live_route_status", "route_ready", "trip_updated": return decodeRouteState(name, data)
         case "done": return .done
         case "error":
             let payload = try? decoder.decode(ErrorPayload.self, from: data)
@@ -315,6 +321,18 @@ enum ChatEvent: Equatable, Sendable {
         }
     }
 
+    private static func decodeRouteState(_ name: String, _ data: Data) -> ChatEvent? {
+        let decoder = JSONDecoder()
+        switch name {
+        case "route_ready": return (try? decoder.decode(RouteReady.self, from: data)).map { .routeReady($0) }
+        case "trip_updated": return (try? decoder.decode(TripUpdated.self, from: data)).map { .tripUpdated($0) }
+        default:
+            return (try? decoder.decode(StatusPayload.self, from: data))
+                .flatMap { LiveRouteStatus(rawValue: $0.state) }.map { .liveRouteStatus($0) }
+        }
+    }
+
+    private struct StatusPayload: Decodable { let state: String }
     private struct TextDelta: Decodable { let text: String }
     private struct BriefUpdated: Decodable {
         let brief: ChatBrief
