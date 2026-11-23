@@ -31,6 +31,9 @@ MUST_HAVE_FETCH = 20
 NAME_ONLY_MIN_SIM = 0.4  # a name search for words that are not a known category
 NAME_STRICT_MIN_SIM = 0.8  # a name found alongside a category reading of the same words
 MAX_PER_MUST_HAVE = 3
+FAR_PLACE_RADIUS_M = 25_000  # Ш-61: a known far place is looked up this close to its point
+FAR_MIN_SIM = 0.3  # name similarity that makes a place "the one the wish names"
+FAR_NEARBY_M = 15_000  # no name match: the nearest sight within this distance stands for it
 MIN_NAME_CHARS = 2
 
 
@@ -94,6 +97,27 @@ def _area() -> Dict[str, Any]:
     return {"west": west, "south": south, "east": east, "north": north}
 
 
+async def _far_place(conn, text: str, far: OutsidePlace) -> Optional[Place]:
+    """The database place for a wish that names a known place outside the start area, or None
+    (then the wish is reported `outside_area`, as in Ш-56)."""
+    rows = await fetch_all(
+        conn,
+        sql.FAR_BY_POINT,
+        {"q": " ".join(text.split()), "lat": far.lat, "lon": far.lon,
+         "radius_m": FAR_PLACE_RADIUS_M, "limit": 5},
+    )  # fmt: skip
+    if not rows:
+        return None
+    best = rows[0]
+    if best["sim"] < FAR_MIN_SIM:  # no name match: the closest sight stands for the named place
+        best = (await fetch_all(
+            conn, sql.FAR_BY_POINT,
+            {"q": far.name_ru, "lat": far.lat, "lon": far.lon,
+             "radius_m": FAR_NEARBY_M, "limit": 5},
+        ) or [None])[0]  # fmt: skip
+    return place_from_row(best) if best else None
+
+
 async def _resolve_must_have(
     conn, text: str, count: int, taken: Set[UUID], chosen: Optional[UUID] = None
 ) -> MustHave:
@@ -105,6 +129,10 @@ async def _resolve_must_have(
     """
     far = None if chosen is not None else outside_wish(text)
     if far is not None:  # Ш-56: never stand in a park of the region for Charyn Canyon
+        # Ш-61: a place of the country that the database knows is a real must-have (a far one)
+        place = await _far_place(conn, text, far)
+        if place is not None:
+            return MustHave(text, [place], "name")
         return MustHave(text, [], "outside", far)
     reading = resolve([text])
     name = " ".join(text.split())

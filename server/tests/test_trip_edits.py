@@ -212,7 +212,8 @@ async def test_removing_a_meal_and_the_last_stop_of_a_day(chat_env, conn):
         assert response.status_code == 200, response.text
     final = await plan(chat_env, headers, ready["trip_id"])
     empty = next(d for d in final["days"] if d["date"] == day["date"])
-    assert empty == {"date": day["date"], "items": [], "legs": []}
+    assert empty["items"] == [] and empty["legs"] == [] and empty["kind"] == "regular"
+    assert empty["overnight"]["city"]["en"] == "Almaty"  # Ш-61: the city the person sleeps in
     assert final["version"] == 2 + len(target["items"])
     await check_totals(conn, {"id": ready["trip_id"]})
 

@@ -128,7 +128,7 @@ async def add_assistant_message(
 
 BRIEF_COLS = (
     "start_date, end_date, budget_kzt, has_accommodation, must_haves, interests, pace, "
-    "crowd_tolerance"
+    "crowd_tolerance, dated_wishes, stay_wishes"
 )
 
 
@@ -164,7 +164,7 @@ async def save_brief(conn, chat_id: UUID, brief: Dict[str, Any]) -> None:
         """
         UPDATE trip_briefs SET start_date = %s, end_date = %s, budget_kzt = %s,
             has_accommodation = %s, must_haves = %s, interests = %s, pace = %s,
-            crowd_tolerance = %s, updated_at = now()
+            crowd_tolerance = %s, dated_wishes = %s, stay_wishes = %s, updated_at = now()
         WHERE chat_id = %s
         """,
         (
@@ -176,6 +176,8 @@ async def save_brief(conn, chat_id: UUID, brief: Dict[str, Any]) -> None:
             Jsonb(brief["interests"]),
             brief["pace"],
             brief["crowd_tolerance"],
+            Jsonb(brief.get("dated_wishes") or []),
+            Jsonb(brief.get("stay_wishes") or []),
             chat_id,
         ),
     )

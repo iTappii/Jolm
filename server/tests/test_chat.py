@@ -249,6 +249,8 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "interests": [],
         "pace": None,
         "crowd_tolerance": None,
+        "dated_wishes": [],
+        "stay_wishes": [],
         "missing": ["budget", "accommodation"],
         "complete": False,
     }
@@ -308,6 +310,8 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "interests": [],
         "pace": "calm",
         "crowd_tolerance": None,
+        "dated_wishes": [],
+        "stay_wishes": [],
         "missing": [],
         "complete": True,
         # Ш-32b: order of the answers, for the ring in the chat

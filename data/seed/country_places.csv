@@ -1,0 +1,10 @@
+# Ш-61: the places of the owner's trip across Kazakhstan (SSOT §5.4): the minimum to plan Almaty -> Charyn -> Kolsai -> Turkistan.
+# Same format and importer as popular_places.csv (data/seed/import_popular.py). They lie OUTSIDE the Almaty bounding box on purpose:
+# they are found only when a wish names them (the planner's must-have search), never as filler of an Almaty day.
+# Coordinates: OpenStreetMap via Nominatim, checked 2026-11-23 (Charyn Canyon way 22722438; Yasawi Mausoleum way 117854803;
+# Kolsai: the centre of the lake area, the OSM camp site node 5043328221 on the first lake, no object for the whole lake system). (c) OpenStreetMap contributors, ODbL.
+# PRICES: empty = unknown (not verified); no entry price was invented. Visit times and popularity are team estimates.
+osm_type,osm_id,name_ru,name_en,lat,lon,category,description_ru,description_en,typical_visit_min,entry_price_kzt,avg_check_kzt,setting,is_mountain,elevation_m,is_public,popularity
+way,22722438,Чарынский каньон,Charyn Canyon,43.3249952,79.0585755,mountain,"Каньон реки Чарын в Алматинской области, «Долина замков»: красные скалы, тропа к реке.","Canyon of the Charyn river in the Almaty Region, the Valley of Castles: red rock formations and a trail down to the river.",150,,,outdoor,1,,1,90
+,,Кольсайские озёра,Kolsai Lakes,42.9912544,78.3279203,lake,"Три горных озера в Кольсайском национальном парке; ночёвка обычно в селе Саты.","Three mountain lakes in Kolsai Lakes National Park; people usually stay in the village of Saty.",240,,,outdoor,1,1800,1,88
+way,117854803,Мавзолей Ходжи Ахмеда Ясави,Mausoleum of Khoja Ahmed Yasawi,43.297709,68.2709559,historic,"Мавзолей XIV века в Туркестане, объект Всемирного наследия ЮНЕСКО.","14th-century mausoleum in Turkistan, a UNESCO World Heritage Site.",120,,,mixed,0,,1,92

@@ -97,7 +97,8 @@ async def recompute_budget(
             must_cost += row["est_cost_kzt"]
     lodging_block = stored.get("lodging") or {}
     lodging = int(lodging_block.get("cost_kzt", 0))
-    transport = sum(leg["cost_kzt"] for leg in legs)
+    # Ш-61: road that no leg shows (evening drives, the way home) stays in the transport cost
+    transport = sum(leg["cost_kzt"] for leg in legs) + int(stored.get("extra_transport_kzt", 0))
     breakdown = {
         "lodging_kzt": lodging,
         "entries_kzt": entries,
@@ -109,10 +110,12 @@ async def recompute_budget(
     budget_kzt = int(trip["budget_kzt"] or stored.get("budget_kzt") or 0)
     shortfall = max(0, total - budget_kzt)
     cheapest_night = None
+    stays_cost = sum(int(st.get("cost_kzt", 0)) for st in lodging_block.get("stays") or [])
     if lodging_block.get("needed"):
         options = await store.lodging_rows(conn, trip["id"])
-        cheapest_night = min((o["total_kzt"] for o in options), default=None)
-    floor = must_cost + (cheapest_night if cheapest_night is not None else lodging)
+        cheapest_night = min((o["total_kzt"] for o in options if not o["stay"]), default=None)
+    floor = must_cost + stays_cost
+    floor += cheapest_night if cheapest_night is not None else lodging - stays_cost
     stored.update(
         breakdown=breakdown,
         total_kzt=total,

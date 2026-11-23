@@ -16,7 +16,7 @@ SERVER_EVENTS = (
 
 MAX_PROP_STR = 40
 OUTSIDE_IDS = tuple(BY_ID)
-MODES = ("walk", "scooter", "bus", "metro", "taxi", "car")
+MODES = ("walk", "scooter", "bus", "metro", "taxi", "car", "plane", "train", "tour")
 PROVIDERS = ("email", "phone", "apple")
 
 

@@ -53,7 +53,7 @@ router = APIRouter(prefix="/v1", tags=["trips"])
 
 
 class LegMode(BaseModel):
-    mode: Literal["walk", "scooter", "bus", "metro", "taxi", "car"]
+    mode: Literal["walk", "scooter", "bus", "metro", "taxi", "car", "plane", "train", "tour"]
     variant: Optional[int] = Field(None, ge=0, le=2)  # Ш-22a path variant; default 0
 
 

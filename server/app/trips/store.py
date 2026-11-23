@@ -27,6 +27,11 @@ from app.planner.layout import TripLayout
 CHOICES = ("drop_places", "cheaper", "keep")
 
 
+def day_meta_json(layout: TripLayout) -> Dict[str, Any]:
+    """Ш-61: per day `{kind, overnight}`, stored with the trip (`trips.day_meta`)."""
+    return {d.date.isoformat(): {"kind": d.kind, "overnight": d.overnight} for d in layout.days}
+
+
 def brief_json(brief: Dict[str, Any]) -> Dict[str, Any]:
     """The brief as stored with the trip: ISO dates, plain lists."""
     out = dict(brief)
@@ -46,14 +51,15 @@ async def insert_leg(conn, trip_id: UUID, variant: str, leg, item_ids: Dict[UUID
         """
         INSERT INTO trip_legs
             (trip_id, variant, from_item_id, to_item_id, depart_at, options, chosen_mode,
-             travel_s, cost_kzt, estimated)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             travel_s, cost_kzt, estimated, intercity)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             trip_id, variant,
             item_ids.get(leg.origin_place_id) if leg.origin_place_id else None,
             item_ids[leg.destination_place_id], leg.depart_at, Jsonb(options),
             leg.default_mode, int(round(leg.travel_s)), bud.leg_cost(leg), leg.estimated,
+            Jsonb(leg.intercity) if getattr(leg, "intercity", None) else None,
         ),
     )  # fmt: skip
 
@@ -106,15 +112,16 @@ async def save_plan(
         conn,
         """
         INSERT INTO trips (user_id, chat_id, brief, start_date, end_date, budget_kzt,
-                           must_have_unmet, warnings, budget, total_cost_kzt, weather_checked_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                           must_have_unmet, warnings, budget, total_cost_kzt, weather_checked_at,
+                           day_meta)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (chat_id) DO UPDATE SET
             version = trips.version + 1, brief = EXCLUDED.brief,
             start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
             budget_kzt = EXCLUDED.budget_kzt, must_have_unmet = EXCLUDED.must_have_unmet,
             warnings = EXCLUDED.warnings, budget = EXCLUDED.budget,
             total_cost_kzt = EXCLUDED.total_cost_kzt, budget_choice = NULL,
-            weather_checked_at = EXCLUDED.weather_checked_at,
+            weather_checked_at = EXCLUDED.weather_checked_at, day_meta = EXCLUDED.day_meta,
             status = 'active', updated_at = now()
         RETURNING id, version, (xmax = 0) AS created
         """,
@@ -122,7 +129,7 @@ async def save_plan(
             user_id, chat_id, Jsonb(brief_json(dict(brief))), brief["start_date"],
             brief["end_date"], plan.budget_kzt, Jsonb(must_have_unmet_json(plan, locale)),
             Jsonb(warnings_json(plan)), Jsonb(budget_json(plan, locale, with_places=False)),
-            plan.costs.total, weather_checked_at,
+            plan.costs.total, weather_checked_at, Jsonb(day_meta_json(plan.layout)),
         ),
     )  # fmt: skip
     trip_id = row["id"]
@@ -131,20 +138,23 @@ async def save_plan(
     await write_layout(conn, trip_id, "main", plan.layout)
     for variant in plan.variants:
         await write_layout(conn, trip_id, variant.kind, variant.layout)
-    for option in plan.lodging.options:
-        await execute(
-            conn,
-            """
-            INSERT INTO trip_lodging_options
-                (trip_id, place_id, rank, price_per_night_kzt, price_assumed, nights, total_kzt,
-                 recommended)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            (
-                trip_id, option.place.id, option.rank, option.price, option.assumed,
-                plan.lodging.nights, option.total, option.recommended,
-            ),
-        )  # fmt: skip
+    pools = [(0, plan.lodging)] + [(st.index, st.lodging) for st in plan.stays]
+    for stay, lodging in pools:  # Ш-61: stay 0 is the home city, 1.. the other overnight points
+        for option in lodging.options:
+            await execute(
+                conn,
+                """
+                INSERT INTO trip_lodging_options
+                    (trip_id, place_id, rank, price_per_night_kzt, price_assumed, nights,
+                     total_kzt, recommended, stay)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (trip_id, place_id) DO NOTHING
+                """,
+                (
+                    trip_id, option.place.id, option.rank, option.price, option.assumed,
+                    lodging.nights, option.total, option.recommended, stay,
+                ),
+            )  # fmt: skip
     return trip_id, row["version"], bool(row["created"])
 
 
@@ -200,15 +210,17 @@ async def apply_budget_choice(conn, trip: dict, choice: str) -> Dict[str, Any]:
             )  # table name from the fixed tuple above, never from input
         if choice == "cheaper" and (trip["budget"]["variants"][choice].get("lodging_changed")):
             await execute(
-                conn, "UPDATE trip_lodging_options SET recommended = false WHERE trip_id = %s",
+                conn,
+                "UPDATE trip_lodging_options SET recommended = false "
+                "WHERE trip_id = %s AND stay = 0",
                 (trip_id,),
             )  # fmt: skip
             await execute(
                 conn,
                 """
                 UPDATE trip_lodging_options SET recommended = true
-                WHERE trip_id = %s AND place_id = (
-                    SELECT place_id FROM trip_lodging_options WHERE trip_id = %s
+                WHERE trip_id = %s AND stay = 0 AND place_id = (
+                    SELECT place_id FROM trip_lodging_options WHERE trip_id = %s AND stay = 0
                     ORDER BY total_kzt, rank LIMIT 1)
                 """,
                 (trip_id, trip_id),
@@ -236,8 +248,8 @@ async def apply_budget_choice(conn, trip: dict, choice: str) -> Dict[str, Any]:
 async def lodging_rows(conn, trip_id: UUID) -> List[dict]:
     return await fetch_all(
         conn,
-        "SELECT place_id, rank, price_per_night_kzt, price_assumed, nights, total_kzt, recommended "
-        "FROM trip_lodging_options WHERE trip_id = %s ORDER BY rank",
+        "SELECT place_id, rank, price_per_night_kzt, price_assumed, nights, total_kzt, "
+        "recommended, stay FROM trip_lodging_options WHERE trip_id = %s ORDER BY stay, rank",
         (trip_id,),
     )
 
@@ -283,7 +295,7 @@ async def main_legs(conn, trip_id: UUID) -> List[dict]:
         conn,
         """
         SELECT l.id, l.from_item_id, l.to_item_id, l.depart_at, l.options, l.chosen_mode,
-               l.travel_s, l.cost_kzt, l.estimated, l.chosen_variant, i.day, i.ord
+               l.travel_s, l.cost_kzt, l.estimated, l.chosen_variant, l.intercity, i.day, i.ord
         FROM trip_legs l JOIN trip_items i ON i.id = l.to_item_id
         WHERE l.trip_id = %s AND l.variant = %s
         ORDER BY i.day, i.ord
@@ -321,7 +333,7 @@ async def get_trip_row(conn, user_id: UUID, trip_id: UUID, lock: bool = False) -
         conn,
         "SELECT id, chat_id, user_id, brief, start_date, end_date, budget_kzt, status, version, "
         "weather_checked_at, must_have_unmet, warnings, budget, total_cost_kzt, budget_choice, "
-        "created_at, updated_at FROM trips WHERE id = %s AND user_id = %s"
+        "day_meta, created_at, updated_at FROM trips WHERE id = %s AND user_id = %s"
         + (" FOR UPDATE" if lock else ""),
         (trip_id, user_id),
     )
@@ -333,12 +345,12 @@ async def lodging_options(conn, trip_id: UUID) -> List[dict]:
         conn,
         """
         SELECT o.place_id, o.rank, o.price_per_night_kzt, o.price_assumed, o.nights, o.total_kzt,
-               o.recommended, p.name_ru, p.name_en, c.slug AS category,
+               o.recommended, o.stay, p.name_ru, p.name_en, c.slug AS category,
                ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon
         FROM trip_lodging_options o
         JOIN places p ON p.id = o.place_id
         LEFT JOIN place_categories c ON c.id = p.category_id
-        WHERE o.trip_id = %s ORDER BY o.rank
+        WHERE o.trip_id = %s ORDER BY o.stay, o.rank
         """,
         (trip_id,),
     )

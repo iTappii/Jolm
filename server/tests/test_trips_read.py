@@ -123,8 +123,9 @@ async def test_get_trip_returns_everything_the_full_map_needs(chat_env, conn):
         for leg in d["legs"]:
             assert set(leg) == {
                 "id", "from_item_id", "to_item_id", "depart_at", "travel_s", "estimated",
-                "chosen_mode", "cost_kzt", "options", "variant", "late_by_s",
+                "chosen_mode", "cost_kzt", "options", "variant", "late_by_s", "intercity",
             }  # fmt: skip
+            assert leg["intercity"] is None  # Ш-61: an ordinary leg
             assert leg["chosen_mode"] in {o["mode"] for o in leg["options"]}
             assert all("geometry" in o and "cost_kzt_max" in o for o in leg["options"])
     assert trip["budget"]["status"] == "ok" and trip["budget"]["variants"] is None

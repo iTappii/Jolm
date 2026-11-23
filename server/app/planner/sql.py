@@ -126,3 +126,43 @@ LIMIT %(limit)s
 # One place by id for a chosen must-have (Ш-54). params: id plus the area (kept so the same
 # `_COLS` shape and the same "only plannable places" rules apply as everywhere in this file).
 PLACE_BY_ID = "SELECT" + _COLS + _FROM_WHERE + "  AND p.id = %(id)s\n"
+
+# Ш-61: the place a wish names outside the start area (Charyn, Kolsai, the Yasawi mausoleum...).
+# params: q (the wish), lat, lon (the known place's point), radius_m, limit. Not food, not lodging;
+# the best name match first, then the nearest, then the most popular.
+FAR_BY_POINT = (
+    "SELECT"
+    + _COLS
+    + """,
+       GREATEST(word_similarity(%(q)s::text, coalesce(p.name_ru, '')),
+                word_similarity(%(q)s::text, coalesce(p.name_en, '')),
+                word_similarity(%(q)s::text, coalesce(p.name_kk, ''))) AS sim
+"""
+    + _FROM_WHERE.replace(
+        "AND p.geom && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s, 4326)::geography",
+        "AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography,"
+        " %(radius_m)s)",
+    )
+    + """
+  AND coalesce(c.slug, '') <> 'food' AND coalesce(pc.slug, '') <> 'food'
+ORDER BY sim DESC,
+         ST_Distance(p.geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography),
+         p.popularity DESC, p.id
+LIMIT %(limit)s
+"""
+)
+
+# Lodging around a point (Ш-61 overnight points). params: lat, lon, radius_m.
+LODGING_NEAR = """
+SELECT p.id, p.name_ru, p.name_en, c.slug AS category,
+       ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon,
+       p.price_per_night_kzt, p.popularity
+FROM places p
+LEFT JOIN place_categories c ON c.id = p.category_id
+LEFT JOIN place_categories pc ON pc.id = c.parent_id
+WHERE p.status = 'active'
+  AND (p.kind = 'accommodation' OR c.slug = 'accommodation' OR pc.slug = 'accommodation')
+  AND ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(%(lon)s, %(lat)s), 4326)::geography, %(radius_m)s)
+ORDER BY p.popularity DESC, p.id
+LIMIT 200
+"""

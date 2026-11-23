@@ -24,7 +24,7 @@ centre; then the first stop has no leg from the start. The brief has only `has_a
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
-from typing import Dict, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 from uuid import UUID
 
 from app.planner import hours as hrs
@@ -95,6 +95,9 @@ class Leg:  # -> trip_legs
     default_mode: Optional[str]  # the Ш-22 recommended option; None when no option was computed
     travel_s: float  # time the schedule reserves for this leg
     estimated: bool  # no router options: the time is a straight-line estimate
+    # Ш-61: a move between cities or a long road (`planner.country`): {mode, from_city, to_city,
+    # approximate, price_kzt_min, price_kzt_max}; None for an ordinary leg
+    intercity: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -102,6 +105,13 @@ class DayPlan:
     date: date
     stops: List[Stop] = field(default_factory=list)
     legs: List[Leg] = field(default_factory=list)  # legs[i] ends at stops[i] (+ start leg first)
+    # Ш-61 (set by `planner.build`): "regular" | "transfer" (the day is mostly an intercity move);
+    # where the person sleeps that night ({city: {ru, en}, region, lat, lon}), None on the last day
+    kind: str = "regular"
+    overnight: Optional[Dict[str, Any]] = None
+    # road the schedule reserves but no leg shows (the evening drive to a night's lodging, the drive
+    # home after an outing): its upper cost, counted in the budget's transport
+    extra_transport_kzt: int = 0
 
 
 @dataclass
@@ -227,8 +237,10 @@ def _assign_activities(
     others: Sequence[Place],
     unplaced: List[Unplaced],
     avoid: Mapping[UUID, Set[int]],
+    pinned: Optional[Mapping[UUID, date]] = None,
 ) -> List[List[_Item]]:
     n = len(ctx.dates)
+    pinned = pinned or {}
     days: List[List[_Item]] = [[] for _ in range(n)]
     ordered: List[Tuple[Place, bool, int]] = [(p, True, -1) for p in must] + [
         (p, False, i) for i, p in enumerate(others)
@@ -243,12 +255,21 @@ def _assign_activities(
     todo: List[Tuple[Place, bool, int]] = []
     for place, is_must, rank in ordered:
         days_ok = [d for d in range(n) if ctx.fits(item_for(place, d, is_must, rank))]
+        pin = pinned.get(place.id)
+        if pin is not None:  # Ш-61: a wish with a date is never moved to another day
+            wanted = [d for d in days_ok if ctx.dates[d] == pin]
+            if not wanted and is_must:
+                feasible[place.id] = wanted
+                reason = "closed_on_trip_days" if pin in ctx.dates else "no_time"
+                unplaced.append(Unplaced(place, reason, True, pin))
+                continue
+            days_ok = wanted
         if not days_ok:
             feasible[place.id] = days_ok
             if is_must:
                 unplaced.append(Unplaced(place, "closed_on_trip_days", True))
             continue
-        if is_must:  # a must-have that did not fit on a day in an earlier pass tries the others
+        if is_must and pin is None:  # a must-have that did not fit on a day tries the others
             days_ok = [d for d in days_ok if d not in avoid.get(place.id, ())] or days_ok
         feasible[place.id] = days_ok
         todo.append((place, is_must, rank))
@@ -361,8 +382,10 @@ def _assign_meals(
     unplaced: List[Unplaced],
     warnings: List[LayoutWarning],
     avoid: Mapping[UUID, Set[int]],
+    pinned: Optional[Mapping[UUID, date]] = None,
 ) -> None:
     n = len(ctx.dates)
+    pinned = pinned or {}
     slots: Dict[Tuple[int, str], Optional[_Item]] = {(d, m): None for d in range(n) for m in MEALS}
     used: Set[UUID] = set()
     centres = [
@@ -376,9 +399,16 @@ def _assign_meals(
     # must-have food: a meal slot if it fits one, else a plain stop (coffee, bakery, or no slot)
     for place in must_food:
         placed = False
+        pin = pinned.get(place.id)
+        pin_days = [d for d in range(n) if ctx.dates[d] == pin] if pin is not None else None
+        if pin_days is not None and not pin_days:  # Ш-61: its day is not a day of this layout
+            unplaced.append(Unplaced(place, "no_time", True, pin))
+            continue
         if meal_ok(place):
             by_distance = sorted(range(n), key=lambda x: (_dist_km(_pt(place), centres[x]), x))
-            skip = avoid.get(place.id, ())
+            if pin_days is not None:
+                by_distance = pin_days
+            skip = avoid.get(place.id, ()) if pin_days is None else ()
             for d in [x for x in by_distance if x not in skip] or by_distance:
                 for meal in MEALS:
                     if slots[(d, meal)] is not None:
@@ -398,6 +428,8 @@ def _assign_meals(
             for d in range(n)
             if ctx.fits(ctx.make_item(place, ctx.dates[d], "activity", True, -1))
         ]
+        if pin_days is not None:
+            feasible = [d for d in feasible if d in pin_days]
         if not feasible:
             unplaced.append(Unplaced(place, "closed_on_trip_days", True))
             continue
@@ -667,8 +699,12 @@ async def plan_days(
     legs: LegProvider,
     forecast: Optional[Forecast] = None,
     start_point: Optional[Point] = None,
+    pinned: Optional[Mapping[UUID, date]] = None,
 ) -> TripLayout:
     """`activities` and `food` in rank order (best first, as Ш-33 returns them).
+
+    `pinned` (Ш-61): place id -> the date of a wish with a date. Such a place stays on that day (or
+    is reported in `unplaced`); it is never moved to another one.
 
     A must-have that is dropped for lack of time on its day (`no_time`) is retried: the whole
     layout is rebuilt with that day excluded for it, up to MUST_HAVE_RETRIES more passes, and
@@ -680,7 +716,7 @@ async def plan_days(
     for _ in range(MUST_HAVE_RETRIES + 1):
         layout = await _plan_once(
             dates, pace, must_have_places, activities, food, hours, travel, legs, forecast,
-            start_point, avoid,
+            start_point, avoid, pinned,
         )  # fmt: skip
         if best is None or len(layout.must_have_unplaced) < len(best.must_have_unplaced):
             best = layout
@@ -711,6 +747,7 @@ async def _plan_once(
     forecast: Optional[Forecast],
     start_point: Optional[Point],
     avoid: Mapping[UUID, Set[int]],
+    pinned: Optional[Mapping[UUID, date]] = None,
 ) -> TripLayout:
     pace = pace if pace in DAY_START else scoring.DEFAULT_PACE
     ctx = _Ctx(
@@ -731,8 +768,8 @@ async def _plan_once(
     others = [p for p in activities if p.id not in must_ids]
     rest_food = [p for p in food if p.id not in must_ids]
 
-    days = _assign_activities(ctx, must_other, others, layout.unplaced, avoid)
-    _assign_meals(ctx, days, must_food, rest_food, layout.unplaced, layout.warnings, avoid)
+    days = _assign_activities(ctx, must_other, others, layout.unplaced, avoid, pinned)
+    _assign_meals(ctx, days, must_food, rest_food, layout.unplaced, layout.warnings, avoid, pinned)
 
     # one matrix for the whole trip: start point + every place that has a day
     places = {i.place.id: i.place for day in days for i in day}

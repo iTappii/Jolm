@@ -83,6 +83,8 @@ class Costs:
     events: int = 0  # Ф16
     meals_assumed: int = 0
     entries_unknown: int = 0
+    # Ш-61: the part of `transport` that no leg shows (evening drives, the way home)
+    extra_transport: int = 0
 
     @property
     def total(self) -> int:
@@ -105,6 +107,8 @@ def plan_costs(layout: TripLayout, lodging_kzt: int) -> Costs:
                 costs.entries += kzt
                 costs.entries_unknown += 1 if assumed else 0
         costs.transport += sum(leg_cost(leg) for leg in day.legs)
+        costs.transport += day.extra_transport_kzt
+        costs.extra_transport += day.extra_transport_kzt
     return costs
 
 
@@ -145,6 +149,11 @@ class LodgingPlan:
     needed: bool
     nights: int
     options: List[LodgingOption] = field(default_factory=list)
+    # Ш-61: the other overnight points of a trip across the country; their cost is fixed (the
+    # over-budget variants change the home city's lodging only)
+    extra_kzt: int = 0
+    extra_assumed: bool = False
+    extra_no_options: bool = False
 
     @property
     def recommended(self) -> Optional[LodgingOption]:
@@ -159,8 +168,13 @@ class LodgingPlan:
         return self.needed and self.nights > 0 and not self.options
 
     def cost(self, option: Optional[LodgingOption] = None) -> int:
-        """Stay cost counted in the budget: the chosen option, else the recommended one, else
-        (no option in the database) nights x the hostel default."""
+        """Stay cost counted in the budget: the home city's (`home_cost`) plus the other overnight
+        points'."""
+        return self.home_cost(option) + self.extra_kzt
+
+    def home_cost(self, option: Optional[LodgingOption] = None) -> int:
+        """The home city's stay: the chosen option, else the recommended one, else (no option in
+        the database) nights x the hostel default."""
         if not self.needed or self.nights == 0:
             return 0
         option = option or self.recommended
@@ -170,6 +184,8 @@ class LodgingPlan:
 
     @property
     def price_assumed(self) -> bool:
+        if self.extra_assumed:
+            return True
         if not self.needed or self.nights == 0:
             return False
         rec = self.recommended

@@ -88,6 +88,10 @@ def leg_json(row: Dict[str, Any], starts_at: Optional[datetime] = None) -> Dict[
         "options": row["options"],
         "variant": row.get("chosen_variant", 0),
         "late_by_s": leg_late_by_s(row, starts_at),
+        # Ш-61: null for an ordinary leg; for a move between cities or a long road
+        # {mode: plane|train|bus|car|taxi|tour, from_city: {ru, en}, to_city: {ru, en},
+        #  approximate, price_kzt_min, price_kzt_max}; `chosen_mode` equals `mode`
+        "intercity": row.get("intercity"),
     }
 
 
@@ -98,7 +102,12 @@ def trip_dates(start: date, end: date) -> List[date]:
 def days_json(
     trip: Dict[str, Any], items: List[Dict[str, Any]], legs: List[Dict[str, Any]], locale: str
 ) -> List[Dict[str, Any]]:
-    """Every day of the trip, empty ones included: `{date, items: [...], legs: [...]}`."""
+    """Every day of the trip, empty ones included: `{date, kind, overnight, items, legs}`.
+
+    Ш-61: `kind` is "regular" or "transfer" (a day whose main content is an intercity move);
+    `overnight` is where the person sleeps that night, `{city: {ru, en}, region, lat, lon}`, null on
+    the last day. A trip built before Ш-61 has every day "regular" with `overnight` null."""
+    meta = trip.get("day_meta") or {}
     by_day: Dict[date, Dict[str, List[Dict[str, Any]]]] = {
         d: {"items": [], "legs": []} for d in trip_dates(trip["start_date"], trip["end_date"])
     }
@@ -112,7 +121,13 @@ def days_json(
             leg_json(row, starts.get(row["to_item_id"]))
         )
     return [
-        {"date": d.isoformat(), "items": v["items"], "legs": v["legs"]}
+        {
+            "date": d.isoformat(),
+            "kind": (meta.get(d.isoformat()) or {}).get("kind", "regular"),
+            "overnight": (meta.get(d.isoformat()) or {}).get("overnight"),
+            "items": v["items"],
+            "legs": v["legs"],
+        }
         for d, v in sorted(by_day.items())
     ]
 
@@ -194,7 +209,16 @@ def budget_json(
     stored = trip["budget"]
     out = dict(stored)
     block = dict(stored.get("lodging") or {})
-    block["options"] = [lodging_option_json(o, locale) for o in lodging]
+    block["options"] = [lodging_option_json(o, locale) for o in lodging if not o.get("stay")]
+    block["stays"] = [  # Ш-61: the other overnight points, each with its own options
+        dict(
+            st,
+            options=[
+                lodging_option_json(o, locale) for o in lodging if o.get("stay") == st["stay"]
+            ],
+        )
+        for st in block.get("stays") or []
+    ]
     out["lodging"] = block
     out["variants"] = variants_json(stored.get("variants"), main, variant_rows, lodging, locale)
     return out

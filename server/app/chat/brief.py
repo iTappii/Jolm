@@ -4,7 +4,7 @@ import json
 from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.regions import default_region
 
@@ -38,6 +38,42 @@ def _clean_items(items: Optional[List[str]]) -> Optional[List[str]]:
     return cleaned
 
 
+class DatedWish(BaseModel):
+    """A wish tied to a day of the trip ("послезавтра Чарын"): the planner never moves it."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    wish: str = Field(description="The wish, exactly as it is (or will be) in must_haves")
+    day: date = Field(
+        alias="date", description="The day it must happen, YYYY-MM-DD (convert 'tomorrow' etc.)"
+    )
+
+    @field_validator("wish")
+    @classmethod
+    def _wish(cls, value):
+        text = " ".join(str(value).split())
+        if not text or len(text) > MAX_ITEM_CHARS:
+            raise ValueError("wish must be 1-%d characters" % MAX_ITEM_CHARS)
+        return text
+
+
+class StayWish(BaseModel):
+    """How the tourist wants a far place visited: there and back in a day, or with a night."""
+
+    wish: str = Field(description="The wish, exactly as it is in must_haves")
+    stay: Literal["day", "overnight"] = Field(
+        description="'day' = there and back the same day, 'overnight' = sleep near the place"
+    )
+
+    @field_validator("wish")
+    @classmethod
+    def _wish(cls, value):
+        text = " ".join(str(value).split())
+        if not text or len(text) > MAX_ITEM_CHARS:
+            raise ValueError("wish must be 1-%d characters" % MAX_ITEM_CHARS)
+        return text
+
+
 class BriefUpdate(BaseModel):
     """Arguments of `update_trip_brief`. Send only what is new or changed."""
 
@@ -59,6 +95,17 @@ class BriefUpdate(BaseModel):
     crowd_tolerance: Optional[int] = Field(
         None, ge=0, le=4, description="0 = only quiet places ... 4 = fine in a crowd"
     )
+    dated_wishes: Optional[List[DatedWish]] = Field(
+        None,
+        description="Wishes tied to a day ('the day after tomorrow Charyn'); the wish is also "
+        "added to must_haves. Added to the existing list; a wish with a new date replaces the old "
+        "one",
+    )
+    stay_wishes: Optional[List[StayWish]] = Field(
+        None,
+        description="Only when the tourist says how to visit a far place: 'day' (there and back) "
+        "or 'overnight'. Leave out when they did not say: the planner decides by the road time",
+    )
 
     @field_validator("must_haves", "remove_must_haves", "interests", "remove_interests")
     @classmethod
@@ -76,6 +123,8 @@ def empty_brief() -> Dict[str, Any]:
         "interests": [],
         "pace": None,
         "crowd_tolerance": None,
+        "dated_wishes": [],  # [{"wish": str, "date": "YYYY-MM-DD"}] (Ш-61)
+        "stay_wishes": [],  # [{"wish": str, "stay": "day" | "overnight"}] (Ш-61)
     }
 
 
@@ -102,6 +151,8 @@ def public_brief(brief: Dict[str, Any]) -> Dict[str, Any]:
         "interests": list(brief["interests"]),
         "pace": brief["pace"],
         "crowd_tolerance": brief["crowd_tolerance"],
+        "dated_wishes": [dict(w) for w in brief.get("dated_wishes") or []],
+        "stay_wishes": [dict(w) for w in brief.get("stay_wishes") or []],
         "missing": missing,
         "complete": not missing,
     }
@@ -121,6 +172,28 @@ def _merge_list(current: List[str], add: Optional[List[str]], remove: Optional[L
     return result
 
 
+def _merge_wish_details(new: Dict[str, Any], update: BriefUpdate, today: date) -> None:
+    """Ш-61: dated and stay wishes. A dated wish is also a must-have; a removed must-have takes its
+    date and stay with it. One entry per wish (case-insensitive), the newest wins."""
+    for dated in update.dated_wishes or []:
+        if dated.day < today:
+            raise BriefError(
+                "the date %s of %r is in the past (today is %s)" % (dated.day, dated.wish, today)
+            )
+        key = dated.wish.casefold()
+        new["dated_wishes"] = [w for w in new["dated_wishes"] if w["wish"].casefold() != key]
+        new["dated_wishes"].append({"wish": dated.wish, "date": dated.day.isoformat()})
+        new["must_haves"] = _merge_list(new["must_haves"], [dated.wish], None)
+    for stay in update.stay_wishes or []:
+        key = stay.wish.casefold()
+        new["stay_wishes"] = [w for w in new["stay_wishes"] if w["wish"].casefold() != key]
+        new["stay_wishes"].append({"wish": stay.wish, "stay": stay.stay})
+    gone = {r.casefold() for r in update.remove_must_haves or []}
+    if gone:
+        new["dated_wishes"] = [w for w in new["dated_wishes"] if w["wish"].casefold() not in gone]
+        new["stay_wishes"] = [w for w in new["stay_wishes"] if w["wish"].casefold() not in gone]
+
+
 def apply_update(
     current: Dict[str, Any], update: BriefUpdate, today: date
 ) -> Tuple[Dict[str, Any], List[str]]:
@@ -137,6 +210,8 @@ def apply_update(
     new = dict(current)
     new["must_haves"] = list(current["must_haves"])
     new["interests"] = list(current["interests"])
+    new["dated_wishes"] = [dict(w) for w in current.get("dated_wishes") or []]
+    new["stay_wishes"] = [dict(w) for w in current.get("stay_wishes") or []]
     for name in ("start_date", "end_date", "budget_kzt", "has_accommodation", "pace"):
         value = getattr(update, name)
         if value is not None:
@@ -145,6 +220,7 @@ def apply_update(
         new["crowd_tolerance"] = update.crowd_tolerance
     new["must_haves"] = _merge_list(new["must_haves"], update.must_haves, update.remove_must_haves)
     new["interests"] = _merge_list(new["interests"], update.interests, update.remove_interests)
+    _merge_wish_details(new, update, today)
     if new["start_date"] and new["end_date"]:
         if new["end_date"] < new["start_date"]:
             raise BriefError(
@@ -162,6 +238,11 @@ def fill_entries(current: Dict[str, Any], new: Dict[str, Any], changed: List[str
     known = {item.casefold() for item in current["must_haves"]}
     entries: List[str] = []
     for field in changed:
+        if field in (
+            "dated_wishes",
+            "stay_wishes",
+        ):  # details of a wish, not an answer of their own
+            continue
         if field == "must_haves":
             entries.extend(
                 "must_haves:" + item for item in new["must_haves"] if item.casefold() not in known

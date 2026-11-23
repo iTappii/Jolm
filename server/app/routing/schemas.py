@@ -5,13 +5,17 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validato
 
 from app.routing.base import Point
 
-Mode = Literal["walk", "scooter", "bus", "metro", "taxi", "car"]
-Group = Literal["walk", "transit", "taxi", "scooter", "car"]
+# Ш-61: plane, train and tour only appear in the legs of a trip across the country (intercity)
+Mode = Literal["walk", "scooter", "bus", "metro", "taxi", "car", "plane", "train", "tour"]
+Group = Literal["walk", "transit", "taxi", "scooter", "car", "intercity"]
 
 
 def group_of(mode: str) -> str:
-    """The client's tab for a mode: bus and metro are both "transit", the rest are their own."""
-    return "transit" if mode in ("bus", "metro") else mode
+    """The client's tab for a mode: bus and metro are both "transit", plane/train/tour are
+    "intercity", the rest are their own."""
+    if mode in ("bus", "metro"):
+        return "transit"
+    return "intercity" if mode in ("plane", "train", "tour") else mode
 
 
 class RoutePoint(BaseModel):

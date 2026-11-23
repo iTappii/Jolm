@@ -39,6 +39,10 @@ def main() -> int:
         print(f"popular places: {stats}")
         conn.execute((HERE / "transport_tariffs.sql").read_text(encoding="utf-8"))
         conn.execute((HERE / "intercity.sql").read_text(encoding="utf-8"))  # Ш-60
+        stats = import_popular.import_csv(conn, HERE / "country_places.csv")  # Ш-61
+        print(f"country places: {stats}")
+        conn.execute((HERE / "country_lodging.sql").read_text(encoding="utf-8"))
+        conn.execute((HERE / "country_planner.sql").read_text(encoding="utf-8"))
     return 0
 
 
