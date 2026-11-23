@@ -11,6 +11,7 @@ the caller knows what was stored. A failed turn ends with one `error` event and
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple
 
@@ -51,6 +52,11 @@ class TurnRecord:
     tool_calls: List[Dict[str, Any]] = field(default_factory=list)  # audit trail
     error: Optional[Dict[str, str]] = None
     usage: Usage = Usage(0, 0)
+    # Ш-64 timings, milliseconds: how long each model round took, each tool call by name, and
+    # when the first text arrived (from the start of the turn). Never any user text.
+    llm_rounds_ms: List[int] = field(default_factory=list)
+    tools_ms: List[Dict[str, Any]] = field(default_factory=list)
+    first_text_ms: Optional[int] = None
 
 
 def error_payload(code: str, locale: str) -> Dict[str, str]:
@@ -69,13 +75,21 @@ async def run_turn(
     max_rounds: int,
 ) -> AsyncIterator[SseEvent]:
     conversation = list(messages)
+    turn_started = time.perf_counter()
+
+    def since(t0: float) -> int:
+        return round((time.perf_counter() - t0) * 1000)
+
     try:
         for round_index in range(max_rounds + 1):
             last_round = round_index == max_rounds
             calls: List[ToolCall] = []
             round_text: List[str] = []
+            round_started = time.perf_counter()
             async for event in llm.stream(conversation, None if last_round else tools, system):
                 if isinstance(event, TextDelta):
+                    if record.first_text_ms is None:
+                        record.first_text_ms = since(turn_started)
                     if not round_text and record.text and not record.text[-1].isspace():
                         record.text += "\n\n"
                         yield "text_delta", {"text": "\n\n"}
@@ -90,6 +104,7 @@ async def run_turn(
                     return
                 elif isinstance(event, (Usage, Done)):
                     pass
+            record.llm_rounds_ms.append(since(round_started))
             if not calls or last_round:
                 if calls:
                     log.warning("model kept calling tools after the tool rounds were used up")
@@ -101,7 +116,9 @@ async def run_turn(
                 if index >= MAX_CALLS_PER_ROUND:
                     outcome = ToolOutcome({"error": "too many tool calls at once"}, ok=False)
                 else:
+                    tool_started = time.perf_counter()
                     outcome = await handle_tool(call)
+                    record.tools_ms.append({"name": call.name, "ms": since(tool_started)})
                 audit: Dict[str, Any] = {"name": call.name, "ok": outcome.ok}
                 try:
                     audit["arguments"] = call.arguments()

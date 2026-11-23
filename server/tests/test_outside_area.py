@@ -11,9 +11,15 @@ from app.planner import outside
 from app.planner.build import must_have_unmet_json
 from app.planner.candidates import select_candidates
 from app.providers.llm.fake import Step
-from tests.conftest import parse_sse
 from tests.test_chat import call, say, use
-from tests.test_live_route import CHINESE, get_chat, live_events, world  # noqa: F401
+from tests.test_live_route import (  # noqa: F401
+    CHINESE,
+    get_chat,
+    live_events,
+    settle,
+    stored_route,
+    world,
+)
 from tests.test_planner_candidates import brief, fixture_places
 
 # --- matching ----------------------------------------------------------------------------------
@@ -118,9 +124,9 @@ def tool_results(llm):
 
 async def run(w, *calls):
     llm = use(w.env, steps=[Step(tool_calls=list(calls)), Step(text=["ok"])])
+    before = await stored_route(w.env, w.headers, w.chat["id"])
     response = await say(w.env, w.headers, w.chat["id"])
-    assert response.status_code == 200, response.text
-    return llm, parse_sse(response.text)
+    return llm, await settle(w.env, w.headers, w.chat["id"], response, before)
 
 
 async def outside_events(conn):

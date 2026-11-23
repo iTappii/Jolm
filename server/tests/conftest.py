@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -106,15 +107,32 @@ async def conn(test_db_url):
 
 
 class TransactionalDatabase:
-    """Drop-in for app.db.Database that reuses one connection (nested = savepoints)."""
+    """Drop-in for app.db.Database that reuses one connection (nested = savepoints).
+
+    Since Ш-64 a background task (the live-route pass) may use the connection while the request
+    that started it goes on, and savepoints of two tasks must not interleave on one connection. So
+    a task that is not already inside a transaction waits for the one that is; a task inside one
+    (nested use, e.g. the chat lock) simply nests."""
 
     def __init__(self, conn):
         self.conn = conn
+        self._gate = asyncio.Lock()
+        self._owner = None
 
     @asynccontextmanager
     async def transaction(self):
-        async with self.conn.transaction():
-            yield self.conn
+        task = asyncio.current_task()
+        if self._owner is task:
+            async with self.conn.transaction():
+                yield self.conn
+            return
+        async with self._gate:
+            self._owner = task
+            try:
+                async with self.conn.transaction():
+                    yield self.conn
+            finally:
+                self._owner = None
 
 
 @pytest.fixture
@@ -142,6 +160,10 @@ async def chat_env(conn):
     app.state.db = TransactionalDatabase(conn)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield SimpleNamespace(app=app, client=c)
+    for name in ("live_routes", "chat_event_bus"):  # Ш-64: background parts start lazily
+        part = getattr(app.state, name, None)
+        if part is not None:
+            await part.close()
 
 
 def parse_sse(text: str) -> list:

@@ -58,6 +58,14 @@ async def lifespan(app: FastAPI):
         stack.push_async_callback(db.close)
         await db.open()
         app.state.db = db
+
+        async def stop_chat_background() -> None:  # Ш-64: before the pool closes
+            for name in ("live_routes", "chat_event_bus"):
+                part = getattr(app.state, name, None)
+                if part is not None:
+                    await part.close()
+
+        stack.push_async_callback(stop_chat_background)
         async with db.transaction() as conn:
             await refresh_regions(conn)  # Ш-57: region constants come from the database
         routing_provider = make_router(settings.valhalla_url)

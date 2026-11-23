@@ -269,20 +269,28 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
     third = parse_sse(
         (await say(chat_env, headers, chat["id"], "I have a hotel, plov please")).text
     )
-    assert [n for n, _ in third] == [
-        "brief_updated",
-        "map_places",
-        "live_route",  # Ш-54
+    # Ш-64: the live route is built in the background; before `done` the stream only says so (and
+    # carries the finished route too if the pass happened to end first: not waited for)
+    names = [n for n, _ in third]
+    assert names[:2] == ["brief_updated", "live_route_status"]
+    assert third[1][1] == {"state": "building"}
+    assert [n for n in names if n in ("graph_node", "text_delta", "done")] == [
         "graph_node",
         "graph_node",
         "text_delta",
         "done",
     ]
-    pins = third[1][1]
-    assert pins["reason"] == "must_have"
-    assert [(p["name"], p["must_have"]) for p in pins["places"]] == [("Плов-центр", "Плов-центр")]
+    assert names[-1] == "done"
+    pins = [d for n, d in third if n == "map_places"]
+    if pins:  # the pass was quicker than the model
+        assert pins[0]["reason"] == "must_have"
+        assert [(p["name"], p["must_have"]) for p in pins[0]["places"]] == [
+            ("Плов-центр", "Плов-центр")
+        ]
+    await chat_api.scheduler_of(chat_env.app).drain()
     assert third[0][1]["brief"]["complete"] is True
-    assert [third[3][1]["ord"], third[4][1]["ord"]] == [3, 4]
+    graph = [d for n, d in third if n == "graph_node"]
+    assert [graph[0]["ord"], graph[1]["ord"]] == [3, 4]
 
     fourth = parse_sse((await say(chat_env, headers, chat["id"], "Build it")).text)
     assert [n for n, _ in fourth] == ["route_ready", "text_delta", "done"]
@@ -334,7 +342,7 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "SELECT * FROM chat_messages WHERE chat_id = %s AND role = 'assistant' ORDER BY id LIMIT 1",
         (chat["id"],),
     )
-    assert row["prompt_id"] == "trip_brief.en.v6" and row["finish"] == "stop"
+    assert row["prompt_id"] == "trip_brief.en.v7" and row["finish"] == "stop"
     assert row["input_tokens"] > 0 and row["output_tokens"] > 0
     assert [t["name"] for t in row["tool_calls"]] == ["update_trip_brief", "add_graph_node"]
     assert all(t["ok"] for t in row["tool_calls"])

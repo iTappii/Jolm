@@ -5,14 +5,20 @@
     GET  /chats/{id}               -> chat + messages + brief + graph_nodes + live_route (or null)
     POST /chats/{id}/live-route/choose  {"ord", "place_id"} -> live_route (Ш-54)
     POST /chats/{id}/messages      {"content": "..."} -> text/event-stream
+    GET  /chats/{id}/events        -> text/event-stream of live-route updates (Ш-64)
 
 Stream events (`event: <name>` + `data: <json>`); the stream ends with `done` or `error`:
 - `text_delta`    {"text"}
 - `graph_node`    {"ord", "kind", "text"}                      one node appended to the graph
 - `brief_updated` {"brief": {...}, "changed": ["budget_kzt", ...]}
 - `map_places`    {"reason": "must_have"|"chosen", "places": [{id, name, category, lat, lon}]}
-- `live_route`    {"stops": [...], "legs": [...]} the whole live route after a must-have wish was
-                  added or removed (exact shape and rules: chat/live_route.py, Ш-54)
+- `live_route_status` {"state": "building"|"ready"|"failed"} (Ш-64) the live route is built in
+                  the BACKGROUND: `building` follows `brief_updated` when must-have wishes changed
+                  and the model does not wait for it. `ready` / `failed` come on the events stream
+                  (GET /chats/{id}/events), or in this stream right before `done` when the pass
+                  happened to end earlier (never waited for)
+- `live_route`    {"stops": [...], "legs": [...]} the whole live route (exact shape and rules:
+                  chat/live_route.py, Ш-54); with `live_route_status` `ready` as above
 - `route_ready`   {"trip_id", "version", "days", "warnings", "must_have_unmet", "budget"}
                   after `build_trip` (exact shape: chat/build_tool.py)
 - `trip_updated`  {"trip_id", "version", "action", "changed_days", "budget"}
@@ -31,6 +37,11 @@ refused with 409 `chat_busy` right away (no waiting). The turn takes a lease on 
 assistant message; the lease also expires on its own after LEASE_SEC, so a crash or a response
 that never started cannot lock a chat for good. Refusals (401/404/409/429/503) do not hold or
 consume anything: the chat_full check comes first, then the lease, then the rate limit.
+Events stream (Ш-64): `GET /chats/{id}/events`, same auth and ownership as `GET /chats/{id}`.
+It sends at once the snapshot `live_route` + `live_route_status` (`building` while a pass of this
+chat runs on this worker, else `ready`), then `live_route` + `live_route_status` after every
+announcement (Postgres NOTIFY, see chat/events_bus.py) of the chat, `: keepalive` comments every
+15 s, and ends after 10 minutes (the client reconnects and gets a fresh snapshot).
 The brief reaches the model as a separate `<trip_brief_data>` message, never inside the system
 prompt, so words typed by the tourist are not promoted to instructions. Memory (Ш-41: notes of
 earlier chats, rejected and favourite categories) comes the same way, as a `<user_memory_data>`
@@ -39,6 +50,7 @@ message before it, and only when there is something to say.
 
 import asyncio
 import logging
+import time
 from datetime import datetime
 from typing import Any, List, Optional, Set
 from uuid import UUID
@@ -49,7 +61,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.analytics import service as analytics
 from app.auth import sessions
 from app.auth.api import bearer_token
-from app.chat import build_tool, edit_tools, live_route, store, tools
+from app.chat import build_tool, edit_tools, events_bus, live_bg, live_route, store, tools
 from app.chat.brief import (
     BriefError,
     BriefUpdate,
@@ -82,6 +94,24 @@ MAX_CHAT_MESSAGES = 400  # user + assistant messages per chat
 HISTORY_MESSAGES = 30  # replayed to the model
 HISTORY_CHARS = 20_000
 MAX_TOOL_ROUNDS = 5
+
+
+EVENTS_KEEPALIVE_SEC = 15.0
+EVENTS_MAX_SEC = 600.0  # the events stream ends after this long; the client reconnects
+
+
+def scheduler_of(app) -> live_bg.LiveRouteScheduler:
+    """Background live-route passes of this process (created on first use, closed in lifespan)."""
+    if getattr(app.state, "live_routes", None) is None:
+        app.state.live_routes = live_bg.LiveRouteScheduler()
+    return app.state.live_routes
+
+
+def bus_of(app) -> events_bus.ChatEventBus:
+    """The one LISTEN connection of this process (opened on the first events subscription)."""
+    if getattr(app.state, "chat_event_bus", None) is None:
+        app.state.chat_event_bus = events_bus.ChatEventBus(getattr(app.state, "listen_url", None))
+    return app.state.chat_event_bus
 
 
 def lease_sec() -> float:
@@ -198,11 +228,62 @@ async def choose_live_stop(chat_id: UUID, payload: ChooseStop, request: Request)
         raise AppError(409, "chat_busy")
     routing = getattr(request.app.state, "routing_provider", None) or FakeRouter()
     try:
-        return await live_route.choose(
+        route = await live_route.choose(
             db, chat_id, chat["locale"], routing, payload.ord, payload.place_id
         )
     except live_route.ChoiceError as exc:
         raise AppError(exc.status, exc.code) from None
+    await events_bus.publish(db, chat_id, "live_route")  # Ш-64: other open screens update too
+    return route
+
+
+def _route_json(route: Optional[dict]) -> dict:
+    return route or {"stops": [], "legs": []}
+
+
+@router.get("/chats/{chat_id}/events")
+async def chat_events(chat_id: UUID, request: Request):
+    """Live-route updates of an open chat (Ш-64); see the module docstring."""
+    access = bearer_token(request)
+    db = request.app.state.db
+    async with db.transaction() as conn:
+        user = await sessions.current_user(conn, access)
+        chat = await _own_chat(conn, user["id"], chat_id)
+    scheduler, bus = scheduler_of(request.app), bus_of(request.app)
+
+    async def read_route() -> dict:
+        async with db.transaction() as conn:
+            return _route_json(await live_route.load(conn, chat_id, chat["locale"]))
+
+    async def frames():
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + EVENTS_MAX_SEC
+        async with bus.subscribe(chat_id) as queue:  # before the snapshot: nothing is missed
+            yield format_event("live_route", await read_route())
+            state = "building" if scheduler.is_building(chat_id) else "ready"
+            yield format_event("live_route_status", {"state": state})
+            while True:
+                left = deadline - loop.time()
+                if left <= 0:
+                    return
+                try:
+                    kind = await asyncio.wait_for(queue.get(), min(EVENTS_KEEPALIVE_SEC, left))
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                if kind == "building":
+                    yield format_event("live_route_status", {"state": "building"})
+                elif kind == "failed":
+                    yield format_event("live_route_status", {"state": "failed"})
+                else:  # live_route / resync: the stored route is the truth
+                    yield format_event("live_route", await read_route())
+                    if kind == "resync" and scheduler.is_building(chat_id):
+                        state = "building"
+                    else:
+                        state = "ready"
+                    yield format_event("live_route_status", {"state": state})
+
+    return sse_response(frames())
 
 
 def _trim_history(rows: List[dict]) -> List[Message]:
@@ -250,17 +331,19 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
     if memory_block is not None:  # Ш-41: data for the model, like the brief, never in `system`
         history.insert(0, Message(role="user", content=memory_block))
     record = TurnRecord()
+    turn_started = time.perf_counter()
 
     router = getattr(request.app.state, "routing_provider", None) or FakeRouter()
     weather = getattr(request.app.state, "weather_provider", None)  # None: plan without forecast
+    live = live_bg.TurnLive(scheduler_of(request.app), db, chat_id, locale, router)
 
     async def handle_tool(call: ToolCall) -> ToolOutcome:
         handler = {
-            tools.UPDATE_TRIP_BRIEF: lambda *a: _update_trip_brief(*a, router),
+            tools.UPDATE_TRIP_BRIEF: lambda *a: _update_trip_brief(*a, live),
             tools.ADD_GRAPH_NODE: _add_graph_node,
             tools.SEARCH_PLACES: _search_places,
             tools.SEARCH_EVENTS: _search_events,
-            tools.BUILD_TRIP: lambda *a: _build_trip(*a, router, weather),
+            tools.BUILD_TRIP: lambda *a: _build_trip(*a, router, weather, live),
             edit_tools.GET_TRIP_PLAN: edit_tools.get_trip_plan,
             edit_tools.REMOVE_TRIP_ITEM: lambda *a: edit_tools.remove_trip_item(*a, router),
             edit_tools.REPLACE_TRIP_ITEM: lambda *a: edit_tools.replace_trip_item(*a, router),
@@ -324,9 +407,12 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
             await turn.aclose()
             message_id = await save("error" if record.error else "stop")
             saved = True
+            _log_turn(record, turn_started)
             if record.error:
                 yield format_event("error", record.error)
             else:
+                for name, data in _finished_route_events(live):
+                    yield format_event(name, data)
                 usage = {
                     "input_tokens": record.usage.input_tokens,
                     "output_tokens": record.usage.output_tokens,
@@ -337,6 +423,37 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
                 await _save_detached(turn, save("error" if record.error else "interrupted"))
 
     return sse_response(frames())
+
+
+def _finished_route_events(live: live_bg.TurnLive) -> list:
+    """Ш-64: if the background pass of this turn already ended, say so before `done` (never wait:
+    otherwise the events stream carries it). No pass or a pass still running: nothing."""
+    result = live.finished()
+    if result is None:
+        return []
+    if not result.ok:
+        return [("live_route_status", {"state": "failed"})]
+    events = []
+    pins = [dict(pin, must_have=wish) for wish, pin in result.pins.items()]
+    if pins:  # old clients: the best match of every new wish
+        events.append(("map_places", {"reason": "must_have", "places": pins}))
+    events.append(("live_route", _route_json(result.route)))
+    events.append(("live_route_status", {"state": "ready"}))
+    return events
+
+
+def _log_turn(record: TurnRecord, started: float) -> None:
+    """One structured line per turn: durations in ms, no text and no ids."""
+    log.info(
+        "chat turn timing",
+        extra={
+            "first_text_ms": record.first_text_ms,
+            "llm_rounds_ms": record.llm_rounds_ms,
+            "tools_ms": record.tools_ms,
+            "total_ms": round((time.perf_counter() - started) * 1000),
+            "error": record.error is not None,
+        },
+    )
 
 
 async def _save_detached(turn, coro) -> None:
@@ -361,7 +478,7 @@ async def _finish(turn, coro) -> None:
 
 
 async def _update_trip_brief(
-    db, chat_id: UUID, locale: str, call: ToolCall, router: Any = None
+    db, chat_id: UUID, locale: str, call: ToolCall, live: live_bg.TurnLive
 ) -> ToolOutcome:
     args = parse_tool_args(call, BriefUpdate)
     async with db.transaction() as conn:
@@ -384,15 +501,10 @@ async def _update_trip_brief(
     events = []
     if changed:
         events.append(("brief_updated", {"brief": public_brief(new), "changed": changed}))
-        if "must_haves" in changed:  # Ш-54: stops and legs of the live route follow the wishes
-            route, route_changed, best = await live_route.sync(
-                db, chat_id, locale, router or FakeRouter(), new["must_haves"]
-            )
-            pins = [dict(pin, must_have=wish) for wish, pin in best.items()]
-            if pins:  # old clients: the best match of every new wish
-                events.append(("map_places", {"reason": "must_have", "places": pins}))
-            if route_changed:
-                events.append(("live_route", route or {"stops": [], "legs": []}))
+        if "must_haves" in changed:  # Ш-54 / Ш-64: the route follows in the background
+            live.schedule()  # returns at once; the model must not wait for the map
+            events.append(("live_route_status", {"state": "building"}))
+            result["live_route"] = "building"
     return ToolOutcome(result, events)
 
 
@@ -444,7 +556,17 @@ async def _search_events(db, chat_id: UUID, locale: str, call: ToolCall) -> Tool
 
 
 async def _build_trip(
-    db, chat_id: UUID, locale: str, call: ToolCall, router: Any, weather: Any = None
+    db,
+    chat_id: UUID,
+    locale: str,
+    call: ToolCall,
+    router: Any,
+    weather: Any = None,
+    live: Optional[live_bg.TurnLive] = None,
 ) -> ToolOutcome:
-    """Plan, save and announce the trip (Ш-36); see `chat/build_tool.py` for the event shape."""
+    """Plan, save and announce the trip (Ш-36); see `chat/build_tool.py` for the event shape.
+    The planner takes the stops picked on the live route (Ш-54), so a background pass that is
+    still running for this chat is awaited first (Ш-64)."""
+    if live is not None:
+        await live.wait_idle()
     return await build_tool.build_trip(db, chat_id, locale, router, weather)

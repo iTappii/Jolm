@@ -16,6 +16,9 @@ retried on the next change. Stored in `chat_live_stops` / `chat_live_alternative
 the chosen stop place for its wish (`chosen_places`).
 """
 
+import asyncio
+import logging
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
@@ -27,6 +30,8 @@ from app.live import clock
 from app.planner.travel import DirectionsLegs
 from app.routing import RoutingError, get_network
 from app.routing.costs import load_tariffs
+
+log = logging.getLogger(__name__)
 
 MAX_PLACES_PER_WISH = 3  # the best one is the stop, the rest are alternatives
 WALK_MAX_S = 20 * 60
@@ -211,16 +216,30 @@ def pick_leg(options: Sequence[Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-async def compute_leg(
-    db, router: Any, origin: Tuple[float, float], destination: Tuple[float, float]
-) -> Optional[Dict[str, Any]]:
+LEG_CONCURRENCY = 4  # routing calls in flight at once while the legs of a route are filled
+
+
+async def leg_context(db) -> Tuple[Any, Any]:
+    """(tariffs, transit network) the legs of one route are priced with; read once, so the legs
+    can then be computed concurrently without touching the database."""
     now: datetime = clock.now()
     async with db.transaction() as conn:
         tariffs = await load_tariffs(conn, now.date())
         network = await get_network(conn) if "bus" in tariffs or "metro" in tariffs else None
+    return tariffs, network
+
+
+async def compute_leg(
+    db,
+    router: Any,
+    origin: Tuple[float, float],
+    destination: Tuple[float, float],
+    context: Optional[Tuple[Any, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    tariffs, network = context if context is not None else await leg_context(db)
     legs = DirectionsLegs(router, network, tariffs)
     try:
-        options = await legs.options(origin, destination, now)
+        options = await legs.options(origin, destination, clock.now())
     except RoutingError:
         return None
     return pick_leg(options)
@@ -230,11 +249,13 @@ async def _fill_legs(
     db, router: Any, stops: List[Stop], places: Dict[UUID, Dict[str, Any]], old: List[Stop]
 ) -> None:
     """Leg for every stop but the first. A leg is reused when the same pair of places (previous
-    place, this place) already had one; otherwise it is computed."""
+    place, this place) already had one; otherwise it is computed (Ш-64: the missing ones
+    concurrently, at most LEG_CONCURRENCY at a time; same results as one by one)."""
     known: Dict[Tuple[UUID, UUID], Dict[str, Any]] = {}
     for index, stop in enumerate(old):
         if index > 0 and stop.leg:
             known[(old[index - 1].place_id, stop.place_id)] = stop.leg
+    missing: List[Tuple[Stop, Tuple[float, float], Tuple[float, float]]] = []
     for index, stop in enumerate(stops):
         stop.leg = None
         if index == 0:
@@ -246,7 +267,24 @@ async def _fill_legs(
             continue
         a, b = places.get(previous.place_id), places.get(stop.place_id)
         if a is not None and b is not None:
-            stop.leg = await compute_leg(db, router, (a["lat"], a["lon"]), (b["lat"], b["lon"]))
+            missing.append((stop, (a["lat"], a["lon"]), (b["lat"], b["lon"])))
+    if not missing:
+        return
+    started = time.perf_counter()
+    context = await leg_context(db)
+    gate = asyncio.Semaphore(LEG_CONCURRENCY)
+
+    async def one(origin: Tuple[float, float], destination: Tuple[float, float]):
+        async with gate:
+            return await compute_leg(db, router, origin, destination, context)
+
+    results = await asyncio.gather(*(one(o, d) for _, o, d in missing))
+    for (stop, _, _), leg in zip(missing, results):
+        stop.leg = leg
+    log.info(
+        "live route legs",
+        extra={"legs": len(missing), "legs_ms": round((time.perf_counter() - started) * 1000)},
+    )
 
 
 # --- sync with the brief --------------------------------------------------------------------

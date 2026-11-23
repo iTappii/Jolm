@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from psycopg.rows import dict_row
 
+from app.chat import api as chat_api
 from app.chat import live_route
 from app.db import fetch_all, fetch_one
 from app.providers.llm.fake import Step
@@ -44,11 +45,32 @@ async def seed(conn):
     return ids
 
 
+async def stored_route(env, headers, chat_id):
+    detail = await env.client.get("/v1/chats/%s" % chat_id, headers=headers)
+    return detail.json()["live_route"]
+
+
+async def settle(env, headers, chat_id, response, before):
+    """Events of a finished turn, with what Ш-64 moved out of the message stream added back.
+
+    The live route is built in the background now, so the message stream carries it before `done`
+    only when the pass happened to end first. The tests below are about the route, not about that
+    timing: wait for the background pass, and if the stored route changed in this turn and the
+    stream did not carry it, append it as `live_route` (as the stream did before Ш-64)."""
+    assert response.status_code == 200, response.text
+    events = parse_sse(response.text)
+    await chat_api.scheduler_of(env.app).drain()
+    after = await stored_route(env, headers, chat_id)
+    if not live_events(events) and after != before:
+        events.append(("live_route", after or {"stops": [], "legs": []}))
+    return events
+
+
 async def turn(env, headers, chat_id, *calls):
     use(env, steps=[Step(tool_calls=list(calls)), Step(text=["ok"])])
+    before = await stored_route(env, headers, chat_id)
     response = await say(env, headers, chat_id)
-    assert response.status_code == 200, response.text
-    return parse_sse(response.text)
+    return await settle(env, headers, chat_id, response, before)
 
 
 def live_events(events):
@@ -87,8 +109,9 @@ async def choose(w, ord_, place_id, headers=None, chat_id=None):
 
 async def test_new_wishes_give_stops_alternatives_and_legs(world):
     events = await add_wishes(world, CHINESE, PARK, BAZAAR)
-    names = [n for n, _ in events]
-    assert names == ["brief_updated", "map_places", "live_route", "text_delta", "done"]
+    names = [n for n, _ in events if n != "map_places"]
+    assert names[:2] == ["brief_updated", "live_route_status"]  # Ш-64: building, in the background
+    assert [n for n in names if n == "text_delta"] == ["text_delta"]
     route = live_events(events)[0]
 
     stops = route["stops"]
@@ -116,14 +139,14 @@ async def test_new_wishes_give_stops_alternatives_and_legs(world):
     assert all(isinstance(leg["duration_s"], int) and leg["distance_m"] > 0 for leg in legs)
     assert legs[1]["duration_s"] <= 20 * 60
 
-    # old clients still get the best match per new wish
-    pins = [d for n, d in events if n == "map_places"][0]
-    assert pins["reason"] == "must_have"
-    assert [(p["name"], p["must_have"]) for p in pins["places"]] == [
-        ("Chinese Dragon", CHINESE),
-        (PARK, PARK),
-        (BAZAAR, BAZAAR),
-    ]
+    # old clients still get the best match per new wish, when the pass ended before `done`
+    for pins in [d for n, d in events if n == "map_places"]:
+        assert pins["reason"] == "must_have"
+        assert [(p["name"], p["must_have"]) for p in pins["places"]] == [
+            ("Chinese Dragon", CHINESE),
+            (PARK, PARK),
+            (BAZAAR, BAZAAR),
+        ]
 
 
 async def test_get_chat_restores_the_live_route_or_null(world):
@@ -149,15 +172,17 @@ async def test_only_new_wishes_are_searched_and_old_legs_are_kept(world, monkeyp
     assert len(calls) == 1  # only the new leg 2 -> 3 was computed
 
 
-async def test_same_wish_again_emits_no_live_route(world):
-    await add_wishes(world, CHINESE)
+async def test_same_wish_again_changes_nothing(world):
+    first = live_events(await add_wishes(world, CHINESE))[0]
     events = await add_wishes(world, CHINESE.lower())
-    assert live_events(events) == []  # nothing changed
+    assert all(route == first for route in live_events(events))  # at most the same route again
+    assert (await get_chat(world))["live_route"] == first
 
 
 async def test_unknown_wish_gets_no_stop(world):
     events = await add_wishes(world, "Nonexistent Cuisine XYZ")
-    assert live_events(events) == [] and "map_places" not in [n for n, _ in events]
+    assert all(r == {"stops": [], "legs": []} for r in live_events(events))
+    assert "map_places" not in [n for n, _ in events]
     assert (await get_chat(world))["live_route"] is None
 
 
