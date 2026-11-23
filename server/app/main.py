@@ -25,6 +25,8 @@ from app.events.api import router as events_router
 from app.favorites.api import router as favorites_router
 from app.geocode.api import LIMIT_PER_MINUTE as GEOCODE_LIMIT
 from app.geocode.api import router as geocode_router
+from app.intercity.api import make_limiter as make_intercity_limiter
+from app.intercity.api import router as intercity_router
 from app.logging_setup import setup_logging
 from app.middleware import RequestIdMiddleware
 from app.places.api import router as places_router
@@ -98,6 +100,7 @@ def create_app() -> FastAPI:
     install_error_handlers(app)
     app.state.chat_limiters = make_limiters(settings)
     app.state.analytics_limiters = make_analytics_limiters(settings)
+    app.state.intercity_limiter = make_intercity_limiter()
     app.state.geocode_limiter = RateRule("geocode", GEOCODE_LIMIT, 60)
     app.include_router(system_router)
     app.include_router(regions_router)
@@ -107,6 +110,7 @@ def create_app() -> FastAPI:
     app.include_router(places_router)
     app.include_router(geocode_router)
     app.include_router(directions_router)
+    app.include_router(intercity_router)
     app.include_router(guest_chat_router)
     app.include_router(chat_router)
     app.include_router(trips_router)

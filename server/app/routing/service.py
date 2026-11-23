@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 from app.regions import default_region
 from app.routing.base import NoRoute, Point, RouteResult, RoutingProvider, RoutingUnavailable
-from app.routing.costs import Tariff, calculate_cost, recommend
+from app.routing.costs import IntercityParams, Tariff, calculate_cost, recommend
 from app.routing.fake import FakeRouter, encode_polyline6, haversine_m
 from app.routing.geometry import decode_polyline6
 from app.routing.schemas import DirectionOption, DirectionStep, Mode, group_of
@@ -40,10 +40,23 @@ def _traffic_max(depart_at: datetime) -> float:
 
 
 def _road_option(
-    result: RouteResult, mode: Mode, tariff: Optional[Tariff], offline: bool, traffic_max: float
+    result: RouteResult,
+    mode: Mode,
+    tariff: Optional[Tariff],
+    offline: bool,
+    traffic_max: float,
+    intercity: Optional[IntercityParams] = None,
+    tariffs: Optional[Dict[str, Tariff]] = None,
 ) -> DirectionOption:
     motor = mode in ("taxi", "car")
     factor = traffic_max if motor else 1.0
+    if motor and intercity is not None and result.distance_m >= intercity.min_distance_km * 1000:
+        # Ш-60: past the threshold the city tariff and its traffic factor do not apply
+        factor = 1.0
+        if mode == "car":
+            tariff = intercity.own_car_tariff()
+        elif tariffs and "taxi_intercity" in tariffs:
+            tariff = tariffs["taxi_intercity"]
     low, high = (
         calculate_cost(
             tariff,
@@ -243,6 +256,7 @@ async def get_directions(
     *,
     data_unavailable: bool = False,
     variants: int = MAX_VARIANTS,
+    intercity: Optional[IntercityParams] = None,
 ) -> List[DirectionOption]:
     """Flat list of options; several per group (walk/transit/taxi/scooter/car) when `variants`
     > 1, ordered by group and then by variant. `variants=1` is the planner's mode: one route per
@@ -298,7 +312,7 @@ async def get_directions(
             for public_mode in road_modes[mode]:
                 tariff = None if public_mode == "walk" else tariffs[public_mode]
                 groups.setdefault(group_of(public_mode), []).append(
-                    _road_option(r, public_mode, tariff, offline, traffic_max)
+                    _road_option(r, public_mode, tariff, offline, traffic_max, intercity, tariffs)
                 )
 
     options: List[DirectionOption] = []
