@@ -78,6 +78,7 @@ async def directions_api(monkeypatch):
     app.state.routing_provider = FakeRouter()
     tariffs = AsyncMock(return_value=TARIFFS.copy())
     monkeypatch.setattr(api, "load_tariffs", tariffs)
+    monkeypatch.setattr(api, "load_intercity_params", AsyncMock(return_value=None))
     monkeypatch.setattr(api, "get_network", AsyncMock(return_value=object()))
     monkeypatch.setattr(api, "region_for_point", _stub_region_for_point([ALMATY, COUNTRY]))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

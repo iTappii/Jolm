@@ -80,7 +80,7 @@ async def test_tariff_versions_seed_and_history(conn):
     before = await load_tariffs(conn, date(2026, 11, 20))
     assert before["bus"].base_kzt == 100
     assert before["bus"].approximate
-    assert set(before) == {"walk", "scooter", "bus", "metro", "taxi", "car"}
+    assert set(before) == {"walk", "scooter", "bus", "metro", "taxi", "car", "taxi_intercity"}
     assert (await load_tariffs(conn, date(2026, 11, 21)))["bus"].base_kzt == 120
     assert (await load_tariffs(conn, date(2026, 11, 22)))["bus"].base_kzt == 130
 
@@ -93,7 +93,7 @@ async def test_tariff_versions_seed_and_history(conn):
             async with conn.transaction():
                 await conn.execute(statement)
     rows = await (await conn.execute("SELECT version_id FROM transport_tariffs")).fetchall()
-    assert len(rows) == 9
+    assert len(rows) == 10
 
 
 async def test_admin_appends_tariffs(client, conn):

@@ -13,7 +13,7 @@ from app.db import fetch_one
 from app.errors import AppError
 from app.regions import region_for_point
 from app.routing import RoutingUnavailable, get_network
-from app.routing.costs import load_tariffs
+from app.routing.costs import load_intercity_params, load_tariffs
 from app.routing.schemas import DirectionOption, DirectionsRequest, RoutePoint
 from app.routing.service import get_directions
 from app.routing.sql import DESTINATION_BY_ID
@@ -65,10 +65,12 @@ async def directions(payload: DirectionsRequest, request: Request):
         raise AppError(422, "validation_error") from None
     tariffs = {}
     network = None
+    intercity = None
     data_unavailable = False
     try:
         async with db.transaction() as conn:
             tariffs = await load_tariffs(conn, depart_at.date())
+            intercity = await load_intercity_params(conn)
             if local and ("bus" in tariffs or "metro" in tariffs):
                 network = await get_network(conn)
     except OperationalError:
@@ -84,6 +86,7 @@ async def directions(payload: DirectionsRequest, request: Request):
             destination.as_point(),
             depart_at,
             data_unavailable=data_unavailable,
+            intercity=intercity,
         )
     except RoutingUnavailable:
         raise AppError(503, "routing_unavailable") from None

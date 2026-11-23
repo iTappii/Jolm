@@ -505,6 +505,7 @@ TARIFF_MODES = {
     "metro": "Метро",
     "taxi": "Такси",
     "car": "Своя машина",
+    "taxi_intercity": "Такси, межгород",
 }
 TARIFF_FIELDS = {
     "base_kzt": "Фиксированная часть, ₸",
@@ -512,9 +513,9 @@ TARIFF_FIELDS = {
     "per_km_kzt": "За километр, ₸",
 }
 _TARIFF_MODES_BY_FIELD = {
-    "base_kzt": {"scooter", "bus", "metro", "taxi"},
+    "base_kzt": {"scooter", "bus", "metro", "taxi", "taxi_intercity"},
     "per_min_kzt": {"scooter", "taxi"},
-    "per_km_kzt": {"taxi", "car"},
+    "per_km_kzt": {"taxi", "car", "taxi_intercity"},
 }
 _TARIFF_AMOUNT_RE = re.compile(r"[0-9]{1,8}(?:\.[0-9]{1,2})?")
 

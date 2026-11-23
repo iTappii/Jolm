@@ -35,6 +35,34 @@ async def load_tariffs(conn: AsyncConnection, travel_date: date) -> dict[str, Ta
     return {row["mode"]: Tariff(**row) for row in rows}
 
 
+@dataclass(frozen=True)
+class IntercityParams:
+    """Ш-60: the road is "intercity" from `min_distance_km` of route length; own-car cost there is
+    fuel (`fuel_per_km_kzt`), taxi uses the `taxi_intercity` tariff. All values come from the
+    `intercity_settings` table, none is a constant of the code."""
+
+    min_distance_km: float
+    max_road_km: float
+    fuel_per_km_kzt: Decimal
+
+    def own_car_tariff(self) -> Tariff:
+        return Tariff("car", Decimal(0), Decimal(0), self.fuel_per_km_kzt, approximate=True)
+
+
+async def load_intercity_params(conn: AsyncConnection) -> Optional[IntercityParams]:
+    """None when the settings are not seeded: directions then keep the city tariffs everywhere."""
+    rows = await fetch_all(conn, "SELECT key, value FROM intercity_settings", ())
+    values = {row["key"]: row["value"] for row in rows}
+    needed = ("fuel_l_per_100km", "fuel_price_kzt_per_l", "min_distance_km", "max_road_km")
+    if any(key not in values for key in needed):
+        return None
+    return IntercityParams(
+        min_distance_km=float(values["min_distance_km"]),
+        max_road_km=float(values["max_road_km"]),
+        fuel_per_km_kzt=values["fuel_l_per_100km"] * values["fuel_price_kzt_per_l"] / 100,
+    )
+
+
 def calculate_cost(
     tariff: Tariff, distance_m: float, duration_s: float, traffic_max: float = 1.0
 ) -> tuple[int, int]:
