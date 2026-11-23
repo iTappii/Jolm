@@ -30,6 +30,8 @@ struct MapView: UIViewRepresentable {
     /// they do, `tripFitVersion` when the camera should fit them again.
     var tripStops: [TripMapStop] = []
     var tripLines: [TripMapLine] = []
+    /// Extra points the camera fits with the trip (where the nights are spent, Ш-62).
+    var tripFitExtras: [CLLocationCoordinate2D] = []
     var tripColor: UIColor = JolColor.brandUIColor
     var tripVersion = 0
     var tripFitVersion = 0

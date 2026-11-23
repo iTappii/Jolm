@@ -72,7 +72,7 @@ extension MapCoordinator {
             let refit = appliedTripFitVersion != parent.tripFitVersion
             appliedTripVersion = parent.tripVersion
             appliedTripFitVersion = parent.tripFitVersion
-            applyTrip(stops: parent.tripStops, lines: parent.tripLines, color: parent.tripColor, refit: refit, map: map)
+            applyTrip(parent, refit: refit, map: map)
         }
         if appliedEventsVersion != parent.eventsVersion {
             appliedEventsVersion = parent.eventsVersion
@@ -80,10 +80,9 @@ extension MapCoordinator {
         }
     }
 
-    private func applyTrip(
-        stops: [TripMapStop], lines: [TripMapLine], color: UIColor, refit: Bool, map: MLNMapView
-    ) {
+    private func applyTrip(_ parent: MapView, refit: Bool, map: MLNMapView) {
         guard let style = map.style else { return }
+        let (stops, lines, extras, color) = (parent.tripStops, parent.tripLines, parent.tripFitExtras, parent.tripColor)
         // Each stop and leg carries its day's colour, so «All days» draws every day in its own colour
         // (`color` is only the fallback for a feature without one).
         let perFeature = NSExpression(
@@ -115,7 +114,7 @@ extension MapCoordinator {
             return feature
         })
         guard refit else { return }
-        var all = stops.map(\.coordinate) + lines.flatMap(\.coordinates)
+        var all = stops.map(\.coordinate) + lines.flatMap(\.coordinates) + extras
         guard !all.isEmpty else { return }
         // A day with a single stop must not zoom in beyond a sensible level (Ш-63).
         if case .center(let center, let zoom) = CameraFit.plan(for: all, singleZoom: CameraFit.singleStopZoom) {

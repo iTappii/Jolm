@@ -48,9 +48,9 @@
     "semantic_hash": "9b31786b637be3c13978bec4c2330752"
   },
   "TECH_PLAN.md": {
-    "mtime": 1795425338.4442332,
-    "seen": 1795425343.001008,
-    "ast_hash": "27ae8951466d309274d07e61bee513d6",
+    "mtime": 1795425811.6154435,
+    "seen": 1795425829.016259,
+    "ast_hash": "872cf430306d4499b25cbd0473036409",
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
@@ -4272,57 +4272,57 @@
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-1-stop-dark.png": {
-    "mtime": 1795425331.1458817,
-    "seen": 1795425343.001146,
-    "ast_hash": "325d0c14018a5d7a2e34877ca98d93a4",
+    "mtime": 1795425680.129313,
+    "seen": 1795425829.020473,
+    "ast_hash": "ae298957de71ca6bedfdf7cc62f2fd26",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-1-stop-light.png": {
-    "mtime": 1795425331.1487532,
-    "seen": 1795425343.0011468,
-    "ast_hash": "619c0ed1429eadbd5e0938ce89710023",
+    "mtime": 1795425714.5564198,
+    "seen": 1795425829.0204742,
+    "ast_hash": "6a749890024b2efe38dae2197c702424",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-2-stops-dark.png": {
-    "mtime": 1795425331.151786,
-    "seen": 1795425343.0011468,
-    "ast_hash": "a3bc3f355bbf944b2c1d280269cb906d",
+    "mtime": 1795425687.7998617,
+    "seen": 1795425829.020475,
+    "ast_hash": "e8c661ed8939d71ddd88e04d9c4ab2a0",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-2-stops-light.png": {
-    "mtime": 1795425331.1569562,
-    "seen": 1795425343.001148,
-    "ast_hash": "4b4efc1952c4e432ece760f2d1a2d97d",
+    "mtime": 1795425722.8545482,
+    "seen": 1795425829.020475,
+    "ast_hash": "177572d80327744b95a33f362789d685",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-3-stops-dark.png": {
-    "mtime": 1795425331.1592283,
-    "seen": 1795425343.001148,
-    "ast_hash": "262badca8eb17ba4d499c38fc029d2ba",
+    "mtime": 1795425695.2602062,
+    "seen": 1795425829.0204759,
+    "ast_hash": "d9c1e80dbd22991ea7e26832c0007725",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-3-stops-light.png": {
-    "mtime": 1795425331.163696,
-    "seen": 1795425343.001149,
-    "ast_hash": "354b37fc6e9e774ed85801c473c2946a",
+    "mtime": 1795425732.2487557,
+    "seen": 1795425829.0204768,
+    "ast_hash": "47f310cb249ba1008abd62fd52245e37",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-after-choose-dark.png": {
-    "mtime": 1795425331.1675687,
-    "seen": 1795425343.00115,
-    "ast_hash": "4cf30ced86a7e429522504b560374cc3",
+    "mtime": 1795425700.786855,
+    "seen": 1795425829.0204768,
+    "ast_hash": "dcfce551d5305cdac28127c6da9a2f46",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-after-choose-light.png": {
-    "mtime": 1795425331.1711023,
-    "seen": 1795425343.00115,
-    "ast_hash": "6d1f76b90717b8b3b5dc2a87414e2b3b",
+    "mtime": 1795425739.031971,
+    "seen": 1795425829.020478,
+    "ast_hash": "6191549c64b014ead2d98fcbe7875ec3",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-choose-card-light.png": {
-    "mtime": 1795425331.1754997,
-    "seen": 1795425343.001151,
-    "ast_hash": "1e187151863059f4be7759400b510e57",
+    "mtime": 1795425734.0535843,
+    "seen": 1795425829.020478,
+    "ast_hash": "b4660a51203655e4af5c0ae169283b9f",
     "semantic_hash": ""
   },
   "ios/Jol/Resources/stub-style-dark.json": {
@@ -4332,9 +4332,9 @@
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-54/live-keyboard-light.png": {
-    "mtime": 1795425331.180248,
-    "seen": 1795425343.001151,
-    "ast_hash": "8830d1ff887f464eadc78a6e350ac236",
+    "mtime": 1795425767.4949796,
+    "seen": 1795425829.020479,
+    "ast_hash": "b7433e03cee95ad3c94ed88052d81f7a",
     "semantic_hash": ""
   },
   "ios/Jol/Core/Networking/UITestDemoTrip.swift": {
@@ -4794,9 +4794,9 @@
     "semantic_hash": ""
   },
   "ios/JolUITests/BackgroundRouteUITests.swift": {
-    "mtime": 1795425331.2590292,
-    "seen": 1795425343.000872,
-    "ast_hash": "df71804f66710c9617cfe94cabd9fdf5",
+    "mtime": 1795425811.357386,
+    "seen": 1795425829.011963,
+    "ast_hash": "157c271f0afd5ed94e4dab00d03fa8f2",
     "semantic_hash": ""
   },
   "docs/instagram-ad/README.md": {
@@ -4926,27 +4926,27 @@
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-64/building-dark.png": {
-    "mtime": 1795425331.182202,
-    "seen": 1795425343.0012102,
-    "ast_hash": "81ed5b7041212dee7e39a9216c31e72a",
+    "mtime": 1795425500.611824,
+    "seen": 1795425829.0214558,
+    "ast_hash": "61ba09ec0d14a3eaa832c89a2ded6e30",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-64/building-light.png": {
-    "mtime": 1795425331.1854787,
-    "seen": 1795425343.001211,
-    "ast_hash": "dcc8ab05d60c4b054206cfaf26ebfcb7",
+    "mtime": 1795425515.8456202,
+    "seen": 1795425829.021457,
+    "ast_hash": "3d2f0d829451d048614c146f6a3ad5b5",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-64/ready-dark.png": {
-    "mtime": 1795425331.1896968,
-    "seen": 1795425343.001211,
-    "ast_hash": "f71b80361e195ba71fbd430d6043f365",
+    "mtime": 1795425504.5136642,
+    "seen": 1795425829.021457,
+    "ast_hash": "9e824537848c0e081de0d193e7111fef",
     "semantic_hash": ""
   },
   "docs/reviews/img/\u0428-64/ready-light.png": {
-    "mtime": 1795425331.1932673,
-    "seen": 1795425343.001212,
-    "ast_hash": "1a61103653861de4a1a3019edc8ec258",
+    "mtime": 1795425519.743924,
+    "seen": 1795425829.021458,
+    "ast_hash": "70e41ebe68e8929d157a7fe6f0c89eb2",
     "semantic_hash": ""
   },
   "docs/instagram-ad/jol-reels-en.mp4": {
@@ -4995,6 +4995,12 @@
     "mtime": 1795404286.3791456,
     "seen": 1795425343.001219,
     "ast_hash": "26708cf0fb101bfaa537335b5aae3f33",
+    "semantic_hash": ""
+  },
+  "docs/reviews/\u0428-64.md": {
+    "mtime": 1795425824.783986,
+    "seen": 1795425829.017901,
+    "ast_hash": "f72eb973b8f4f7521464b48ca4523a6f",
     "semantic_hash": ""
   }
 }

@@ -1,0 +1,12 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": 600000, "has_accommodation": false, "must_haves": ["Shymbulak", "Charyn Canyon"], "interests": [], "pace": null, "crowd_tolerance": null, "missing": [], "complete": false}, "changed": ["must_haves"]}
+
+event: text_delta
+data: {"text": "Added Charyn Canyon, about 4 hours by car. "}
+
+event: live_route
+data: {"stops": [{"ord": 1, "wish": "Shymbulak", "place": {"id": "1b000000-0000-4000-8000-000000000001", "name": "Shymbulak", "category": "mountain", "lat": 43.1286, "lon": 77.0807}, "alternatives": []}, {"ord": 2, "wish": "Charyn Canyon", "place": {"id": "1b000000-0000-4000-8000-000000000002", "name": "Charyn Canyon", "category": "nature", "lat": 43.35, "lon": 79.075}, "alternatives": []}], "legs": [{"from_ord": 1, "to_ord": 2, "mode": "car", "duration_s": 14400, "distance_m": 265000, "intercity": true, "price_kzt_min": 25000, "price_kzt_max": 40000}]}
+
+event: done
+data: {"message_id": 4, "usage": {"input_tokens": 10, "output_tokens": 20}}
+

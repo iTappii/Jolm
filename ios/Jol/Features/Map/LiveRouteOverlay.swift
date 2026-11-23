@@ -62,7 +62,9 @@ struct LiveRouteOverlay: View {
     }
 
     private func edgeText(_ edge: LiveEdge) -> String {
-        LiveRouteFormatting.duration(edge.leg.durationS, language: language)
+        edge.isIntercity
+            ? LiveRouteFormatting.intercityDuration(edge.leg.durationS, language: language)
+            : LiveRouteFormatting.duration(edge.leg.durationS, language: language)
     }
 
     private func resolve() -> Resolved {
@@ -78,13 +80,16 @@ struct LiveRouteOverlay: View {
         }
         let pins = Array(result.stopPoints.values)
         var placedCapsules: [CGRect] = []
-        for edge in route.edges where edge.leg.mode != nil {
+        for edge in route.edges where edge.leg.isLabelled {
             guard let from = projection.point(for: edge.from), let to = projection.point(for: edge.to) else { continue }
             result.edgePoints[edge.id] = (from, to)
             let size = LiveRouteLayout.capsuleSize(text: edgeText(edge))
-            let center = LiveRouteLayout.capsuleCenter(
-                from: from, to: to, offset: Self.labelOffset, size: size, avoiding: pins,
-                alternatives: Array(result.alternativePoints.values), otherCapsules: placedCapsules)
+            // A long intercity edge is an arc: its capsule rides on the middle of the curve.
+            let center = edge.isIntercity
+                ? LiveRouteGeometry.arc(from: from, to: to).middle
+                : LiveRouteLayout.capsuleCenter(
+                    from: from, to: to, offset: Self.labelOffset, size: size, avoiding: pins,
+                    alternatives: Array(result.alternativePoints.values), otherCapsules: placedCapsules)
             result.capsuleCenters[edge.id] = center
             let frame = LiveRouteLayout.rect(center: center, size: size)
             placedCapsules.append(frame)
@@ -109,7 +114,7 @@ struct LiveRouteOverlay: View {
         return ZStack(alignment: .topLeading) {
             ForEach(route.edges) { edge in
                 if let points = resolved.edgePoints[edge.id] {
-                    EdgeLine(from: points.0, to: points.1)
+                    EdgeLine(from: points.0, to: points.1, intercity: edge.isIntercity)
                         .transition(.opacity)
                 }
             }
@@ -225,9 +230,9 @@ struct LiveRouteOverlay: View {
 
     @ViewBuilder
     private func edgeLabel(_ edge: LiveEdge, center: CGPoint) -> some View {
-        if let mode = edge.leg.mode {
+        if edge.leg.isLabelled {
             HStack(spacing: 4) {
-                Image(systemName: LiveRouteFormatting.symbol(mode))
+                Image(systemName: LiveRouteFormatting.edgeSymbol(edge.leg.mode))
                     .imageScale(.small)
                 Text(verbatim: edgeText(edge))
             }
@@ -339,18 +344,27 @@ extension LiveRouteOverlay {
 private struct EdgeLine: View {
     let from: CGPoint
     let to: CGPoint
+    /// Between cities (Ш-62): a dashed arc instead of a straight line.
+    var intercity = false
     @State private var progress: CGFloat = 0
 
     var body: some View {
         let path = Path { path in
             path.move(to: from)
-            path.addLine(to: to)
+            if intercity {
+                path.addQuadCurve(to: to, control: LiveRouteGeometry.arc(from: from, to: to).control)
+            } else {
+                path.addLine(to: to)
+            }
         }
         ZStack {
             path.trim(from: 0, to: progress)
                 .stroke(Color.white, style: StrokeStyle(lineWidth: 7, lineCap: .round))
             path.trim(from: 0, to: progress)
-                .stroke(JolColor.brand, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .stroke(
+                    JolColor.brand,
+                    style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: intercity ? [9, 7] : [])
+                )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)

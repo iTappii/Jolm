@@ -28,6 +28,8 @@ enum ChatStub {
     private nonisolated(unsafe) static var failedOnce: Set<String> = []
     private nonisolated(unsafe) static var proposalStatus = "pending"
     private nonisolated(unsafe) static var liveTurn = 0
+    /// Ш-62: the owner's intercity scenario (`chat-icity-N`) instead of the Almaty one (`chat-live-N`).
+    private nonisolated(unsafe) static var intercity = false
     /// Ш-64: the live route is built "in the background": after a live turn it reaches the events stream a moment
     /// later (`liveReadyAt`); `publishedTurn` is the turn whose route the events stream has delivered.
     private nonisolated(unsafe) static var liveReadyAt: Date?
@@ -48,6 +50,7 @@ enum ChatStub {
     /// `-JolDemo`: plain phrases instead of the `live1`…`live4` tags.
     private static func demoTurn(_ lowered: String) -> Int? {
         guard UITestSupport.isDemo else { return nil }
+
         if lowered.contains("chinese") { return 1 }
         if lowered.contains("president") { return 2 }
         if lowered.contains("bazaar") { return 3 }
@@ -101,6 +104,9 @@ enum ChatStub {
     }
 
     private static func tripAnswer(method: String, path: String, body: [String: Any]) -> Answer {
+        if method == "GET", path == "/v1/trips/\(IntercityStub.tripID)" {
+            return Answer(body: IntercityStub.json(id: IntercityStub.tripID))
+        }
         if let answer = TripStub.answer(method: method, path: path, body: body, tripIDs: [tripID, oldTripID]) {
             return answer
         }
@@ -129,9 +135,25 @@ enum ChatStub {
         if lowered.contains("full") { return error(409, "chat_full", "This chat is full.") }
         if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
         if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
+        // Intercity scenario (Ш-62): "icity1" … "icity5"; the demo phrases pick the same turns.
+        let demoStep = UITestSupport.isDemo ? IntercityStub.demoTurn(lowered, underway: intercity) : nil
+        for turn in 1...5 where lowered.contains("icity\(turn)") || demoStep == turn {
+            sent.append(text)
+            intercity = true
+            liveTurn = turn
+            if turn == 5 {
+                tripBuilt = true
+                publishedTurn = 0
+                liveReadyAt = nil
+                return stream("chat-icity-5")
+            }
+            liveReadyAt = Date().addingTimeInterval(buildDelay)
+            return backgroundLive(stream("chat-icity-\(turn)"))
+        }
         // Live route (Ш-54): "live2" replays the second turn of the recorded live dialog.
         for turn in 1...4 where lowered.contains("live\(turn)") || demoTurn(lowered) == turn {
             sent.append(text)
+            intercity = false
             liveTurn = turn
             if turn == 4 {
                 tripBuilt = true
@@ -150,32 +172,6 @@ enum ChatStub {
         sent.append(text)
         tripBuilt = true
         return stream("chat-trip")
-    }
-
-    // MARK: - Background live route (Ш-64)
-
-    /// The recorded turn as the server now sends it: the `live_route` chunk is not in the message stream any more;
-    /// `live_route_status building` follows the brief, and the text comes right after.
-    private static func backgroundLive(_ answer: Answer) -> Answer {
-        var out = answer
-        out.chunks = []
-        var inserted = false
-        for chunk in answer.chunks where !chunk.hasPrefix("event: live_route") {
-            if !inserted, chunk.hasPrefix("event: text_delta") || chunk.hasPrefix("event: done") {
-                out.chunks.append(statusChunk("building"))
-                inserted = true
-            }
-            out.chunks.append(chunk)
-            if !inserted, chunk.hasPrefix("event: brief_updated") {
-                out.chunks.append(statusChunk("building"))
-                inserted = true
-            }
-        }
-        return out
-    }
-
-    private static func statusChunk(_ state: String) -> String {
-        "event: live_route_status\ndata: {\"state\": \"\(state)\"}\n\n"
     }
 
     /// What the events stream sends next, given the last (published turn, building) pair this connection sent.
@@ -229,8 +225,8 @@ enum ChatStub {
 
     private static func liveJSON(turn: Int? = nil) -> String? {
         let liveTurn = turn ?? liveTurn
-        guard liveTurn >= 1, liveTurn <= 3 else { return nil }
-        let chunks = fixture("chat-live-\(liveTurn)").components(separatedBy: "\n\n")
+        guard liveTurn >= 1, liveTurn <= (intercity ? 4 : 3) else { return nil }
+        let chunks = fixture("\(intercity ? "chat-icity" : "chat-live")-\(liveTurn)").components(separatedBy: "\n\n")
         guard let chunk = chunks.first(where: { $0.hasPrefix("event: live_route") }),
               let range = chunk.range(of: "data: ") else { return nil }
         let json = String(chunk[range.upperBound...])

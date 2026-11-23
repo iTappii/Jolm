@@ -72,9 +72,11 @@ struct TripLeg: Decodable, Equatable, Identifiable, Sendable {
     let chosenModeRaw: String?
     let costKzt: Int?
     let options: [DirectionOption]
+    /// Set when the leg joins two cities (Ш-62, SSOT §5.4): then `travelS` is the whole transfer.
+    let intercity: IntercityInfo?
 
     enum CodingKeys: String, CodingKey {
-        case id, estimated, options
+        case id, estimated, options, intercity
         case fromItemID = "from_item_id"
         case toItemID = "to_item_id"
         case departAt = "depart_at"
@@ -93,6 +95,7 @@ struct TripLeg: Decodable, Equatable, Identifiable, Sendable {
         estimated = try values.decodeIfPresent(Bool.self, forKey: .estimated)
         chosenModeRaw = try values.decodeIfPresent(String.self, forKey: .chosenModeRaw)
         costKzt = try values.decodeIfPresent(Int.self, forKey: .costKzt)
+        intercity = try? values.decodeIfPresent(IntercityInfo.self, forKey: .intercity)
         // One option with a mode this app does not know must not hide the whole plan.
         options = (try values.decodeIfPresent([Lossy<DirectionOption>].self, forKey: .options) ?? [])
             .compactMap(\.value)
@@ -130,20 +133,38 @@ struct Lossy<Value: Decodable>: Decodable {
 }
 
 struct TripDay: Decodable, Equatable, Identifiable, Sendable {
+    /// `regular`, or `transfer` — a day spent mostly getting to another city (Ш-62). An unknown kind is regular.
+    enum Kind: String, Sendable {
+        case regular, transfer
+    }
+
     let date: String
     var items: [TripDayItem]
     var legs: [TripLeg]
+    let kind: Kind
+    /// Where the night of this day is spent (Ш-62); `nil` when the plan says nothing.
+    let overnight: TripOvernight?
 
     var id: String { date }
 
-    enum CodingKeys: String, CodingKey { case date, items, legs }
+    enum CodingKeys: String, CodingKey { case date, items, legs, kind, overnight }
 
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         date = try values.decode(String.self, forKey: .date)
         items = try values.decodeIfPresent([TripDayItem].self, forKey: .items) ?? []
         legs = try values.decodeIfPresent([TripLeg].self, forKey: .legs) ?? []
+        kind = (try? values.decodeIfPresent(String.self, forKey: .kind)).flatMap(Kind.init(rawValue:)) ?? .regular
+        overnight = try? values.decodeIfPresent(TripOvernight.self, forKey: .overnight)
     }
+
+    var isTransfer: Bool { kind == .transfer }
+
+    /// The leg between two cities, if the day has one.
+    var intercityLeg: TripLeg? { legs.first { $0.intercity != nil } }
+
+    /// The city a transfer day goes to: the leg's, else the overnight city.
+    var destinationCity: CityName? { intercityLeg?.intercity?.toCity ?? overnight?.city }
 
     /// The leg that arrives at `item` (the first stop of a day has none).
     func leg(to item: TripDayItem) -> TripLeg? { legs.first { $0.toItemID == item.id } }
@@ -397,102 +418,4 @@ struct TripSummary: Decodable, Equatable, Identifiable, Sendable {
 
 struct TripSummaries: Decodable, Sendable {
     let items: [TripSummary]
-}
-
-// MARK: - Edit answers
-
-/// `POST /v1/trips/{id}/legs/{leg_id}/mode`.
-struct LegModeChange: Decodable, Equatable, Sendable {
-    let version: Int
-    let leg: TripLeg
-    let lateByS: Int?
-    let changedDays: [String]
-    let budget: RouteBudget?
-
-    enum CodingKeys: String, CodingKey {
-        case version, leg, budget
-        case lateByS = "late_by_s"
-        case changedDays = "changed_days"
-    }
-}
-
-/// `POST /v1/trips/{id}/budget-choice`: the new stored budget block; the plan itself is re-read.
-struct BudgetChoiceResult: Decodable, Equatable, Sendable {
-    let version: Int
-}
-
-/// A stop that no longer fits after a removal.
-struct DroppedStop: Decodable, Equatable, Sendable {
-    let mustHave: Bool?
-
-    enum CodingKeys: String, CodingKey { case mustHave = "must_have" }
-}
-
-/// `POST /v1/trips/{id}/items/{item_id}/remove`.
-struct ItemRemoval: Decodable, Equatable, Sendable {
-    let version: Int
-    let changedDays: [String]
-    let dropped: [DroppedStop]
-
-    enum CodingKeys: String, CodingKey {
-        case version, dropped
-        case changedDays = "changed_days"
-    }
-
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 0
-        changedDays = try values.decodeIfPresent([String].self, forKey: .changedDays) ?? []
-        dropped = try values.decodeIfPresent([DroppedStop].self, forKey: .dropped) ?? []
-    }
-}
-
-// MARK: - Replacing a stop (Ш-55)
-
-/// A place the stop can be swapped for: `GET /v1/trips/{id}/items/{item_id}/alternatives` (up to 5, nearby, similar,
-/// not yet in the trip).
-struct TripAlternative: Decodable, Equatable, Identifiable, Sendable {
-    let id: UUID
-    let name: String
-    let category: String?
-    let categoryName: String?
-    let lat: Double
-    let lon: Double
-    let priceKzt: Int?
-    let distanceM: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case id, name, category, lat, lon
-        case categoryName = "category_name"
-        case priceKzt = "price_kzt"
-        case distanceM = "distance_m"
-    }
-}
-
-struct TripAlternatives: Decodable, Equatable, Sendable {
-    let items: [TripAlternative]
-
-    init(from decoder: Decoder) throws {
-        let values = try decoder.container(keyedBy: CodingKeys.self)
-        items = (try values.decodeIfPresent([Lossy<TripAlternative>].self, forKey: .items) ?? []).compactMap(\.value)
-    }
-
-    enum CodingKeys: String, CodingKey { case items }
-}
-
-/// `POST /v1/trips/{id}/items/{item_id}/replace` body: exactly one of `place_id`, `category`, `query` (here the id).
-struct ItemReplacement: Encodable, Equatable, Sendable {
-    let placeID: UUID
-    let force: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case force
-        case placeID = "place_id"
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(placeID.uuidString.lowercased(), forKey: .placeID)
-        try container.encode(force, forKey: .force)
-    }
 }

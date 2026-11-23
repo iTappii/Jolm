@@ -1,0 +1,9 @@
+event: text_delta
+data: {"text": "Your trip is ready. "}
+
+event: route_ready
+data: {"trip_id": "99999999-9999-4999-8999-999999999999", "version": 1, "days": 5, "warnings": [], "must_have_unmet": [], "budget": {"budget_kzt": 600000, "status": "ok", "total_kzt": 410000, "remaining_kzt": 190000, "shortfall_kzt": 0}}
+
+event: done
+data: {"message_id": 10, "usage": {"input_tokens": 10, "output_tokens": 20}}
+

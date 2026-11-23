@@ -134,6 +134,13 @@ struct TripMapOverlay: View {
                     .accessibilityHidden(true)
                 Text("Day \(index + 1)").font(JolFont.callout.weight(.semibold))
                 Text(verbatim: TripFormatting.dayDate(day.date, locale: locale)).font(JolFont.caption)
+                if day.isTransfer {
+                    // A travel day (Ш-62): the way's icon, so it stands out in the strip.
+                    Image(systemName: IntercityFormatting.symbol(day.intercityLeg?.intercity?.mode))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(TripMapModel.dayColor(index)))
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, JolSpacing.md)
             .padding(.vertical, JolSpacing.sm)
@@ -146,6 +153,7 @@ struct TripMapOverlay: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(verbatim: IntercityFormatting.chipSpoken(day, language: container.language.code)))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier("trip-day-chip-\(index + 1)")
     }
