@@ -28,6 +28,12 @@ struct ChatService: Sendable {
         api.stream(try Endpoint.post("v1/chats/\(Self.path(chatID))/messages", json: ["content": text]))
     }
 
+    /// `GET /v1/chats/{id}/events` (Ш-64): a long-lived stream with the live route and its build status — first a
+    /// snapshot, then every change, also those of a build that finished after the answer.
+    func events(chatID: UUID) -> AsyncThrowingStream<SSEEvent, Error> {
+        api.stream(.get("v1/chats/\(Self.path(chatID))/events"))
+    }
+
     /// An alternative becomes the stop (Ш-54); the answer is the whole live route again.
     func chooseLiveStop(chatID: UUID, ord: Int, placeID: UUID) async throws -> LiveRoute {
         try await api.send(Endpoint.post(

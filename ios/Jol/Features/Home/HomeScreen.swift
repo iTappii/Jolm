@@ -54,6 +54,9 @@ struct HomeScreen: View {
                         onDismissError: { container.chat.dismissLiveRouteError() }
                     )
                 }
+                if container.chat.isBuildingRoute || container.chat.routeBuildFailed {
+                    StandaloneBuildBadge(chat: container.chat)
+                }
                 overlay
                 attributionLine
             }

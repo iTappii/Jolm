@@ -18,7 +18,9 @@ struct RootView: View {
             .onChange(of: container.language.code) { _, _ in
                 Task { await container.devices.register() }
             }
+            .task(id: container.auth.isSignedIn) { syncChatEvents() }
             .onChange(of: scenePhase) { _, phase in
+                syncChatEvents()
                 if phase == .active { Task { await container.devices.retryIfNeeded() } }
                 // Ш-50: what is queued leaves when the app is put away (and again when it comes back).
                 Task { await container.analytics.flush() }
@@ -34,6 +36,11 @@ struct RootView: View {
                     Task { await container.devices.requestPermissionAfterFirstTrip() }
                 }
             }
+    }
+
+    /// Ш-64: the chat's events stream runs only for a signed-in person while the app is in front.
+    private func syncChatEvents() {
+        container.chat.setEventsEnabled(container.auth.isSignedIn && scenePhase == .active)
     }
 
     @ViewBuilder

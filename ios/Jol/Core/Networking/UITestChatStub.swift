@@ -28,6 +28,17 @@ enum ChatStub {
     private nonisolated(unsafe) static var failedOnce: Set<String> = []
     private nonisolated(unsafe) static var proposalStatus = "pending"
     private nonisolated(unsafe) static var liveTurn = 0
+    /// Ш-64: the live route is built "in the background": after a live turn it reaches the events stream a moment
+    /// later (`liveReadyAt`); `publishedTurn` is the turn whose route the events stream has delivered.
+    private nonisolated(unsafe) static var liveReadyAt: Date?
+    private nonisolated(unsafe) static var publishedTurn = 0
+    /// ~1.6 s like a quick server; `-JolStubBuildDelay <seconds>` stretches it so a UI test can look at the indicator.
+    static var buildDelay: TimeInterval {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "-JolStubBuildDelay"), index + 1 < args.count,
+              let seconds = TimeInterval(args[index + 1]) else { return 1.6 }
+        return seconds
+    }
     /// Stop `ord` → id of the alternative the tester chose for it.
     private nonisolated(unsafe) static var liveChoices: [Int: String] = [:]
 
@@ -60,6 +71,8 @@ enum ChatStub {
         var body = ""
         /// Event chunks to replay one by one (SSE); empty for a plain body.
         var chunks: [String] = []
+        /// `GET /v1/chats/{id}/events` (Ш-64): a long-lived stream driven by `eventsStep`.
+        var isEvents = false
     }
 
     static func answer(method: String, path: String, signedIn: Bool, body: [String: Any]) -> Answer {
@@ -76,6 +89,8 @@ enum ChatStub {
             return Answer(body: oldChatDetail())
         case ("GET", "/v1/chats/\(chatID)"):
             return Answer(body: newChatDetail())
+        case ("GET", "/v1/chats/\(chatID)/events"):
+            return Answer(headers: ["Content-Type": "text/event-stream"], isEvents: true)
         case ("POST", "/v1/chats/\(chatID)/messages"):
             return message((body["content"] as? String) ?? "")
         case ("POST", "/v1/chats/\(chatID)/live-route/choose"):
@@ -118,8 +133,14 @@ enum ChatStub {
         for turn in 1...4 where lowered.contains("live\(turn)") || demoTurn(lowered) == turn {
             sent.append(text)
             liveTurn = turn
-            if turn == 4 { tripBuilt = true }
-            return stream("chat-live-\(turn)")
+            if turn == 4 {
+                tripBuilt = true
+                publishedTurn = 0
+                liveReadyAt = nil
+                return stream("chat-live-4")
+            }
+            liveReadyAt = Date().addingTimeInterval(buildDelay)
+            return backgroundLive(stream("chat-live-\(turn)"))
         }
         // Chain dialog (Ш-32b): "#dlg3 …" replays the third turn of the recorded dialog.
         for turn in 0...7 where lowered.contains("#dlg\(turn)") {
@@ -129,6 +150,47 @@ enum ChatStub {
         sent.append(text)
         tripBuilt = true
         return stream("chat-trip")
+    }
+
+    // MARK: - Background live route (Ш-64)
+
+    /// The recorded turn as the server now sends it: the `live_route` chunk is not in the message stream any more;
+    /// `live_route_status building` follows the brief, and the text comes right after.
+    private static func backgroundLive(_ answer: Answer) -> Answer {
+        var out = answer
+        out.chunks = []
+        var inserted = false
+        for chunk in answer.chunks where !chunk.hasPrefix("event: live_route") {
+            if !inserted, chunk.hasPrefix("event: text_delta") || chunk.hasPrefix("event: done") {
+                out.chunks.append(statusChunk("building"))
+                inserted = true
+            }
+            out.chunks.append(chunk)
+            if !inserted, chunk.hasPrefix("event: brief_updated") {
+                out.chunks.append(statusChunk("building"))
+                inserted = true
+            }
+        }
+        return out
+    }
+
+    private static func statusChunk(_ state: String) -> String {
+        "event: live_route_status\ndata: {\"state\": \"\(state)\"}\n\n"
+    }
+
+    /// What the events stream sends next, given the last (published turn, building) pair this connection sent.
+    /// The first call is the snapshot; later ones deliver the finished build.
+    static func eventsStep(last: [Int]?) -> (chunks: [String], key: [Int]) {
+        lock.lock(); defer { lock.unlock() }
+        if let at = liveReadyAt, Date() >= at {
+            publishedTurn = liveTurn
+            liveReadyAt = nil
+        }
+        let building = liveReadyAt != nil
+        let key = [publishedTurn, building ? 1 : 0]
+        guard key != last else { return ([], key) }
+        let route = liveJSON(turn: publishedTurn) ?? "{\"stops\": [], \"legs\": []}"
+        return (["event: live_route\ndata: \(route)\n\n", statusChunk(building ? "building" : "ready")], key)
     }
 
     private static func stream(_ name: String) -> Answer {
@@ -165,7 +227,8 @@ enum ChatStub {
         return String(bytes: data, encoding: .utf8)
     }
 
-    private static func liveJSON() -> String? {
+    private static func liveJSON(turn: Int? = nil) -> String? {
+        let liveTurn = turn ?? liveTurn
         guard liveTurn >= 1, liveTurn <= 3 else { return nil }
         let chunks = fixture("chat-live-\(liveTurn)").components(separatedBy: "\n\n")
         guard let chunk = chunks.first(where: { $0.hasPrefix("event: live_route") }),
@@ -257,6 +320,24 @@ extension FixtureURLProtocol {
             headerFields: answer.headers
         )!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        if answer.isEvents {
+            DispatchQueue.global().async { [self] in
+                var last: [Int]?
+                var quiet = 0.0
+                while !stopped {
+                    let step = ChatStub.eventsStep(last: last)
+                    last = step.key
+                    for chunk in step.chunks { client?.urlProtocol(self, didLoad: Data(chunk.utf8)) }
+                    quiet = step.chunks.isEmpty ? quiet + 0.1 : 0
+                    if quiet >= 15 {
+                        client?.urlProtocol(self, didLoad: Data(": keepalive\n\n".utf8))
+                        quiet = 0
+                    }
+                    Thread.sleep(forTimeInterval: 0.1)
+                }
+            }
+            return
+        }
         if answer.chunks.isEmpty {
             client?.urlProtocol(self, didLoad: Data(answer.body.utf8))
             client?.urlProtocolDidFinishLoading(self)

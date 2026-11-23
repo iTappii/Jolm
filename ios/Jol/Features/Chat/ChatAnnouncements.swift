@@ -3,7 +3,8 @@ import SwiftUI
 /// VoiceOver announcements for what changes on screen while the person is talking to the chat (Ш-52): a new node of
 /// the answer chain, a new stop of the live route, the finished route. The chat card and the map are not in the
 /// focus when the answer arrives, so without this a VoiceOver user would not learn that the plan grew.
-/// Only live changes are announced (`isStreaming`): opening a saved chat shows everything at once and stays silent.
+/// Only live changes are announced (streaming, or a Ш-64 background update): opening a saved chat shows
+/// everything at once and stays silent.
 struct ChatAnnouncements: ViewModifier {
     let chat: ChatModel
     let language: String
@@ -17,7 +18,9 @@ struct ChatAnnouncements: ViewModifier {
                 post(ChainLabels.spoken(node, index: new - 1, brief: chat.state.brief ?? ChatBrief(), locale: locale))
             }
             .onChange(of: chat.state.liveRoute?.stops.count ?? 0) { old, new in
-                guard chat.isStreaming, new > old, let route = chat.state.liveRoute, let stop = route.stops.last else {
+                // A route that grew while the person talks, or one the background build delivered after the answer.
+                let live = chat.isStreaming || chat.backgroundLiveVersion == chat.state.liveVersion
+                guard live, new > old, let route = chat.state.liveRoute, let stop = route.stops.last else {
                     return
                 }
                 post(LiveRouteFormatting.spokenStop(number: new, name: stop.place.name, language: language))

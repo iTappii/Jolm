@@ -26,7 +26,15 @@ final class ChatModel {
     private(set) var isChoosing = false
     private(set) var liveRouteError: LiveRouteError?
 
+    /// Ш-64: bumped when the background events stream changed the live route, so VoiceOver announces it.
+    private(set) var backgroundLiveVersion = 0
+    /// Ш-64: the build failed; a short non-blocking sentence until the next message.
+    private(set) var routeBuildFailed = false
+
     @ObservationIgnored private let service: ChatService
+    @ObservationIgnored private let sleeper: @Sendable (Duration) async throws -> Void
+    @ObservationIgnored private var eventsTask: Task<Void, Never>?
+    @ObservationIgnored private var eventsEnabled = false
     @ObservationIgnored private let language: @MainActor () -> String
     @ObservationIgnored private var streamTask: Task<Void, Never>?
     @ObservationIgnored private var recentTask: Task<Void, Never>?
@@ -36,12 +44,19 @@ final class ChatModel {
     /// Bumped on every reset / reopen, so a late answer of an older chat is dropped.
     @ObservationIgnored private var generation = 0
 
-    init(api: APIClient, language: @escaping @MainActor () -> String = { "en" }) {
+    init(
+        api: APIClient,
+        language: @escaping @MainActor () -> String = { "en" },
+        sleeper: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) {
         self.service = ChatService(api: api)
         self.language = language
+        self.sleeper = sleeper
     }
 
     var isStreaming: Bool { state.isStreaming }
+    /// The live route is being built in the background; typing is not blocked by it.
+    var isBuildingRoute: Bool { state.isBuildingRoute }
     var isGuestTranscript: Bool { chatID == nil && transcriptIsGuest && !state.messages.isEmpty }
 
     // MARK: - Intent
@@ -68,6 +83,7 @@ final class ChatModel {
         guard !text.isEmpty, !state.isStreaming, !isOpening else { return }
         if signedIn, isGuestTranscript { reset() }  // the guest talk does not move into the saved chat
         transcriptIsGuest = !signedIn
+        routeBuildFailed = false
         state.appendUserMessage(text)
         run(text: text, signedIn: signedIn)
     }
@@ -127,6 +143,7 @@ final class ChatModel {
             let chat = try await service.createChat(locale: language())
             try Task.checkCancellation()
             chatID = chat.id
+            startEvents()
         }
         guard let chatID else { throw APIError.invalidResponse }
         return try service.send(chatID: chatID, text: text)
@@ -144,6 +161,8 @@ final class ChatModel {
         case .tripUpdated(let update):
             tripID = update.tripID
             loadTrip()
+        case .liveRouteStatus(let status):
+            routeBuildFailed = status == .failed
         default:
             break
         }
@@ -172,7 +191,10 @@ final class ChatModel {
         generation += 1
         streamTask?.cancel()
         tripTask?.cancel()
+        eventsTask?.cancel()
+        eventsTask = nil
         streamTask = nil
+        routeBuildFailed = false
         state = ChatState()
         chatID = nil
         tripID = nil
@@ -202,6 +224,7 @@ final class ChatModel {
                 tripID = loaded.tripID
                 isOpening = false
                 if tripID != nil { loadTrip() }
+                startEvents()
             } catch {
                 guard generation == self.generation, !Task.isCancelled else { return }
                 isOpening = false
@@ -248,6 +271,7 @@ final class ChatModel {
             next.mapVersion = state.mapVersion
             next.liveRoute = state.liveRoute
             next.liveVersion = state.liveVersion
+            next.liveStatus = state.liveStatus
             if let route = state.route, next.route == nil || next.route?.tripID == route.tripID { next.route = route }
             state = next
             if let id = loaded.tripID { tripID = id }
@@ -265,6 +289,73 @@ enum LiveRouteError: Equatable, Sendable {
 }
 
 extension ChatModel {
+    // MARK: - Events stream (Ш-64)
+
+    /// Delay before reconnect attempt `attempt` (0-based): 1, 2, 5, then 10 seconds.
+    nonisolated static func backoff(attempt: Int) -> Duration {
+        let steps: [Int] = [1, 2, 5, 10]
+        return .seconds(steps[min(max(attempt, 0), steps.count - 1)])
+    }
+
+    /// The events stream runs while a saved chat is open, the app is active and the person is signed in. Switching
+    /// it off (background, sign-out) stops it; on again it reconnects and the snapshot brings the state up to date.
+    func setEventsEnabled(_ enabled: Bool) {
+        guard enabled != eventsEnabled else { return }
+        eventsEnabled = enabled
+        if enabled { startEvents() } else {
+            eventsTask?.cancel()
+            eventsTask = nil
+        }
+    }
+
+    var isEventsRunning: Bool { eventsTask != nil }
+
+    private func startEvents() {
+        eventsTask?.cancel()
+        eventsTask = nil
+        guard eventsEnabled, let chatID else { return }
+        let generation = generation
+        eventsTask = Task { [weak self] in
+            var attempt = 0
+            while !Task.isCancelled {
+                guard let self, generation == self.generation else { return }
+                var gotEvent = false
+                do {
+                    for try await raw in service.events(chatID: chatID) {
+                        guard generation == self.generation else { return }
+                        gotEvent = true
+                        applyBackground(ChatEvent(raw))
+                    }
+                } catch {
+                    if Task.isCancelled { return }
+                }
+                if Task.isCancelled { return }
+                if gotEvent { attempt = 0 }
+                let delay = Self.backoff(attempt: attempt)
+                attempt += 1
+                do { try await sleeper(delay) } catch { return }
+            }
+        }
+    }
+
+    /// An event of the events stream: the live route and its status. Idempotent — a snapshot of what the screen
+    /// already shows changes nothing (`setLiveRoute` ignores an equal route), so nothing is announced or refitted.
+    func applyBackground(_ event: ChatEvent) {
+        switch event {
+        case .liveRoute(let live):
+            // The finished plan owns the map; a stored live route must not bring the pins back.
+            guard !state.isConverged else { return }
+            let before = state.liveVersion
+            state.apply(.liveRoute(live))
+            if state.liveVersion != before { backgroundLiveVersion = state.liveVersion }
+        case .liveRouteStatus(let status):
+            state.apply(event)
+            routeBuildFailed = status == .failed
+        default:
+            break
+        }
+    }
+
     // MARK: - Live route (Ш-54)
 
     /// «Choose this instead»: the alternative `placeID` replaces stop `ord`. The answer is the whole route again.
@@ -295,6 +386,10 @@ extension ChatModel {
             }
             if generation == self.generation { isChoosing = false }
         }
+    }
+
+    func dismissRouteBuildFailure() {
+        routeBuildFailed = false
     }
 
     func dismissLiveRouteError() {

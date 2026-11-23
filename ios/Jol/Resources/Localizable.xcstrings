@@ -569,6 +569,16 @@
         }
       }
     },
+    "Building route…" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Строю маршрут…"
+          }
+        }
+      }
+    },
     "Bus" : {
       "localizations" : {
         "ru" : {
@@ -971,6 +981,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Не удалось построить маршрут."
+          }
+        }
+      }
+    },
+    "Couldn't build the route. I'll try again with your next message." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось построить путь, попробую ещё раз при следующем сообщении"
           }
         }
       }
