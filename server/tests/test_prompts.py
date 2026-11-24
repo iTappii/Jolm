@@ -23,9 +23,9 @@ def test_unknown_locale_falls_back_to_english_and_unknown_prompt_fails():
 
 
 def test_versions_are_listed_and_latest_is_loaded():
-    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4, 5]
+    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4, 5, 6]
     assert prompts.load_prompt(prompts.GUEST, "en", version=1).version == 1
-    assert prompts.load_prompt(prompts.GUEST, "en").version == 5
+    assert prompts.load_prompt(prompts.GUEST, "en").version == 6
 
 
 def test_render_fills_today():
@@ -89,11 +89,13 @@ BOUNDARY_WORDS = {
 }  # fmt: skip
 
 
-def test_prompt_v9_and_v5_carry_the_boundaries_and_are_the_ones_in_use():
+def test_prompt_v9_and_v5_carry_the_boundaries_and_the_latest_keep_them():
     for name, version, previous in ((prompts.TRIP_BRIEF, 9, 8), (prompts.GUEST, 5, 4)):
         for locale in ("en", "ru"):
-            latest = prompts.load_prompt(name, locale)
-            assert latest.version == version  # the app loads the highest version (see deps/api)
+            latest = prompts.load_prompt(name, locale, version=version)
+            assert prompts.load_prompt(name, locale).version > version  # Ш-67 built on it
+            for word in BOUNDARY_WORDS[locale]:
+                assert word in prompts.load_prompt(name, locale).text, (name, locale, word)
             for word in BOUNDARY_WORDS[locale]:
                 assert word in latest.text, (name, locale, word)
             old = prompts.load_prompt(name, locale, version=previous).text
@@ -124,3 +126,12 @@ async def test_the_chats_use_the_latest_prompts(chat_env, conn):
     )
     assert guest.status_code == 200
     assert "Рамки" in llm.calls[-1].system
+
+
+def test_latest_prompts_tell_the_model_search_understands_dishes():  # Ш-67
+    for name, version in ((prompts.TRIP_BRIEF, 10), (prompts.GUEST, 6)):
+        for locale in ("en", "ru"):
+            latest = prompts.load_prompt(name, locale)
+            assert latest.version == version
+            assert "near" in latest.text and "matched" in latest.text
+            assert "matched" not in prompts.load_prompt(name, locale, version=version - 1).text

@@ -81,6 +81,9 @@ async def list_places(
         "category": category or None,
         "q": None,
         "pattern": None,
+        "near_lat": None,
+        "near_lon": None,
+        "radius_m": 0,
         "limit": limit,
     }
     if bbox is not None:

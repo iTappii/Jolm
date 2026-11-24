@@ -9,7 +9,7 @@ from app.chat.brief import BriefUpdate
 from app.db import fetch_all
 from app.events import service as events_service
 from app.live import clock
-from app.places import service, sql
+from app.places import dishes, service, sql
 from app.planner import candidates, outside
 from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
@@ -23,12 +23,23 @@ SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
 MAX_NODE_CHARS = 80
+NEAR_RADIUS_M = 3000
+DISH_NOTE = (
+    "matched by the cuisine of the dish: say these places 'most likely serve' it (cuisine/"
+    "category), unless a place has match 'menu' (its menu lists the dish) or 'name'"
+)
+NEAR_NOT_FOUND_NOTE = "could not locate the `near` place: results are not limited to its area"
 OUTSIDE_NOTE = "a place Jol has no data for yet: it cannot be planned in this version"
 
 
 class SearchPlacesArgs(BaseModel):
     query: Optional[str] = Field(None, max_length=100, description="Part of a place name")
     category: Optional[str] = Field(None, max_length=64, description="Category slug")
+    near: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Name of a place or landmark the results must be close to (about 3 km)",
+    )
     limit: int = Field(5, ge=1, le=MAX_SEARCH_LIMIT)
     show_on_map: bool = Field(
         False, description="Registered chat only: pin the results on the user's map as chosen"
@@ -57,7 +68,10 @@ class NoArgs(BaseModel):
 
 SEARCH_PLACES_SPEC = ToolSpec.from_model(
     SEARCH_PLACES,
-    "Search the places database of the trip region by name part and/or category. Use it to answer "
+    "Search the places database of the trip region by name part and/or category. The query may "
+    "also be a dish (beshbarmak, plov, sushi, dim sum...): the search then returns places of "
+    "the matching cuisine and says which cuisine it matched. `near` limits the results to a "
+    "place or landmark's area. Use it to answer "
     "questions about real places; never invent places, prices or hours. Places anywhere in "
     "Kazakhstan come back as places (a far one also has a far block); a well-known place Jol has "
     "no data for comes back as outside_area instead.",
@@ -128,6 +142,21 @@ async def search_places(
         pin = place_pin(row, locale)
         found = dict(pin, kind=known.kind, popularity=known.popularity, is_partner=False)
         return {"places": [found], "far": far.as_json(locale)}, [pin]
+    near_point, near_missing = None, False
+    near_name = " ".join((args.near or "").split())
+    if len(near_name) >= 2:
+        near_point = await _locate(db, near_name)
+        near_missing = near_point is None
+    if query and not category:
+        async with db.transaction() as conn:
+            dish = await dishes.resolve(conn, query)
+            dish_rows = (
+                await dishes.search(conn, dish, args.limit, near_point, NEAR_RADIUS_M)
+                if dish
+                else []
+            )
+        if dish_rows:
+            return _dish_result(dish, dish_rows, locale, near_point, near_missing)
     params = {
         "bbox": False,
         "west": None,
@@ -137,6 +166,9 @@ async def search_places(
         "category": category,
         "q": query or None,
         "pattern": service.like_pattern(query) if query else None,
+        "near_lat": near_point["lat"] if near_point else None,
+        "near_lon": near_point["lon"] if near_point else None,
+        "radius_m": NEAR_RADIUS_M,
         "limit": args.limit,
     }
     async with db.transaction() as conn:
@@ -147,8 +179,66 @@ async def search_places(
         for pin, row in zip(pins, rows)
     ]
     if not found:
-        return {"places": [], "note": "nothing found"}, []
-    return {"places": found}, pins
+        result = {"places": [], "note": "nothing found"}
+        if near_missing:
+            result["near_not_found"] = True
+        return result, []
+    return {"places": found, **({"note": NEAR_NOT_FOUND_NOTE} if near_missing else {})}, pins
+
+
+async def _locate(db, name: str) -> Optional[Dict[str, float]]:
+    """Coordinates of the best place by this name (a landmark to search near), or None."""
+    params = {
+        "bbox": False,
+        "west": None,
+        "south": None,
+        "east": None,
+        "north": None,
+        "category": None,
+        "q": name,
+        "pattern": service.like_pattern(name),
+        "near_lat": None,
+        "near_lon": None,
+        "radius_m": NEAR_RADIUS_M,
+        "limit": 1,
+    }
+    async with db.transaction() as conn:
+        rows = await fetch_all(conn, sql.PLACES_SEARCH, params)
+    return {"lat": rows[0]["lat"], "lon": rows[0]["lon"]} if rows else None
+
+
+def _dish_result(
+    dish: Dict[str, Any],
+    rows: List[Dict[str, Any]],
+    locale: str,
+    near_point: Optional[Dict[str, float]],
+    near_missing: bool,
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    pins = [place_pin(row, locale) for row in rows]
+    found = []
+    for pin, row in zip(pins, rows):
+        item = dict(
+            pin,
+            kind=row["kind"],
+            popularity=row["popularity"],
+            is_partner=row["is_partner"],
+            match=dishes.MATCH_NAMES[row["tier"]],
+        )
+        if row["distance_m"] is not None:
+            item["distance_m"] = int(row["distance_m"])
+        found.append(item)
+    result: Dict[str, Any] = {
+        "places": found,
+        "matched": {
+            "dish": dish["name_ru"] if locale == "ru" else dish["name_en"],
+            "cuisines": list(dish["cuisines"]),
+        },
+        "note": DISH_NOTE,
+    }
+    if near_missing:
+        result["near_not_found"] = True
+        result["note"] += "; " + NEAR_NOT_FOUND_NOTE
+    return result, pins
 
 
 def event_for_model(item: Dict[str, Any]) -> Dict[str, Any]:

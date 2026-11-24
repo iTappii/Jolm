@@ -37,11 +37,17 @@ LEFT JOIN place_categories pc ON pc.id = c.parent_id
 WHERE p.status = 'active'
   AND (%(bbox)s::boolean IS FALSE
        OR p.geom && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s, 4326)::geography)
+  AND (%(near_lat)s::float8 IS NULL
+       OR ST_DWithin(p.geom, ST_SetSRID(ST_MakePoint(%(near_lon)s::float8,
+                     %(near_lat)s::float8), 4326)::geography, %(radius_m)s::float8))
   AND (%(category)s::text IS NULL OR c.slug = %(category)s::text OR pc.slug = %(category)s::text)
   AND (%(q)s::text IS NULL
        OR p.name_ru ILIKE %(pattern)s OR p.name_en ILIKE %(pattern)s OR p.name_kk ILIKE %(pattern)s
        OR %(q)s::text <%% p.name_ru OR %(q)s::text <%% p.name_en OR %(q)s::text <%% p.name_kk)
 ORDER BY
+  CASE WHEN %(near_lat)s::float8 IS NULL THEN 0
+       ELSE ST_Distance(p.geom, ST_SetSRID(ST_MakePoint(%(near_lon)s::float8,
+            %(near_lat)s::float8), 4326)::geography) END,
   CASE WHEN %(q)s::text IS NULL THEN 0
        ELSE -GREATEST(word_similarity(%(q)s::text, coalesce(p.name_ru, '')),
                       word_similarity(%(q)s::text, coalesce(p.name_en, '')),
