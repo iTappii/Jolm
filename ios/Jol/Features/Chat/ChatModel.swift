@@ -173,6 +173,8 @@ final class ChatModel {
         switch error {
         case .server(_, let code, _) where code == "chat_busy": return .busy
         case .server(_, let code, _) where code == "chat_full": return .full
+        case .server(_, let code, let message) where code == APIErrorBody.budgetExceededCode:
+            return .budgetExceeded(message: message)
         case .rateLimited(let retryAfter, _): return .rateLimited(retryAfter: retryAfter.map { Int($0.rounded(.up)) })
         case .server(_, _, let message) where !message.isEmpty: return .server(message: message)
         case .network: return .network

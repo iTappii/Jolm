@@ -8,12 +8,22 @@ enum ChatFailure: Equatable, Sendable {
     case full
     /// 429, with `Retry-After` seconds when the server sent them.
     case rateLimited(retryAfter: Int?)
+    /// 429 `llm_budget_exceeded` (Ш-66): the daily AI limit is used up; empty message → local text. No retry.
+    case budgetExceeded(message: String)
     /// An `error` event or an HTTP error that carries the server's own (localized) text.
     case server(message: String)
     case network
     case other
 
-    var canRetry: Bool { self != .full }
+    var canRetry: Bool {
+        switch self {
+        case .full, .budgetExceeded: false
+        default: true
+        }
+    }
+
+    /// Only "chat full" asks for a new chat; the daily limit offers nothing to press.
+    var offersNewChat: Bool { self == .full }
 }
 
 enum ProposalState: Equatable, Sendable {

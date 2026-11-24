@@ -157,6 +157,21 @@ final class ChatUITests: XCTestCase {
         XCTAssertTrue(element(app, "chat-route-card").exists)
     }
 
+    func testDailyAILimitShowsMessageWithoutRetryAndInputStaysUsable() {
+        let app = launch()
+        send(app, "budget please")
+        waitFor(app, "chat-error")
+        XCTAssertTrue(element(app, "chat-error").label.contains("today's AI message limit"),
+                      element(app, "chat-error").label)
+        XCTAssertFalse(app.buttons["chat-retry"].exists)
+        XCTAssertFalse(app.buttons["chat-full-new"].exists)
+        let input = element(app, "chat-input")
+        XCTAssertTrue(input.isHittable)
+        input.tap()
+        input.typeText("hello again")
+        XCTAssertTrue(element(app, "chat-send").isEnabled)
+    }
+
     func testChatBusyIsShownInlineAndRetryContinues() {
         let app = launch()
         send(app, "busy: plan 3 days")

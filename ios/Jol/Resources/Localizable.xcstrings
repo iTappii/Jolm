@@ -3849,12 +3849,12 @@
         }
       }
     },
-    "Too many messages. Try again in %lld s." : {
+    "Too many messages. Try again in %@." : {
       "localizations" : {
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Слишком много сообщений. Попробуйте через %lld с."
+            "value" : "Слишком много сообщений. Попробуйте через %@."
           }
         }
       }
@@ -4725,6 +4725,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Время и цена примерные."
+          }
+        }
+      }
+    },
+    "You've reached today's AI message limit. Try again tomorrow — the map and directions keep working." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит сообщений ИИ на сегодня исчерпан. Попробуйте завтра — карта и маршруты работают как обычно."
           }
         }
       }

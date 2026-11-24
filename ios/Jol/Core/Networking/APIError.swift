@@ -37,10 +37,15 @@ struct APIErrorBody: Decodable {
 
     let error: Payload
 
+    /// 429 code of the person's daily AI limit (Ш-66).
+    static let budgetExceededCode = "llm_budget_exceeded"
+
     /// Maps a non-2xx response; 429 keeps its `Retry-After` (seconds form only; HTTP-date is ignored).
     static func decode(response: HTTPURLResponse, data: Data) -> APIError {
         let error = decode(status: response.statusCode, data: data)
         guard response.statusCode == 429 else { return error }
+        // The daily AI limit is not a retry-in-a-moment case: keep its `code` (and no countdown).
+        if case .server(_, let code, _) = error, code == budgetExceededCode { return error }
         let retry = response.value(forHTTPHeaderField: "Retry-After").flatMap { TimeInterval($0) }
         return .rateLimited(retryAfter: retry.map { max(0, $0) }, message: error.serverMessage)
     }
