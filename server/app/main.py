@@ -27,6 +27,7 @@ from app.geocode.api import LIMIT_PER_MINUTE as GEOCODE_LIMIT
 from app.geocode.api import router as geocode_router
 from app.intercity.api import make_limiter as make_intercity_limiter
 from app.intercity.api import router as intercity_router
+from app.landmarks.api import router as landmarks_router
 from app.logging_setup import setup_logging
 from app.middleware import RequestIdMiddleware
 from app.places.api import router as places_router
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
     app.include_router(otp_router)
     app.include_router(apple_router)
     app.include_router(places_router)
+    app.include_router(landmarks_router)
     app.include_router(geocode_router)
     app.include_router(directions_router)
     app.include_router(intercity_router)

@@ -44,6 +44,7 @@ def main() -> int:
         conn.execute((HERE / "country_lodging.sql").read_text(encoding="utf-8"))
         conn.execute((HERE / "dishes.sql").read_text(encoding="utf-8"))  # Ш-67
         conn.execute((HERE / "country_planner.sql").read_text(encoding="utf-8"))
+        conn.execute((HERE / "landmarks.sql").read_text(encoding="utf-8"))  # Ш-69
     return 0
 
 
