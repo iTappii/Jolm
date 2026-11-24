@@ -1,9 +1,9 @@
 """Pure logic for places: localization fallback, open-now, bbox/query validation."""
 
-from datetime import datetime, time
+from datetime import datetime, time, tzinfo
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from app.regions import default_region
+from app.regions import all_regions, default_region
 
 # Max bbox span in degrees (protects the server: one region fits easily).
 MAX_BBOX_SPAN_DEG = 2.0
@@ -66,8 +66,18 @@ def _covers(opens: time, closes: time, t: time) -> bool:
     return t >= opens  # runs past midnight: today's part is [opens, 24:00)
 
 
+def region_tz(lat: float, lon: float) -> tzinfo:
+    """Time zone of the region covering the point (smallest box wins), else the default region."""
+    inside = [r for r in all_regions() if r.contains(lat, lon)]
+    if inside:
+        return min(inside, key=lambda r: (r.bbox[2] - r.bbox[0]) * (r.bbox[3] - r.bbox[1])).tz
+    return default_region().tz
+
+
 def is_open_now(
-    hours: List[Tuple[int, time, time]], now: Optional[datetime] = None
+    hours: List[Tuple[int, time, time]],
+    now: Optional[datetime] = None,
+    tz: Optional[tzinfo] = None,
 ) -> Optional[bool]:
     """Is the place open at `now` (default: current time in the region time zone)?
 
@@ -76,12 +86,13 @@ def is_open_now(
     """
     if not hours:
         return None
+    tz = tz or default_region().tz
     if now is None:
-        now = datetime.now(default_region().tz)
+        now = datetime.now(tz)
     elif now.tzinfo is None:
-        now = now.replace(tzinfo=default_region().tz)
+        now = now.replace(tzinfo=tz)
     else:
-        now = now.astimezone(default_region().tz)
+        now = now.astimezone(tz)
     today = now.weekday()
     yesterday = (today - 1) % 7
     t = now.time().replace(second=0, microsecond=0, tzinfo=None)
@@ -106,3 +117,35 @@ def group_hours(hours: List[Tuple[int, time, time]]) -> List[Dict]:
             {"opens": opens.strftime("%H:%M"), "closes": closes.strftime("%H:%M")}
         )
     return [{"weekday": d, "intervals": days[d]} for d in sorted(days)]
+
+
+def today_block(
+    hours: List[Tuple[int, time, time]], now: datetime, tz: Optional[tzinfo] = None
+) -> Optional[Dict]:
+    """Today's opening hours for the card (Ш-70), by the calendar day in the region time zone.
+
+    None when no hours are known. `opens` = first interval's start, `closes` = last interval's end
+    (a lunch break is not shown; closes <= opens means past midnight, "02:00" is the next night).
+    A day with no intervals: closed_today, opens/closes null (the place may still be open from
+    yesterday's past-midnight interval, then open_now is true). Round the clock: open_24h with
+    00:00-23:59.
+    """
+    if not hours:
+        return None
+    tz = tz or default_region().tz
+    local = now.astimezone(tz) if now.tzinfo else now.replace(tzinfo=tz)
+    today = sorted((o, c) for d, o, c in hours if d == local.weekday())
+    open_now = bool(is_open_now(hours, local, tz))
+    if not today:
+        return {
+            "opens": None, "closes": None, "open_now": open_now,
+            "open_24h": False, "closed_today": True,
+        }  # fmt: skip
+    round_clock = any(o == time(0, 0) and c == _ROUND_CLOCK_CLOSE for o, c in today)
+    return {
+        "opens": today[0][0].strftime("%H:%M"),
+        "closes": today[-1][1].strftime("%H:%M"),
+        "open_now": open_now,
+        "open_24h": round_clock,
+        "closed_today": False,
+    }

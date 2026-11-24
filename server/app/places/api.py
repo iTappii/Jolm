@@ -45,6 +45,22 @@ def _summary(row: dict, locale: str) -> dict:
     }
 
 
+def _rating(row: Optional[dict]) -> Optional[dict]:
+    if not row or not row["n"]:
+        return None
+    return {"average": round(float(row["avg"]), 1), "count": row["n"]}
+
+
+def _address(row: dict, locale: str) -> Optional[str]:
+    return service.pick_text(
+        row, "address", locale, ("ru", "en") if locale == "ru" else ("en", "ru")
+    )[0]
+
+
+def _hours(rows: list) -> list:
+    return [(h["weekday"], h["opens"], h["closes"]) for h in rows]
+
+
 def _geojson(items: list) -> dict:
     return {
         "type": "FeatureCollection",
@@ -102,7 +118,24 @@ async def list_places(
 
     async with request.app.state.db.transaction() as conn:
         rows = await fetch_all(conn, sql.PLACES_SEARCH, params)
-    items = [_summary(r, locale) for r in rows]
+        ids = [r["id"] for r in rows]
+        ratings = {r["place_id"]: r for r in await fetch_all(conn, sql.RATINGS_BY_PLACES, (ids,))}
+        hours: dict = {}
+        for h in await fetch_all(conn, sql.HOURS_BY_PLACES, (ids,)):
+            hours.setdefault(h["place_id"], []).append(h)
+    now = clock.now()
+    items = [
+        dict(
+            _summary(r, locale),
+            rating=_rating(ratings.get(r["id"])),
+            today=service.today_block(
+                _hours(hours.get(r["id"], [])), now, service.region_tz(r["lat"], r["lon"])
+            ),
+            address=_address(r, locale),
+            logo_url=media_url(r["logo_key"]) if r["logo_key"] else None,
+        )
+        for r in rows
+    ]
     if format == "geojson":
         return JSONResponse(_geojson(items), media_type="application/geo+json")
     return schemas.PlacesList(items=items)
@@ -126,13 +159,13 @@ async def get_place(request: Request, place_id: UUID):
             place_id=place_id,
         )  # fmt: skip
         booking = await bookings_service.card_block(conn, place_id)  # Ш-49: None = no partner
+        rating_row = await fetch_one(conn, sql.RATINGS_BY_PLACES, ([place_id],))
 
     name, lang = service.pick_text(row, "name", locale)
     description, _ = service.pick_text(row, "description", locale)
-    address, _ = service.pick_text(
-        row, "address", locale, ("ru", "en") if locale == "ru" else ("en", "ru")
-    )
-    hours = [(h["weekday"], h["opens"], h["closes"]) for h in hours_rows]
+    address = _address(row, locale)
+    hours = _hours(hours_rows)
+    tz = service.region_tz(row["lat"], row["lon"])
     category = None
     if row["category"]:
         category = {
@@ -151,6 +184,9 @@ async def get_place(request: Request, place_id: UUID):
         "lat": row["lat"],
         "lon": row["lon"],
         "address": address,
+        "logo_url": media_url(row["logo_key"]) if row["logo_key"] else None,
+        "rating": _rating(rating_row),
+        "today": service.today_block(hours, now, tz),
         "website": row["website"],
         "prices": {
             "entry_price_kzt": row["entry_price_kzt"],
@@ -165,7 +201,7 @@ async def get_place(request: Request, place_id: UUID):
         "popularity": row["popularity"],
         "photos": [dict(p, url=media_url(p["storage_key"])) for p in photos],
         "hours": service.group_hours(hours),
-        "open_now": service.is_open_now(hours),
+        "open_now": service.is_open_now(hours, now, tz),
         "menu": menu,
         "crowd": crowd,
         "events": [events_service.event_json(r, locale) for r in event_rows],

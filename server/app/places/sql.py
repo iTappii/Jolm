@@ -23,13 +23,21 @@ _SUMMARY_COLS = """
        p.is_public, p.is_partner, p.popularity
 """
 
+# Pins (GET /v1/places) also carry what the map and the card header need (Ш-70).
+_PIN_COLS = (
+    _SUMMARY_COLS
+    + """,
+       p.address_ru, p.address_en, p.logo_key
+"""
+)
+
 # params: west, south, east, north, category (x3: NULL check, slug, parent slug),
 #         q (x7: NULL check, ILIKE pattern x3, word-similarity x3), q (order), limit
 # `q <% name` = word_similarity above pg_trgm.word_similarity_threshold (uses the GIN trigram
 # index for ru/en); the ILIKE pattern is escaped by the caller (backslash escape).
 PLACES_SEARCH = (
     "SELECT"
-    + _SUMMARY_COLS
+    + _PIN_COLS
     + """
 FROM places p
 LEFT JOIN place_categories c ON c.id = p.category_id
@@ -62,7 +70,7 @@ SELECT p.id, p.name_ru, p.name_en, p.name_kk, p.description_ru, p.description_en
        c.slug AS category, c.name_ru AS category_name_ru, c.name_en AS category_name_en,
        p.kind, p.setting,
        ST_Y(p.geom::geometry) AS lat, ST_X(p.geom::geometry) AS lon,
-       p.address_ru, p.address_en, p.website,
+       p.address_ru, p.address_en, p.website, p.logo_key,
        p.entry_price_kzt, p.avg_check_kzt, p.price_per_night_kzt, p.typical_visit_min,
        p.is_public, p.is_partner, p.is_mountain, p.elevation_m, p.popularity,
        p.data_updated_at
@@ -74,6 +82,22 @@ WHERE p.id = %s AND p.status = 'active'
 PLACE_HOURS = """
 SELECT weekday, opens, closes FROM place_hours
 WHERE place_id = %s ORDER BY weekday, opens
+"""
+
+# Rating = reviews that passed the auto-filter and were not rejected by a moderator (SSOT §10.2:
+# a review "will be checked later" counts at once). Same status set as the reviews list.
+# params: array of place ids
+RATINGS_BY_PLACES = """
+SELECT place_id, count(*) AS n, avg((payload->>'rating')::int) AS avg
+FROM submissions
+WHERE place_id = ANY(%s) AND type = 'review'
+  AND status IN ('published_pending_review', 'approved')
+GROUP BY place_id
+"""
+
+HOURS_BY_PLACES = """
+SELECT place_id, weekday, opens, closes FROM place_hours
+WHERE place_id = ANY(%s) ORDER BY place_id, weekday, opens
 """
 
 PLACE_PHOTOS = """

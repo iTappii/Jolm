@@ -24,8 +24,32 @@ class PlaceSummary(BaseModel):
     popularity: int
 
 
+class Rating(BaseModel):
+    average: float  # 1 decimal
+    count: int
+
+
+class Today(BaseModel):
+    """Today's hours in the region time zone. opens/closes are null on a closed day."""
+
+    opens: Optional[str] = None  # "HH:MM"
+    closes: Optional[str] = None  # "HH:MM"; <= opens means past midnight
+    open_now: bool
+    open_24h: bool
+    closed_today: bool
+
+
+class PlacePin(PlaceSummary):
+    """Map pin: summary plus what the card header shows (Ш-70). Null when unknown."""
+
+    rating: Optional[Rating] = None
+    today: Optional[Today] = None
+    address: Optional[str] = None
+    logo_url: Optional[str] = None
+
+
 class PlacesList(BaseModel):
-    items: List[PlaceSummary]
+    items: List[PlacePin]
 
 
 class Names(BaseModel):
@@ -97,6 +121,9 @@ class PlaceDetail(BaseModel):
     lat: float
     lon: float
     address: Optional[str] = None
+    logo_url: Optional[str] = None
+    rating: Optional[Rating] = None
+    today: Optional[Today] = None
     website: Optional[str] = None
     prices: Prices
     typical_visit_min: Optional[int] = None

@@ -140,6 +140,10 @@ async def test_places_bbox_category_limit_and_status(client, conn):
         "is_public",
         "is_partner",
         "popularity",
+        "rating",
+        "today",
+        "address",
+        "logo_url",
     }
     r = await client.get("/v1/places", params={"bbox": BBOX, "category": "viewpoint"})
     assert [i["name"] for i in r.json()["items"]] == ["Кок-Тобе"]
