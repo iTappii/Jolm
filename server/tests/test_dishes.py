@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.chat import live_route, tools
-from app.places import dishes
+from app.places import dishes, recommend
 from app.providers.llm.fake import FakeToolCall, Step
 from tests.conftest import parse_sse
 from tests.test_places import add_place, load_categories
@@ -142,13 +142,14 @@ async def test_yo_and_case_are_ignored_and_dictionary_is_idempotent(conn):
 
 async def test_beshbarmak_ranks_kazakh_cuisine_first_then_related(world):
     args = tools.SearchPlacesArgs(query="бешбармак", limit=10)
-    result, pins = await tools.search_places(world.db, args, "ru")
+    at_bazaar = recommend.Anchor(GREEN_BAZAAR[1], GREEN_BAZAAR[0], recommend.SOURCE_LODGING)
+    result, pins = await tools.search_places(world.db, args, "ru", at_bazaar)
     assert result["matched"] == {"dish": "Бешбармак", "cuisines": ["kazakh", "central_asian"]}
     assert "most likely serve" in result["note"]
     assert names(result) == [
-        "Қазақ асханасы далеко",  # popularity 99 beats 60 and 40 among Kazakh cuisine
-        "Дастархан",
+        "Дастархан",  # famous (60) and near the centre; the 99-popular one is 14 km away
         "Жайлау",
+        "Қазақ асханасы далеко",
         "Чайхана Нават",  # related cuisine comes after the primary one
     ]
     assert [p["match"] for p in result["places"]] == ["cuisine"] * 3 + ["related_cuisine"]
@@ -158,10 +159,10 @@ async def test_beshbarmak_ranks_kazakh_cuisine_first_then_related(world):
 async def test_beshbarmak_near_the_green_bazaar_finds_kazakh_places_nearby(world):
     args = tools.SearchPlacesArgs(query="бешбармак", near="Зелёный базар", limit=5)
     result, _ = await tools.search_places(world.db, args, "ru")
-    assert names(result) == ["Жайлау", "Дастархан", "Чайхана Нават"]  # nearest Kazakh first
+    assert names(result) == ["Дастархан", "Жайлау", "Чайхана Нават"]  # best Kazakh first (Ш-68)
     assert "Қазақ асханасы далеко" not in names(result)  # ~13 km away
     assert all(p["distance_m"] < tools.NEAR_RADIUS_M for p in result["places"])
-    assert result["places"][0]["distance_m"] < result["places"][1]["distance_m"]
+    assert result["anchor"] == "landmark"
     assert "near_not_found" not in result
 
 
@@ -259,7 +260,7 @@ async def test_guest_chat_search_understands_the_dish(chat_env, conn):
     assert response.status_code == 200, response.text
     events = parse_sse(response.text)
     pins = [d for n, d in events if n == "map_places"][0]["places"]
-    assert [p["name"] for p in pins] == ["Жайлау", "Дастархан", "Чайхана Нават"]
+    assert [p["name"] for p in pins] == ["Дастархан", "Жайлау", "Чайхана Нават"]
     tool_result = json.loads(llm.calls[1].messages[-1].content)
     assert tool_result["matched"]["dish"] == "Beshbarmak"
     assert "most likely serve" in tool_result["note"]
@@ -269,5 +270,6 @@ async def test_live_route_wish_with_a_dish_finds_stops(world):
     found = await live_route._search(world.db, "бешбармак", "ru", set())
     assert found is not None
     pins, ids = found
-    assert [p["name"] for p in pins][0] == "Қазақ асханасы далеко"  # best by cuisine and fame
+    # best for a tourist (Ш-68): the 99-popular place is 14 km out of town
+    assert pins[0]["name"] == "Дастархан"
     assert len(ids) == live_route.MAX_PLACES_PER_WISH

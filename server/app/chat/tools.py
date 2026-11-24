@@ -9,7 +9,7 @@ from app.chat.brief import BriefUpdate
 from app.db import fetch_all
 from app.events import service as events_service
 from app.live import clock
-from app.places import dishes, service, sql
+from app.places import dishes, recommend, service, sql
 from app.planner import candidates, outside
 from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
@@ -22,8 +22,10 @@ BUILD_TRIP = "build_trip"
 SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
+DEFAULT_SEARCH_LIMIT = 6  # the model needs ~6 places to pick 2-3 from
 MAX_NODE_CHARS = 80
 NEAR_RADIUS_M = 3000
+LANDMARK = "landmark"
 DISH_NOTE = (
     "matched by the cuisine of the dish: say these places 'most likely serve' it (cuisine/"
     "category), unless a place has match 'menu' (its menu lists the dish) or 'name'"
@@ -40,7 +42,7 @@ class SearchPlacesArgs(BaseModel):
         max_length=100,
         description="Name of a place or landmark the results must be close to (about 3 km)",
     )
-    limit: int = Field(5, ge=1, le=MAX_SEARCH_LIMIT)
+    limit: int = Field(DEFAULT_SEARCH_LIMIT, ge=1, le=MAX_SEARCH_LIMIT)
     show_on_map: bool = Field(
         False, description="Registered chat only: pin the results on the user's map as chosen"
     )
@@ -71,7 +73,9 @@ SEARCH_PLACES_SPEC = ToolSpec.from_model(
     "Search the places database of the trip region by name part and/or category. The query may "
     "also be a dish (beshbarmak, plov, sushi, dim sum...): the search then returns places of "
     "the matching cuisine and says which cuisine it matched. `near` limits the results to a "
-    "place or landmark's area. Use it to answer "
+    "place or landmark's area; without `near` it ranks from the tourist's own position (or the "
+    "city centre). Places come sorted best-first with signals (distance_m, popularity, open_now, "
+    "closes_at, price, address): pick and recommend the best 2-3 yourself. Use it to answer "
     "questions about real places; never invent places, prices or hours. Places anywhere in "
     "Kazakhstan come back as places (a far one also has a far block); a well-known place Jol has "
     "no data for comes back as outside_area instead.",
@@ -112,13 +116,28 @@ def place_pin(row: Dict[str, Any], locale: str) -> Dict[str, Any]:
     }
 
 
+ANCHOR_FROM = {
+    recommend.SOURCE_LOCATION: "tourist_location",
+    recommend.SOURCE_LODGING: "accommodation",
+    recommend.SOURCE_REGION: "city_centre",
+}
+RANK_NOTE = (
+    "sorted best-first for a tourist (popularity, distance, open now). Recommend the first 2-3 "
+    "yourself with one short reason each, taken ONLY from the signals a place has (distance_m is "
+    "metres from `anchor`; omitted signals are unknown, never guess them). Do not ask the person "
+    "for a landmark"
+)
+
+
 async def search_places(
-    db, args: SearchPlacesArgs, locale: str
+    db, args: SearchPlacesArgs, locale: str, anchor: Optional[recommend.Anchor] = None
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Run the places search. Returns (result for the model, pins for the map).
 
-    Read-only (a SELECT in its own transaction), so it is also used by the guest chat.
+    `anchor` is where "near" is measured from (see places/recommend.py); default: the region
+    centre. Read-only (a SELECT in its own transaction), so it is also used by the guest chat.
     """
+    anchor = anchor or recommend.choose_anchor()
     query = " ".join((args.query or "").split())
     category = (args.category or "").strip() or None
     if len(query) < 2 and not category:
@@ -147,16 +166,27 @@ async def search_places(
     if len(near_name) >= 2:
         near_point = await _locate(db, near_name)
         near_missing = near_point is None
+    # an explicit landmark overrides the anchor (Ш-67 `near`); not found -> the anchor, no limit
+    if near_point:
+        origin = recommend.Anchor(near_point["lat"], near_point["lon"], LANDMARK)
+        search_point, radius = near_point, NEAR_RADIUS_M
+    else:
+        origin = anchor
+        search_point, radius = {"lat": anchor.lat, "lon": anchor.lon}, recommend.ANCHOR_RADIUS_M
+    now = clock.now()
     if query and not category:
         async with db.transaction() as conn:
             dish = await dishes.resolve(conn, query)
             dish_rows = (
-                await dishes.search(conn, dish, args.limit, near_point, NEAR_RADIUS_M)
+                await dishes.search(conn, dish, recommend.CANDIDATES, search_point, radius)
                 if dish
                 else []
             )
+            extras, hours = await recommend.load_extras(conn, [r["id"] for r in dish_rows])
         if dish_rows:
-            return _dish_result(dish, dish_rows, locale, near_point, near_missing)
+            ranked = recommend.rank(dish_rows, extras, hours, origin, now, locale, args.limit)
+            return _ranked_result(ranked, locale, origin, near_missing, dish)
+    by_name = bool(query) and not category  # a name search is ordered by how well the name fits
     params = {
         "bbox": False,
         "west": None,
@@ -166,24 +196,63 @@ async def search_places(
         "category": category,
         "q": query or None,
         "pattern": service.like_pattern(query) if query else None,
-        "near_lat": near_point["lat"] if near_point else None,
-        "near_lon": near_point["lon"] if near_point else None,
-        "radius_m": NEAR_RADIUS_M,
-        "limit": args.limit,
+        "near_lat": near_point["lat"] if near_point else (None if by_name else anchor.lat),
+        "near_lon": near_point["lon"] if near_point else (None if by_name else anchor.lon),
+        "radius_m": radius if near_point or by_name else recommend.ANCHOR_RADIUS_M,
+        "limit": args.limit if by_name else recommend.CANDIDATES,
     }
     async with db.transaction() as conn:
         rows = await fetch_all(conn, sql.PLACES_SEARCH, params)
-    pins = [place_pin(row, locale) for row in rows]
-    found = [
-        dict(pin, kind=row["kind"], popularity=row["popularity"], is_partner=row["is_partner"])
-        for pin, row in zip(pins, rows)
-    ]
-    if not found:
+        extras, hours = await recommend.load_extras(conn, [r["id"] for r in rows])
+    if not rows:
         result = {"places": [], "note": "nothing found"}
         if near_missing:
             result["near_not_found"] = True
         return result, []
-    return {"places": found, **({"note": NEAR_NOT_FOUND_NOTE} if near_missing else {})}, pins
+    ranked = recommend.rank(rows, extras, hours, origin, now, locale, args.limit, sort=not by_name)
+    return _ranked_result(ranked, locale, origin, near_missing, None)
+
+
+def _ranked_result(
+    ranked: List[Dict[str, Any]],
+    locale: str,
+    origin: recommend.Anchor,
+    near_missing: bool,
+    dish: Optional[Dict[str, Any]],
+) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    """The model's view of ranked places: signals, no coordinates of the tourist's whereabouts."""
+    private = origin.source == recommend.SOURCE_LOCATION  # distances only, no place coordinates
+    pins, found = [], []
+    for entry in ranked:
+        row, signals = entry["row"], dict(entry["signals"])
+        pin = place_pin(row, locale)
+        pins.append(pin)
+        item: Dict[str, Any] = {
+            "id": pin["id"],
+            "name": pin["name"],
+            "category": signals.pop("category_name", None) or pin["category"],
+            "kind": row["kind"],
+        }
+        if not private:
+            item.update(lat=pin["lat"], lon=pin["lon"])
+        if row["is_partner"]:
+            item["is_partner"] = True
+        if dish is not None:
+            item["match"] = dishes.MATCH_NAMES[row["tier"]]
+        item.update(signals)
+        found.append(item)
+    anchor_from = ANCHOR_FROM.get(origin.source, "landmark")
+    result: Dict[str, Any] = {"places": found, "anchor": anchor_from, "ranking": RANK_NOTE}
+    if dish is not None:
+        result["matched"] = {
+            "dish": dish["name_ru"] if locale == "ru" else dish["name_en"],
+            "cuisines": list(dish["cuisines"]),
+        }
+        result["note"] = DISH_NOTE
+    if near_missing:
+        result["near_not_found"] = True
+        result["note"] = (result["note"] + "; " if "note" in result else "") + NEAR_NOT_FOUND_NOTE
+    return result, pins
 
 
 async def _locate(db, name: str) -> Optional[Dict[str, float]]:
@@ -205,40 +274,6 @@ async def _locate(db, name: str) -> Optional[Dict[str, float]]:
     async with db.transaction() as conn:
         rows = await fetch_all(conn, sql.PLACES_SEARCH, params)
     return {"lat": rows[0]["lat"], "lon": rows[0]["lon"]} if rows else None
-
-
-def _dish_result(
-    dish: Dict[str, Any],
-    rows: List[Dict[str, Any]],
-    locale: str,
-    near_point: Optional[Dict[str, float]],
-    near_missing: bool,
-) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
-    pins = [place_pin(row, locale) for row in rows]
-    found = []
-    for pin, row in zip(pins, rows):
-        item = dict(
-            pin,
-            kind=row["kind"],
-            popularity=row["popularity"],
-            is_partner=row["is_partner"],
-            match=dishes.MATCH_NAMES[row["tier"]],
-        )
-        if row["distance_m"] is not None:
-            item["distance_m"] = int(row["distance_m"])
-        found.append(item)
-    result: Dict[str, Any] = {
-        "places": found,
-        "matched": {
-            "dish": dish["name_ru"] if locale == "ru" else dish["name_en"],
-            "cuisines": list(dish["cuisines"]),
-        },
-        "note": DISH_NOTE,
-    }
-    if near_missing:
-        result["near_not_found"] = True
-        result["note"] += "; " + NEAR_NOT_FOUND_NOTE
-    return result, pins
 
 
 def event_for_model(item: Dict[str, Any]) -> Dict[str, Any]:

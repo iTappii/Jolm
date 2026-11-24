@@ -74,6 +74,7 @@ from app.chat.brief import (
 )
 from app.chat.deps import make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
+from app.chat.location import Location
 from app.chat.prompts import TRIP_BRIEF, load_prompt
 from app.chat.sse import format_event, sse_response
 from app.config import get_settings
@@ -82,6 +83,7 @@ from app.errors import AppError
 from app.live import clock
 from app.memory import affinity
 from app.memory.notes import latest_notes, memory_data_block
+from app.places import recommend
 from app.planner.candidates import far_place
 from app.planner.outside import outside_wish
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
@@ -130,6 +132,7 @@ class CreateChat(BaseModel):
 
 class SendMessage(BaseModel):
     content: str = Field(max_length=MAX_MESSAGE_CHARS)
+    location: Optional[Location] = None  # Ш-68: used for this turn only, never stored or logged
 
     @field_validator("content")
     @classmethod
@@ -334,6 +337,10 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         memory_block = memory_data_block(await latest_notes(conn, user["id"]), memory)
 
     locale = chat["locale"]
+    # Ш-68: where "near" is measured from: the tourist's location, else the stay, else the centre
+    anchor = recommend.choose_anchor(
+        payload.location.point() if payload.location else None, recommend.lodging_point(brief)
+    )
     prompt = load_prompt(TRIP_BRIEF, locale)
     system = prompt.render(today_in_region())  # static per prompt version; no user text in it
     history.insert(0, Message(role="user", content=brief_data_block(brief)))
@@ -350,7 +357,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         handler = {
             tools.UPDATE_TRIP_BRIEF: lambda *a: _update_trip_brief(*a, live),
             tools.ADD_GRAPH_NODE: _add_graph_node,
-            tools.SEARCH_PLACES: _search_places,
+            tools.SEARCH_PLACES: lambda *a: _search_places(*a, anchor),
             tools.SEARCH_EVENTS: _search_events,
             tools.BUILD_TRIP: lambda *a: _build_trip(*a, router, weather, live),
             edit_tools.GET_TRIP_PLAN: edit_tools.get_trip_plan,
@@ -546,9 +553,11 @@ async def _add_graph_node(db, chat_id: UUID, locale: str, call: ToolCall) -> Too
     return ToolOutcome({"ok": True, "ord": node["ord"]}, [("graph_node", dict(node))])
 
 
-async def _search_places(db, chat_id: UUID, locale: str, call: ToolCall) -> ToolOutcome:
+async def _search_places(
+    db, chat_id: UUID, locale: str, call: ToolCall, anchor: recommend.Anchor
+) -> ToolOutcome:
     args = parse_tool_args(call, tools.SearchPlacesArgs)
-    result, pins = await tools.search_places(db, args, locale)
+    result, pins = await tools.search_places(db, args, locale, anchor)
     events = []
     if pins and args.show_on_map:
         events.append(("map_places", {"reason": "chosen", "places": pins}))

@@ -34,13 +34,13 @@ final class ChatModelTests: XCTestCase {
         }
     }
 
-    private func makeModel(signedIn: Bool = true) -> ChatModel {
+    private func makeModel(signedIn: Bool = true, location: GeoPoint? = nil) -> ChatModel {
         let tokens = MemoryTokenStore(signedIn ? SessionTokens(accessToken: "a", refreshToken: "r") : nil)
         let client = APIClient(
             baseURL: .success(base), tokens: tokens, installID: "install-1",
             session: StubURLProtocol.session(), language: { "en" }, onSessionCleared: {}
         )
-        return ChatModel(api: client, language: { "ru" })
+        return ChatModel(api: client, language: { "ru" }, location: { location })
     }
 
     private func requests(_ method: String, _ path: String) -> [URLRequest] {
@@ -102,6 +102,30 @@ final class ChatModelTests: XCTestCase {
         await waitUntil("the recent list to refresh") { !self.requests("GET", "/v1/chats").isEmpty }
     }
 
+    /// Ш-68: the known position goes along with a message (guest and registered); without one the key is absent.
+    func testTheKnownLocationGoesAlongWithAGuestAndARegisteredMessage() async throws {
+        let script = scriptedTripChat()
+        script.set("POST /v1/chat/guest") { _ in (200, ChatStub.fixture("chat-guest")) }
+        install(script)
+        let spot = GeoPoint(lat: 43.2601, lon: 76.9503)
+        let guest = makeModel(signedIn: false, location: spot)
+        guest.send("Where is a good doner?", signedIn: false)
+        await waitUntil("the guest answer") { !guest.isStreaming }
+        let guestData = requests("POST", "/v1/chat/guest")[0].httpBody ?? Data()
+        let guestBody = try XCTUnwrap(JSONSerialization.jsonObject(with: guestData) as? [String: Any])
+        let sent = try XCTUnwrap(guestBody["location"] as? [String: Double])
+        XCTAssertEqual(sent["lat"], 43.2601)
+        XCTAssertEqual(sent["lon"], 76.9503)
+
+        let member = makeModel(location: spot)
+        member.send("Plan 3 days", signedIn: true)
+        await waitUntil("the registered answer") { !member.isStreaming && member.state.route != nil }
+        let message = try XCTUnwrap(requests("POST", "/v1/chats/\(chatID)/messages").first)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: message.httpBody ?? Data()) as? [String: Any])
+        XCTAssertEqual(body["content"] as? String, "Plan 3 days")
+        XCTAssertNotNil(body["location"])
+    }
+
     func testGuestTalksToTheGuestEndpointWithClientSideHistory() async throws {
         let script = Script()
         script.set("POST /v1/chat/guest") { _ in (200, ChatStub.fixture("chat-guest")) }
@@ -121,6 +145,7 @@ final class ChatModelTests: XCTestCase {
         XCTAssertEqual(history.map { $0["role"] }, ["user", "assistant", "user"])
         XCTAssertEqual(history.last?["content"], "And a cafe?")
         XCTAssertEqual(body["locale"] as? String, "ru")
+        XCTAssertNil(body["location"], "no known position: the key is absent")
         XCTAssertNil(model.chatID, "a guest chat is never saved")
         XCTAssertTrue(requests("POST", "/v1/chats").isEmpty)
         XCTAssertEqual(model.state.mapPlaces.count, 1)

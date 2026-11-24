@@ -36,6 +36,8 @@ final class ChatModel {
     @ObservationIgnored private var eventsTask: Task<Void, Never>?
     @ObservationIgnored private var eventsEnabled = false
     @ObservationIgnored private let language: @MainActor () -> String
+    /// Ш-68: where the tourist is, if the app may already know (permission granted, fresh fix); never prompts.
+    @ObservationIgnored private let location: @MainActor () -> GeoPoint?
     @ObservationIgnored private var streamTask: Task<Void, Never>?
     @ObservationIgnored private var recentTask: Task<Void, Never>?
     @ObservationIgnored private var tripTask: Task<Void, Never>?
@@ -47,10 +49,12 @@ final class ChatModel {
     init(
         api: APIClient,
         language: @escaping @MainActor () -> String = { "en" },
+        location: @escaping @MainActor () -> GeoPoint? = { nil },
         sleeper: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     ) {
         self.service = ChatService(api: api)
         self.language = language
+        self.location = location
         self.sleeper = sleeper
     }
 
@@ -146,11 +150,13 @@ final class ChatModel {
             startEvents()
         }
         guard let chatID else { throw APIError.invalidResponse }
-        return try service.send(chatID: chatID, text: text)
+        return try service.send(chatID: chatID, text: text, location: location())
     }
 
     private func openGuest() throws -> AsyncThrowingStream<SSEEvent, Error> {
-        try service.guest(messages: ChatService.guestHistory(from: state.messages), locale: language())
+        try service.guest(
+            messages: ChatService.guestHistory(from: state.messages), locale: language(), location: location()
+        )
     }
 
     private func sideEffects(of event: ChatEvent) {

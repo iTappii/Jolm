@@ -21,12 +21,14 @@ from app import llm_budget
 from app.chat import tools
 from app.chat.deps import install_id, make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
+from app.chat.location import Location
 from app.chat.prompts import GUEST, load_prompt
 from app.chat.sse import format_event, sse_response
 from app.clientip import client_ip
 from app.config import get_settings
 from app.errors import AppError
 from app.i18n import pick_locale
+from app.places import recommend
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
 from app.ratelimit import acquire_own
 
@@ -54,6 +56,7 @@ class ChatTurn(BaseModel):
 class GuestChatRequest(BaseModel):
     messages: List[ChatTurn] = Field(min_length=1, max_length=MAX_MESSAGES)
     locale: Optional[Literal["ru", "en"]] = None
+    location: Optional[Location] = None
 
     @model_validator(mode="after")
     def _limits(self):
@@ -83,6 +86,7 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
 
     db = request.app.state.db
+    anchor = recommend.choose_anchor(payload.location.point() if payload.location else None)
     system = load_prompt(GUEST, locale).render()
     messages = [Message(role=m.role, content=m.content) for m in payload.messages]
 
@@ -99,7 +103,7 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
             args = parse_tool_args(call, tools.SearchPlacesArgs)
         except ToolArgsError as exc:
             return ToolOutcome({"error": str(exc)}, ok=False, error=str(exc))
-        result, pins = await tools.search_places(db, args, locale)
+        result, pins = await tools.search_places(db, args, locale, anchor)
         events = [("map_places", {"reason": "search", "places": pins})] if pins else []
         return ToolOutcome(result, events)
 

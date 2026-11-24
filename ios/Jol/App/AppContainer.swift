@@ -58,8 +58,10 @@ final class AppContainer {
         self.places = PlacesModel(api: self.api)
         self.gate = AccountGate(auth: auth)
         self.favorites = FavoritesModel(api: self.api)
-        self.chat = ChatModel(api: self.api, language: { languageSettings.code })
         let locator = locator ?? CoreLocationProvider()
+        self.chat = ChatModel(
+            api: self.api, language: { languageSettings.code }, location: { locator.knownLocation() }
+        )
         self.directions = DirectionsModel(api: self.api, locator: locator)
         self.offline = OfflineTripsModel(api: self.api, store: offlineStore)
         self.devices = DeviceRegistrar(
