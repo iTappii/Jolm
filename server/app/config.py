@@ -71,6 +71,18 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     llm_timeout_sec: float = 60.0
     llm_max_retries: int = 2
+    # Model limits (Ш-66). Output cap per model reply (a reply cut by it ends cleanly): chat turns
+    # and the longer explanation of a plan after build_trip / a plan edit.
+    llm_max_output_tokens: int = 800
+    llm_max_output_tokens_plan: int = 1800
+    # Daily token budgets (input + output), counted in PostgreSQL (`llm_usage_daily`) per day of
+    # the default region; 0 = no limit. Checked BEFORE the model is called, so one turn can pass
+    # the line. Registered user / guest per install id and per IP (NAT-friendly) / whole service.
+    llm_daily_tokens_user: int = 300_000
+    llm_daily_tokens_guest_install: int = 60_000
+    llm_daily_tokens_guest_ip: int = 300_000
+    llm_daily_tokens_global: int = 5_000_000
+    llm_budget_warn_percent: int = 80  # global budget: warning log + metric at this and at 100%
     # Chat limits (Ш-30/31). Counted in PostgreSQL (`rate_limit_hits`, Ш-51), shared by all API
     # processes; only hashed keys and timestamps are stored, never chat content.
     guest_chat_install_limit: int = 20  # requests per window per X-Install-ID

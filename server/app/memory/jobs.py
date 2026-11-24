@@ -18,6 +18,7 @@ from uuid import UUID
 from app import worker
 from app.chat import store
 from app.chat.brief import public_brief
+from app.config import get_settings
 from app.db import Database, fetch_all, fetch_one
 from app.memory import notes
 from app.providers.llm import LLMProvider, Message, collect, get_llm_provider
@@ -105,7 +106,10 @@ async def memory_note(db: Database, payload: dict) -> None:
         return
     recent.reverse()
     block = chat_data_block(brief, recent)
-    reply = await collect(_provider().stream([Message(role="user", content=block)], None, SYSTEM))
+    cap = get_settings().llm_max_output_tokens  # Ш-66: a note is short; never an open-ended reply
+    reply = await collect(
+        _provider().stream([Message(role="user", content=block)], None, SYSTEM, max_tokens=cap)
+    )
     note = notes.clean_note(reply.text)
     if not note:
         return

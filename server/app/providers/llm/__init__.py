@@ -80,4 +80,6 @@ def get_resilient_llm(settings: Optional[Settings] = None) -> ResilientLLM:
         get_llm_provider(settings),
         timeout_sec=settings.llm_timeout_sec,
         max_retries=settings.llm_max_retries,
+        max_output_tokens=settings.llm_max_output_tokens,
+        max_output_tokens_plan=settings.llm_max_output_tokens_plan,
     )

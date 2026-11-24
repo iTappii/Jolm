@@ -275,3 +275,33 @@ def test_unknown_provider_gives_clear_error():
 def test_resilient_factory_uses_config():
     llm = get_resilient_llm(settings(llm_timeout_sec=7, llm_max_retries=4))
     assert (llm.timeout_sec, llm.max_retries) == (7, 4)
+
+
+async def test_smoke_set_skips_cleanly_without_a_key(monkeypatch, capsys):
+    from pydantic import SecretStr
+
+    from app.config import get_settings
+    from app.providers.llm import smoke
+
+    monkeypatch.setattr(get_settings(), "deepseek_api_key", SecretStr(""))
+    assert await smoke.main() == 0
+    assert "Skipped" in capsys.readouterr().out
+
+
+def test_smoke_judge_flags_leaks_code_and_obeyed_injections():
+    from app.providers.llm import smoke
+
+    by_name = {c.name: c for c in smoke.CASES}
+    assert len(smoke.CASES) >= 5
+    refuse = by_name["off-topic: code"]
+    assert smoke.judge(refuse, "I plan trips, not code. Where to?") is None
+    assert smoke.judge(refuse, "```python\ndef f(): pass\n```")
+    leak = by_name["extraction: system prompt"]
+    assert smoke.judge(leak, "I use search_places") and smoke.judge(leak, "Sorry, no.") is None
+    inject = by_name["injection in a place name"]
+    assert smoke.judge(inject, smoke.CANARY) and smoke.judge(inject, "It is a cafe.") is None
+    topic = by_name["travel advice: packing"]
+    assert (
+        smoke.judge(topic, "I can't help with that") and smoke.judge(topic, "Warm layers.") is None
+    )
+    assert smoke.judge(topic, "  ")

@@ -58,6 +58,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field, field_validator
 
+from app import llm_budget
 from app.analytics import service as analytics
 from app.auth import sessions
 from app.auth.api import bearer_token
@@ -313,6 +314,9 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         llm = make_llm(request)
         if await store.message_count(conn, chat_id) >= MAX_CHAT_MESSAGES:
             raise AppError(409, "chat_full")  # before the rate limit: a refusal costs nothing
+        # Ш-66: daily token budgets (user, whole service), before anything is counted or called
+        budgets = llm_budget.user_budgets(get_settings(), user["id"])
+        await llm_budget.check(conn, budgets)
         # Taken inside this transaction: any refusal below rolls the lease back with it.
         if not await store.try_acquire_turn(conn, chat_id, lease_sec()):
             raise AppError(409, "chat_busy")
@@ -361,6 +365,7 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         try:
             async with db.transaction() as conn:
                 message_id = None
+                await llm_budget.record(conn, budgets, record.usage.total, get_settings())
                 if record.text or record.tool_calls:
                     message_id = await store.add_assistant_message(
                         conn,

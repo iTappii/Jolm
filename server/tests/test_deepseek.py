@@ -235,3 +235,23 @@ def test_factory_builds_deepseek_with_defaults_and_overrides():
 
 def test_key_is_not_leaked_in_settings_repr():
     assert "sk-secret" not in repr(settings(deepseek_api_key="sk-secret"))
+
+
+# --- Ш-66: output cap -------------------------------------------------------------------------
+
+
+async def test_max_tokens_is_sent_and_a_length_finish_ends_cleanly():
+    seen: List = []
+    body = sse(delta("Cut of"), delta(None, finish="length"), USAGE, DONE)
+    llm = provider(ok(body, seen))
+    done = await collect(llm.stream(HELLO, None, "sys", max_tokens=123))
+    assert json.loads(seen[0].content)["max_tokens"] == 123
+    assert done.text == "Cut of" and done.finish_reason == "length"
+    assert done.usage == Usage(11, 7)
+
+
+async def test_no_max_tokens_field_when_not_asked():
+    seen: List = []
+    llm = provider(ok(sse(delta("x", finish="stop"), USAGE, DONE), seen))
+    await collect(llm.stream(HELLO))
+    assert "max_tokens" not in json.loads(seen[0].content)

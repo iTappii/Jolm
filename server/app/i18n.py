@@ -31,6 +31,14 @@ MESSAGES = {
         "ru": "Слишком много запросов, попробуйте позже",
     },
     "llm_unavailable": {"en": "Assistant unavailable", "ru": "Ассистент временно недоступен"},
+    "llm_budget_exceeded": {
+        "en": "You have used today's assistant limit. It resets tomorrow.",
+        "ru": "На сегодня лимит общения с ассистентом исчерпан. Завтра он обновится.",
+    },
+    "llm_budget_service": {
+        "en": "The assistant is very busy today. Please try again tomorrow.",
+        "ru": "Ассистент сегодня сильно загружен. Попробуйте завтра.",
+    },
     "llm_timeout": {
         "en": "The assistant took too long to answer",
         "ru": "Ассистент слишком долго отвечает",

@@ -118,6 +118,7 @@ class DeepSeekLLM:
         messages: List[Message],
         tools: Optional[List[ToolSpec]] = None,
         system: Optional[str] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncIterator[LLMEvent]:
         payload: Dict[str, Any] = {
             "model": self.model,
@@ -125,6 +126,8 @@ class DeepSeekLLM:
             "stream": True,
             "stream_options": {"include_usage": True},
         }
+        if max_tokens:  # Ш-66: the reply is cut here; finish_reason "length" -> Done("length")
+            payload["max_tokens"] = max_tokens
         if tools:
             payload["tools"] = build_tools(tools)
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}

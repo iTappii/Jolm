@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
-from app import __version__, metrics
+from app import __version__, llm_budget, metrics
 from app.config import get_settings
 from app.db import fetch_one
 from app.errors import AppError
@@ -68,6 +68,16 @@ async def metrics_endpoint(request: Request):
                 "jol_jobs_dead",
                 "Dead jobs (kept until cleanup)",
                 row["dead"],
+            ),
+        ]
+        async with request.app.state.db.transaction() as conn:  # Ш-66
+            used = await llm_budget.global_used_today(conn)
+        gauges += [
+            ("jol_llm_tokens_today", "Model tokens used today (all users)", used),
+            (
+                "jol_llm_tokens_budget",
+                "Daily global model token budget (0 = no limit)",
+                settings.llm_daily_tokens_global,
             ),
         ]
     except Exception:
