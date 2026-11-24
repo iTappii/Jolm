@@ -26,7 +26,7 @@ struct HomeScreen: View {
                 directions: container.directions,
                 tripMap: container.tripMap,
                 events: container.events,
-                projection: projection,
+                projection: projection, landmarks: showsLandmarks ? container.landmarks.items : [],
                 bottomInset: mapBottomInset
             )
             if showsLandmarks { landmarksLayer }

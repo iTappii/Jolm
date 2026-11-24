@@ -18,6 +18,9 @@ enum UITestSupport {
         }
     }
 
+    /// The stub map opens at this zoom (above `PlacePinVisibility.streetZoom`) unless `-JolStartCamera` says otherwise.
+    static let stubStreetZoom = 15.5
+
     static var isStubbed: Bool { ProcessInfo.processInfo.arguments.contains("-JolStubAPI") }
     /// `-JolDemo` (with `-JolStubAPI`): a clean demo for a screen recording — plain phrases drive the live route,
     /// the built trip is made of the same stops, no fixture pins or ad events on the map.
@@ -26,6 +29,8 @@ enum UITestSupport {
     /// Fixture place that sits exactly at `Region.current.center`, i.e. in the middle of the screen at launch.
     static let centerPlaceID = "11111111-1111-4111-8111-111111111111"
     static let secondPlaceID = "22222222-2222-4222-8222-222222222222"
+    /// A third fixture place ~150 m from the museum, with a logo (`asset:` = an image bundled in the app).
+    static let logoPlaceID = "44444444-4444-4444-8444-444444444444"
     static let routeID = "33333333-3333-4333-8333-333333333333"
 
     static func makeSession() -> URLSession {
@@ -35,11 +40,12 @@ enum UITestSupport {
     }
 
     static func summary(_ id: String, _ name: String, _ category: String, _ lat: Double, _ lon: Double,
-                        ord: Int? = nil) -> String {
+                        ord: Int? = nil, logo: String? = nil) -> String {
         let order = ord.map { ",\"ord\":\($0)" } ?? ""
+        let logoField = logo.map { ",\"logo_url\":\"\($0)\"" } ?? ""
         return """
         {"id":"\(id)","name":"\(name)","name_lang":"en","category":"\(category)","kind":"venue","lat":\(lat),\
-        "lon":\(lon),"is_public":true,"is_partner":false,"popularity":50\(order)}
+        "lon":\(lon),"is_public":true,"is_partner":false,"popularity":50\(order)\(logoField)}
         """
     }
 
@@ -47,8 +53,10 @@ enum UITestSupport {
         if isDemo { return "{\"items\":[]}" }
         let lat = Region.current.center.latitude
         let lon = Region.current.center.longitude
+        let logo = "asset:StubLogo"
+        let bakery = summary(logoPlaceID, "Fixture Bakery", "bakery", lat + 0.0012, lon + 0.0016, logo: logo)
         return "{\"items\":[\(summary(centerPlaceID, "Fixture Museum", "museum", lat, lon)),"
-            + "\(summary(secondPlaceID, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012))]}"
+            + "\(summary(secondPlaceID, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012)),\(bakery)]}"
     }
 
     /// Main sights (Ш-69): six in Almaty (the first two appear at zoom 12, the rest closer) and two in Turkestan.
@@ -98,13 +106,22 @@ enum UITestSupport {
     static func detailJSON(id: String) -> String {
         let second = id == secondPlaceID
         let sight = landmarkFixtures.first { $0.id == id }
-        let name = sight?.name ?? (second ? "Fixture Cafe" : "Fixture Museum")
+        let bakery = id == logoPlaceID
+        let name = sight?.name ?? (second ? "Fixture Cafe" : bakery ? "Fixture Bakery" : "Fixture Museum")
         let category = second
             ? "{\"slug\":\"coffee\",\"name\":\"Coffee\"}"
             : "{\"slug\":\"museum\",\"name\":\"Museum\"}"
         let prices = second ? "{\"avg_check_kzt\":3500}" : "{\"entry_price_kzt\":1500}"
-        let lat = sight?.lat ?? Region.current.center.latitude + (second ? 0.01 : 0)
-        let lon = sight?.lon ?? Region.current.center.longitude + (second ? 0.012 : 0)
+        let lat = sight?.lat ?? Region.current.center.latitude + (second ? 0.01 : bakery ? 0.0012 : 0)
+        let lon = sight?.lon ?? Region.current.center.longitude + (second ? 0.012 : bakery ? 0.0016 : 0)
+        // Ш-70: the museum has a rating and hours; the cafe is open round the clock and has no reviews; the bakery
+        // is closed today and carries a logo.
+        let rating = second ? "null" : bakery ? "{\"average\":5.0,\"count\":1}" : "{\"average\":4.6,\"count\":23}"
+        let today = second ? "{\"opens\":null,\"closes\":null,\"open_now\":true,\"open_24h\":true,"
+            + "\"closed_today\":false}"
+            : bakery ? "{\"opens\":null,\"closes\":null,\"open_now\":false,\"open_24h\":false,\"closed_today\":true}"
+            : "{\"opens\":\"10:00\",\"closes\":\"23:00\",\"open_now\":true,\"open_24h\":false,\"closed_today\":false}"
+        let logo = bakery ? "\"asset:StubLogo\"" : "null"
         var days: [String] = []
         for day in 0..<7 {
             days.append("{\"weekday\":\(day),\"intervals\":[{\"opens\":\"09:00\",\"closes\":\"18:00\"}]}")
@@ -117,6 +134,7 @@ enum UITestSupport {
         "photos":[],"hours":[\(days.joined(separator: ","))],"open_now":true,"menu":null,\
         "crowd":\(second ? crowdJSON : "null"),"events":[\(second ? eventsItemsJSON : "")],\
         "booking":\(second ? "{\"available\":true,\"kinds\":[\"table\",\"ticket\"]}" : "null"),\
+        "rating":\(rating),"today":\(today),"logo_url":\(logo),\
         "data_updated_at":"2026-11-21T00:00:00Z"}
         """
     }
@@ -232,6 +250,11 @@ enum UITestSupport {
 @MainActor
 final class StubLocationProvider: LocationProviding {
     func currentLocation() async -> LocationResult { UITestSupport.stubLocation }
+
+    func knownLocation() -> GeoPoint? {
+        if case .located(let point) = UITestSupport.stubLocation { return point }
+        return nil
+    }
 }
 
 final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {

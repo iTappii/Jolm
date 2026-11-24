@@ -12,6 +12,9 @@ final class MapProjection {
     private(set) var version = 0
     @ObservationIgnored weak var map: MLNMapView?
 
+    /// UI tests: what the map draws (`pins:N,logos:M,clusters:K`), see `MapCoordinator.reportDebug`.
+    var debugPins = ""
+
     func invalidate() {
         version &+= 1
     }

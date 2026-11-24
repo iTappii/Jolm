@@ -97,20 +97,7 @@ struct PlaceCardView: View {
             if !(typeSize.isAccessibilitySize && (detail?.photos ?? []).isEmpty) {
                 PlaceGallery(photos: detail?.photos ?? [], category: place.category)
             }
-            VStack(alignment: .leading, spacing: JolSpacing.xxs) {
-                Text(place.name)
-                    .font(JolFont.headline)
-                    .foregroundStyle(JolColor.textPrimary)
-                    .accessibilityIdentifier("place-name")
-                    .accessibilityAddTraits(.isHeader)
-                if let address = detail?.address, !address.isEmpty {
-                    Label { Text(address).font(JolFont.callout) } icon: {
-                        Image(systemName: "mappin.and.ellipse").foregroundStyle(JolColor.textSecondary)
-                    }
-                    .foregroundStyle(JolColor.textSecondary)
-                    .accessibilityIdentifier("place-address")
-                }
-            }
+            PlaceHeaderView(place: place, detail: detail)
             tabBar
             if case .failed = model.detail {
                 failedRow

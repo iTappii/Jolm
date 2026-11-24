@@ -96,6 +96,7 @@ extension MapCoordinator {
     func mapView(_ mapView: MLNMapView, regionDidChangeWith reason: MLNCameraChangeReason, animated: Bool) {
         parent?.projection?.invalidate()
         reportRegion(mapView)
+        refreshPins(mapView)
     }
 
     func applyLiveRoute(_ parent: MapView, map: MLNMapView) {

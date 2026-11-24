@@ -61,7 +61,7 @@ final class PlacesTests: XCTestCase {
         let query = requests.first?.url?.query ?? ""
         XCTAssertTrue(query.contains("bbox="))
         XCTAssertTrue(query.contains("limit=1000"))
-        XCTAssertEqual(model.pins.count, 2)
+        XCTAssertEqual(model.pins.count, 3)
     }
 
     func testMovingInsideLoadedAreaDoesNotRequestAgain() async {
@@ -84,7 +84,7 @@ final class PlacesTests: XCTestCase {
         model.regionChanged(bounds(77.5, 43.2, size: 0.1))  // new area, same items come back
         await wait { placeRequests().count == 2 }
         try? await Task.sleep(for: .milliseconds(100))
-        XCTAssertEqual(model.pins.count, 2)
+        XCTAssertEqual(model.pins.count, 3)
         XCTAssertEqual(model.pinsVersion, 1, "unchanged data does not touch the map")
     }
 
@@ -113,7 +113,7 @@ final class PlacesTests: XCTestCase {
         model.regionChanged(bounds(77.5, 43.2, size: 0.1))
         await wait { model.pinsFailed }
         XCTAssertTrue(model.pinsFailed)
-        XCTAssertEqual(model.pins.count, 2)
+        XCTAssertEqual(model.pins.count, 3)
     }
 
     // MARK: - Selection and routes

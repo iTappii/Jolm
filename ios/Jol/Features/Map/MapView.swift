@@ -3,7 +3,8 @@ import MapLibre
 import SwiftUI
 
 /// SwiftUI wrapper over MLNMapView. The style is loaded by URL; on top of it the view draws the places
-/// layer (clustered GeoJSON source, category pins) and an optional curated route (line + numbered stops).
+/// layer (GeoJSON source; logo / category pins from street zoom, no clusters, Ш-70) and an optional curated route
+/// (line + numbered stops).
 struct MapView: UIViewRepresentable {
     let styleURL: URL
     var pins: [PlaceSummary] = []
@@ -11,6 +12,8 @@ struct MapView: UIViewRepresentable {
     var routeStops: [PlaceSummary] = []
     var routeID: UUID?
     var selectedID: UUID?
+    /// Main sights drawn by `LandmarksOverlay` (Ш-69): the pins under them (and under their labels) are not drawn.
+    var landmarks: [Landmark] = []
     /// The tapped address / point shown in the card (Ш-23c); `nil` for a place of ours.
     var markedPoint: GeoPoint?
     /// Chosen way to a place (Ш-23): the line, where it starts, and a counter that changes when either does.
@@ -54,14 +57,7 @@ struct MapView: UIViewRepresentable {
         map.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         map.setCenter(Region.current.center, zoomLevel: Region.current.zoom, animated: false)
         #if DEBUG
-        // Screenshots of far regions (Ш-59): `-JolStartCamera 43.297,68.272,12` (lat,lon,zoom).
-        if let spec = UserDefaults.standard.string(forKey: "JolStartCamera") {
-            let parts = spec.split(separator: ",").compactMap { Double($0) }
-            if parts.count == 3 {
-                map.setCenter(CLLocationCoordinate2D(latitude: parts[0], longitude: parts[1]),
-                              zoomLevel: parts[2], animated: false)
-            }
-        }
+        MapCoordinator.applyDebugCamera(map)
         #endif
         map.showsUserLocation = true
         map.logoView.isHidden = false
@@ -88,7 +84,7 @@ struct MapView: UIViewRepresentable {
 final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLocationManagerDelegate {
     enum Layer {
         static let placesSource = "jol-pins"
-        static let cluster = "jol-places-cluster"
+        static let cluster = "jol-places-cluster"  // gone since Ш-70; still removed from a style that carries it
         static let clusterCount = "jol-places-cluster-count"
         static let selection = "jol-places-selection"
         static let pin = "jol-places-pin"
@@ -122,8 +118,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     var parent: MapView?
     private let locationManager = CLLocationManager()
     private weak var map: MLNMapView?
-    private var styleReady = false
-    private var appliedPinsVersion = -1
+    private(set) var styleReady = false
+    var appliedPinsVersion = -1
     private var appliedRouteID: UUID?
     private var appliedSelection: UUID?
     private var appliedInset: CGFloat = 0
@@ -135,6 +131,13 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     var appliedTripFitVersion = -1
     var appliedEventsVersion = -1
     private var appliedMarker: GeoPoint?
+    /// Pins hidden under a sight (Ш-70) as last applied to the pin layer's filter.
+    var appliedHidden: [String] = []
+    /// Pins whose logo is loaded and registered as a style image; the ones being fetched.
+    var logoReady: Set<UUID> = []
+    var logoRequested: Set<UUID> = []
+    var appliedLandmarkIDs: [UUID] = []
+    var debugCameraApplied = false
 
     func attach(to map: MLNMapView) {
         self.map = map
@@ -161,6 +164,9 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
     func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
         installLayers(in: style)
         styleReady = true
+        #if DEBUG
+        applyDebugCameraOnce(mapView)
+        #endif
         appliedPinsVersion = -1
         appliedRouteID = nil
         appliedDirectionVersion = -1
@@ -171,6 +177,9 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         appliedTripFitVersion = -1
         appliedEventsVersion = -1
         appliedMarker = nil
+        logoReady = []
+        logoRequested = []
+        appliedLandmarkIDs = []
         apply(to: mapView)
         reportRegion(mapView)
     }
@@ -206,29 +215,9 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             style.setImage(entry.style.pinImage(), forName: entry.name)
         }
 
-        let places = MLNShapeSource(identifier: Layer.placesSource, shape: nil, options: [
-            .clustered: true,
-            .clusterRadius: 44,
-            .maximumZoomLevelForClustering: 15,
-        ])
+        // No clusters (Ш-70): a sea of numbered circles drowned the sights. Ordinary pins appear from street zoom only.
+        let places = MLNShapeSource(identifier: Layer.placesSource, shape: nil, options: nil)
         style.addSource(places)
-
-        let clusters = MLNCircleStyleLayer(identifier: Layer.cluster, source: places)
-        clusters.predicate = NSPredicate(format: "cluster == YES")
-        clusters.circleColor = NSExpression(forConstantValue: JolColor.brandUIColor)
-        clusters.circleRadius = NSExpression(forConstantValue: 18)
-        clusters.circleStrokeColor = NSExpression(forConstantValue: UIColor.white)
-        clusters.circleStrokeWidth = NSExpression(forConstantValue: 2)
-        style.addLayer(clusters)
-
-        let counts = MLNSymbolStyleLayer(identifier: Layer.clusterCount, source: places)
-        counts.predicate = NSPredicate(format: "cluster == YES")
-        counts.text = NSExpression(format: "CAST(point_count, 'NSString')")
-        counts.textColor = NSExpression(forConstantValue: UIColor.black)
-        counts.textFontSize = NSExpression(forConstantValue: 13)
-        counts.textFontNames = NSExpression(forConstantValue: ["Noto Sans Bold"])
-        counts.textAllowsOverlap = NSExpression(forConstantValue: true)
-        style.addLayer(counts)
 
         let selection = MLNCircleStyleLayer(identifier: Layer.selection, source: places)
         selection.predicate = NSPredicate(format: "id == %@", "")
@@ -236,13 +225,19 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         selection.circleRadius = NSExpression(forConstantValue: 24)
         selection.circleStrokeColor = NSExpression(forConstantValue: JolColor.brandUIColor)
         selection.circleStrokeWidth = NSExpression(forConstantValue: 2)
+        selection.minimumZoomLevel = Float(PlacePinVisibility.streetZoom)
         style.addLayer(selection)
 
+        // Pins keep out of each other's way (a more popular place wins) and out of the sights' drawings.
         let pins = MLNSymbolStyleLayer(identifier: Layer.pin, source: places)
-        pins.predicate = NSPredicate(format: "cluster != YES")
         pins.iconImageName = NSExpression(forKeyPath: "icon")
-        pins.iconAllowsOverlap = NSExpression(forConstantValue: true)
+        pins.iconAllowsOverlap = NSExpression(forConstantValue: false)
+        pins.iconIgnoresPlacement = NSExpression(forConstantValue: false)
+        pins.iconPadding = NSExpression(forConstantValue: 3)
+        pins.symbolSortKey = NSExpression(forKeyPath: "order")
+        pins.minimumZoomLevel = Float(PlacePinVisibility.streetZoom)
         style.addLayer(pins)
+        appliedHidden = []
 
         installRouteLayers(in: style)
         installDirectionsLayers(in: style, belowPins: pins)
@@ -260,7 +255,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         if appliedPinsVersion != parent.pinsVersion, let source = style.source(withIdentifier: Layer.placesSource)
             as? MLNShapeSource {
             appliedPinsVersion = parent.pinsVersion
-            source.shape = MLNShapeCollectionFeature(shapes: parent.pins.map(Self.feature))
+            source.shape = MLNShapeCollectionFeature(shapes: parent.pins.map { Self.feature($0, logoReady: logoReady) })
+            refreshPins(map)
         }
 
         if appliedRouteID != parent.routeID {
@@ -297,6 +293,8 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             applyChatPlaces(parent.chatPlaces, in: style, map: map)
         }
 
+        applyLandmarks(parent.landmarks, map: map)
+
         applyLiveRoute(parent, map: map)
 
         applyTripAndEvents(parent, style: style, map: map)
@@ -309,13 +307,15 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         }
     }
 
-    private static func feature(_ place: PlaceSummary) -> MLNPointFeature {
+    static func feature(_ place: PlaceSummary, logoReady: Set<UUID>) -> MLNPointFeature {
         let feature = MLNPointFeature()
         feature.coordinate = place.coordinate
         feature.attributes = [
             "id": place.id.uuidString.lowercased(),
             "name": place.name,
-            "icon": PlaceCategoryStyle.imageName(for: place.category),
+            "icon": logoReady.contains(place.id) ? "logo-\(place.id.uuidString.lowercased())"
+                : PlaceCategoryStyle.imageName(for: place.category),
+            "order": Double(1000 - place.popularity),
         ]
         return feature
     }
@@ -348,7 +348,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
         guard let map, gesture.state == .ended else { return }
         let point = gesture.location(in: map)
         let hitBox = CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44)
-        let layers: Set<String> = [Layer.pin, Layer.cluster, Layer.routeStop, Layer.chatDot, Layer.tripStop,
+        let layers: Set<String> = [Layer.pin, Layer.routeStop, Layer.chatDot, Layer.tripStop,
                                    Layer.eventDot]
         let features = map.visibleFeatures(in: hitBox, styleLayerIdentifiers: layers)
         let nearest = features.min { distance($0, point, map) < distance($1, point, map) }
@@ -363,9 +363,7 @@ final class MapCoordinator: NSObject, @preconcurrency MLNMapViewDelegate, CLLoca
             }
             return
         }
-        if let cluster = nearest as? MLNPointFeatureCluster {
-            map.setCenter(cluster.coordinate, zoomLevel: min(map.zoomLevel + 2, 17), animated: true)
-        } else if let raw = nearest.attribute(forKey: "event") as? String, let id = UUID(uuidString: raw) {
+        if let raw = nearest.attribute(forKey: "event") as? String, let id = UUID(uuidString: raw) {
             parent?.onSelectEvent(id)
         } else if let raw = nearest.attribute(forKey: "id") as? String, let id = UUID(uuidString: raw) {
             parent?.onSelect(id)
