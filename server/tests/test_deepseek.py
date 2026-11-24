@@ -214,7 +214,8 @@ def settings(**values):
 
 def test_empty_key_is_clear_not_configured_error():
     with pytest.raises(LLMNotConfigured) as info:
-        get_llm_provider(settings(llm_provider="deepseek"))
+        # explicit empty key: the owner's .env may hold a real one, the test must not depend on it
+        get_llm_provider(settings(llm_provider="deepseek", deepseek_api_key=""))
     assert "DEEPSEEK_API_KEY" in str(info.value)
 
 
