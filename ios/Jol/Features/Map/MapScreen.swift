@@ -36,6 +36,7 @@ struct MapScreen: View {
             projection: projection,
             tripStops: tripOpen ? tripMap?.stops ?? [] : [],
             tripLines: tripOpen ? tripMap?.lines ?? [] : [],
+            tripFitExtras: tripOpen ? tripMap?.fitExtras ?? [] : [],
             tripColor: tripMap?.dayColor ?? JolColor.brandUIColor,
             tripVersion: tripOpen ? (tripMap?.drawVersion ?? 0) + 1 : 0,
             tripFitVersion: tripOpen ? (tripMap?.fitVersion ?? 0) + 1 : 0,

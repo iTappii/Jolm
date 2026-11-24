@@ -4548,6 +4548,186 @@
           }
         }
       }
+    },
+    "by plane" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на самолёте"
+          }
+        }
+      }
+    },
+    "by train" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на поезде"
+          }
+        }
+      }
+    },
+    "by intercity bus" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "на междугороднем автобусе"
+          }
+        }
+      }
+    },
+    "on a tour" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "в туре"
+          }
+        }
+      }
+    },
+    "From %lld to %lld: %@ about %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "От %lld до %lld: %@ около %@"
+          }
+        }
+      }
+    },
+    "Flight" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перелёт"
+          }
+        }
+      }
+    },
+    "Train" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поезд"
+          }
+        }
+      }
+    },
+    "Intercity bus" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Междугородний автобус"
+          }
+        }
+      }
+    },
+    "Transfer" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переезд"
+          }
+        }
+      }
+    },
+    "Organized tour" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Организованный тур"
+          }
+        }
+      }
+    },
+    "Travel day" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "День переезда"
+          }
+        }
+      }
+    },
+    "Travel to %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переезд в %@"
+          }
+        }
+      }
+    },
+    "Overnight: %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ночёвка: %@"
+          }
+        }
+      }
+    },
+    "%@ to %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ в %@"
+          }
+        }
+      }
+    },
+    "about %@" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "около %@"
+          }
+        }
+      }
+    },
+    "Approximate" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Примерно"
+          }
+        }
+      }
+    },
+    "Shows the details" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывает подробности"
+          }
+        }
+      }
+    },
+    "Time and price are approximate." : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Время и цена примерные."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

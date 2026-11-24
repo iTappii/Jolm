@@ -37,7 +37,9 @@ struct TripLegSheet: View {
                             .foregroundStyle(JolColor.danger)
                             .accessibilityIdentifier("trip-leg-problem")
                     }
-                    if choices.isEmpty {
+                    if let info = current.intercity {
+                        intercityCard(info)
+                    } else if choices.isEmpty {
                         Text("No ways to get there were calculated for this leg.")
                             .font(JolFont.callout)
                             .foregroundStyle(JolColor.textSecondary)
@@ -72,6 +74,39 @@ struct TripLegSheet: View {
         case .noReplacement: L10n.string("No other place fits this day.", language: language)
         case .server(let message): message
         }
+    }
+
+    /// The transfer between two cities (Ш-62): the way, the time, the price range; no alternatives to pick from.
+    private func intercityCard(_ info: IntercityInfo) -> some View {
+        HStack(spacing: JolSpacing.md) {
+            Image(systemName: IntercityFormatting.symbol(info.mode))
+                .font(.title3)
+                .frame(width: 40, height: 40)
+                .background(JolColor.brand, in: Circle())
+                .foregroundStyle(JolColor.onBrand)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: JolSpacing.xxs) {
+                Text(verbatim: IntercityFormatting.title(info.mode, language: language)).font(JolFont.headline)
+                if let seconds = current.travelS {
+                    Text(verbatim: IntercityFormatting.duration(seconds: seconds, language: language))
+                        .font(JolFont.callout)
+                }
+                if let price = IntercityFormatting.priceRange(info, locale: Locale(identifier: language)) {
+                    Text(verbatim: price).font(JolFont.callout).foregroundStyle(JolColor.textSecondary)
+                }
+                if info.approximate {
+                    Text("Time and price are approximate.").font(JolFont.caption)
+                        .foregroundStyle(JolColor.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(JolSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.lg))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: IntercityFormatting.spoken(current, language: language) ?? ""))
+        .accessibilityIdentifier("trip-leg-intercity")
     }
 
     private var header: some View {

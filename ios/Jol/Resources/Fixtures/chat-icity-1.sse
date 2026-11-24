@@ -1,0 +1,12 @@
+event: brief_updated
+data: {"brief": {"start_date": "2026-12-05", "end_date": "2026-12-09", "budget_kzt": 600000, "has_accommodation": false, "must_haves": ["Shymbulak"], "interests": [], "pace": null, "crowd_tolerance": null, "missing": [], "complete": false}, "changed": ["must_haves"]}
+
+event: text_delta
+data: {"text": "Shymbulak is on the map. "}
+
+event: live_route
+data: {"stops": [{"ord": 1, "wish": "Shymbulak", "place": {"id": "1b000000-0000-4000-8000-000000000001", "name": "Shymbulak", "category": "mountain", "lat": 43.1286, "lon": 77.0807}, "alternatives": []}], "legs": []}
+
+event: done
+data: {"message_id": 2, "usage": {"input_tokens": 10, "output_tokens": 20}}
+

@@ -26,7 +26,8 @@ struct TripDayListView: View {
 
     private func dayList(_ day: TripDay) -> some View {
         LazyVStack(alignment: .leading, spacing: JolSpacing.xs) {
-            if day.items.isEmpty {
+            transferBanner(day)
+            if day.items.isEmpty && !day.isTransfer {
                 Text("Free day")
                     .foregroundStyle(JolColor.textSecondary)
                     .padding(.vertical, JolSpacing.md)
@@ -36,8 +37,84 @@ struct TripDayListView: View {
                 if let leg = day.leg(to: item) { legRow(leg) }
                 stopRow(item, number: index + 1)
             }
+            overnightLine(day)
         }
         .padding(.bottom, JolSpacing.xl)
+    }
+
+    // MARK: - Intercity (Ш-62)
+
+    /// «Travel to Turkestan» above a transfer day's list.
+    @ViewBuilder private func transferBanner(_ day: TripDay) -> some View {
+        if let title = IntercityFormatting.transferTitle(day, language: container.language.code) {
+            let mode = day.intercityLeg?.intercity?.mode
+            HStack(spacing: JolSpacing.sm) {
+                Image(systemName: IntercityFormatting.symbol(mode)).accessibilityHidden(true)
+                Text(verbatim: title).font(JolFont.callout.weight(.semibold))
+            }
+            .foregroundStyle(Color(TripMapModel.dayColor(shownIndex)))
+            .padding(.vertical, JolSpacing.xs)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier(identifiesDay ? "trip-transfer-d\(shownIndex + 1)" : "trip-transfer")
+        }
+    }
+
+    /// «Overnight: Saty» under the day's last stop.
+    @ViewBuilder private func overnightLine(_ day: TripDay) -> some View {
+        if let line = IntercityFormatting.overnightLine(day, language: container.language.code) {
+            HStack(spacing: JolSpacing.sm) {
+                Image(systemName: "moon.stars.fill").accessibilityHidden(true)
+                Text(verbatim: line).font(JolFont.callout)
+            }
+            .foregroundStyle(JolColor.textSecondary)
+            .padding(.vertical, JolSpacing.xs)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier(identifiesDay ? "trip-overnight-d\(shownIndex + 1)" : "trip-overnight")
+        }
+    }
+
+    /// A leg between two cities: the way, the approximate time and the price range.
+    private func intercityRow(_ leg: TripLeg, _ info: IntercityInfo) -> some View {
+        let language = container.language.code
+        return Button { model.selectLeg(leg.id) } label: {
+            HStack(spacing: JolSpacing.sm) {
+                Image(systemName: IntercityFormatting.symbol(info.mode))
+                    .frame(width: 28)
+                    .foregroundStyle(JolColor.textSecondary)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: JolSpacing.xxs) {
+                    HStack(spacing: JolSpacing.xs) {
+                        Text(verbatim: IntercityFormatting.title(info.mode, language: language))
+                            .fontWeight(.semibold)
+                        if let seconds = leg.travelS {
+                            Text(verbatim: "· " + IntercityFormatting.duration(seconds: seconds, language: language))
+                        }
+                    }
+                    HStack(spacing: JolSpacing.xs) {
+                        if let price = IntercityFormatting.priceRange(info, locale: locale) { Text(verbatim: price) }
+                        if info.approximate { Text("Approximate") }
+                    }
+                }
+                Spacer()
+                if !model.isSavedCopy {
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(JolColor.textTertiary)
+                        .accessibilityHidden(true)
+                }
+            }
+            .font(JolFont.caption)
+            .foregroundStyle(JolColor.textSecondary)
+            .padding(.vertical, JolSpacing.xs)
+            .frame(minHeight: JolTarget.minimum)
+            .padding(.horizontal, JolSpacing.sm)
+            .background(JolColor.surface, in: RoundedRectangle(cornerRadius: JolRadius.md))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: IntercityFormatting.spoken(leg, language: language) ?? ""))
+        .accessibilityHint(Text("Shows the details"))
+        .accessibilityIdentifier("trip-intercity-leg")
     }
 
     private func stopRow(_ item: TripDayItem, number: Int) -> some View {
@@ -119,7 +196,15 @@ struct TripDayListView: View {
         .foregroundStyle(JolColor.textSecondary)
     }
 
-    private func legRow(_ leg: TripLeg) -> some View {
+    @ViewBuilder private func legRow(_ leg: TripLeg) -> some View {
+        if let info = leg.intercity {
+            intercityRow(leg, info)
+        } else {
+            routeLegRow(leg)
+        }
+    }
+
+    private func routeLegRow(_ leg: TripLeg) -> some View {
         let option = leg.activeOption
         let late = model.lateBy[leg.id] ?? 0
         return Button { model.selectLeg(leg.id) } label: {

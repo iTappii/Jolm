@@ -212,7 +212,7 @@ final class TripMapModel {
     // MARK: - Drawing
 
     /// The days drawn: the shown one, or all of them.
-    private var drawnDays: [(index: Int, day: TripDay)] {
+    var drawnDays: [(index: Int, day: TripDay)] {
         if showsAllDays { return days.enumerated().map { (index: $0.offset, day: $0.element) } }
         guard let day else { return [] }
         return [(index: dayIndex, day: day)]
@@ -224,26 +224,6 @@ final class TripMapModel {
                 TripMapStop(
                     placeID: item.place.id, number: number + 1, coordinate: item.place.coordinate,
                     colorHex: Self.dayColors[index % Self.dayColors.count]
-                )
-            }
-        }
-    }
-
-    var lines: [TripMapLine] {
-        drawnDays.flatMap { index, day in
-            let hex = Self.dayColors[index % Self.dayColors.count]
-            let byID = Dictionary(day.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            return day.legs.compactMap { leg -> TripMapLine? in
-                guard let from = leg.fromItemID.flatMap({ byID[$0] }), let to = byID[leg.toItemID] else { return nil }
-                if let option = leg.activeOption {
-                    let line = option.line
-                    if line.count >= 2 {
-                        return TripMapLine(legID: leg.id, coordinates: line, approximate: false, colorHex: hex)
-                    }
-                }
-                return TripMapLine(
-                    legID: leg.id, coordinates: [from.place.coordinate, to.place.coordinate], approximate: true,
-                    colorHex: hex
                 )
             }
         }
