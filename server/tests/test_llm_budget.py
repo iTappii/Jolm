@@ -171,21 +171,49 @@ async def test_guest_counters_hold_no_raw_identifiers(chat_env, conn, monkeypatc
 # --- global budget -----------------------------------------------------------------------------
 
 
-async def test_global_budget_refuses_everyone_with_503(chat_env, conn, monkeypatch):
+async def test_global_budget_never_blocks_but_keeps_counting(chat_env, conn, monkeypatch):
     limits(monkeypatch, llm_daily_tokens_global=100)
     llm = use_chat(chat_env, steps=[Step(text=["ok"])])
-    assert (await guest(chat_env)).status_code == 200
-    calls = len(llm.calls)
-    refused = await guest(chat_env, OTHER_INSTALL)
-    assert refused.status_code == 503
-    assert refused.json()["error"]["code"] == "llm_budget_service"
-    assert int(refused.headers["retry-after"]) > 0
+    for install in (INSTALL, OTHER_INSTALL, INSTALL):
+        assert (await guest(chat_env, install)).status_code == 200
     headers = await sign_in(conn)
     chat = await new_chat(chat_env, headers)
-    registered = await say(chat_env, headers, chat["id"])
-    assert registered.status_code == 503
-    assert registered.json()["error"]["code"] == "llm_budget_service"
-    assert len(llm.calls) == calls
+    assert (await say(chat_env, headers, chat["id"])).status_code == 200
+    assert len(llm.calls) == 4
+    assert await llm_budget.global_used_today(conn) > 100  # spend stays visible
+    assert 'jol_llm_budget_threshold_total{percent="100"} 1' in metrics.render()
+
+
+async def test_defaults_put_no_limit_on_chat_messages():
+    settings = get_settings().__class__()
+    for name in (
+        "llm_daily_tokens_user",
+        "llm_daily_tokens_guest_install",
+        "llm_daily_tokens_guest_ip",
+        "llm_daily_tokens_global",
+        "chat_user_limit",
+        "guest_chat_install_limit",
+        "guest_chat_ip_limit",
+    ):
+        assert getattr(settings, name) == 0, name
+    assert settings.llm_max_output_tokens == 800 and settings.llm_max_output_tokens_plan == 1800
+
+
+async def test_zero_rate_limits_mean_no_limit(chat_env, conn):
+    from app.chat.deps import make_limiters
+
+    chat_env.app.state.chat_limiters = make_limiters(
+        get_settings().__class__(
+            chat_user_limit=0, guest_chat_install_limit=0, guest_chat_ip_limit=0
+        )
+    )
+    use_chat(chat_env, steps=[Step(text=["ok"])])
+    for _ in range(5):
+        assert (await guest(chat_env)).status_code == 200
+    headers = await sign_in(conn)
+    chat = await new_chat(chat_env, headers)
+    for _ in range(5):
+        assert (await say(chat_env, headers, chat["id"])).status_code == 200
 
 
 async def test_zero_means_no_limit(chat_env, monkeypatch):

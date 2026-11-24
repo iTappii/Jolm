@@ -77,7 +77,8 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
     checks = [(limiters.guest_ip, "ip:" + client_ip(request))]
     if installation:
         checks.append((limiters.guest_install, "install:" + installation))
-    wait = await acquire_own(request.app.state.db, checks)
+    checks = [c for c in checks if c[0].limit > 0]  # limit 0 = no limit (owner, 2026-11-24)
+    wait = await acquire_own(request.app.state.db, checks) if checks else None
     if wait is not None:
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
 

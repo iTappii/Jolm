@@ -320,7 +320,11 @@ async def send_message(chat_id: UUID, payload: SendMessage, request: Request):
         # Taken inside this transaction: any refusal below rolls the lease back with it.
         if not await store.try_acquire_turn(conn, chat_id, lease_sec()):
             raise AppError(409, "chat_busy")
-        wait = await acquire(conn, [(request.app.state.chat_limiters.user, "user:%s" % user["id"])])
+        user_rule = request.app.state.chat_limiters.user
+        # owner's decision 2026-11-24: limit 0 = no cap on the number of messages
+        wait = await acquire(
+            conn, [(user_rule, "user:%s" % user["id"])] if user_rule.limit > 0 else []
+        )
         if wait is not None:
             raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
         await store.add_user_message(conn, chat_id, payload.content)

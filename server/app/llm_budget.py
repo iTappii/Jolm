@@ -6,7 +6,8 @@ nothing); `record` adds the tokens a turn really used (`TurnRecord.usage`, input
 it. One turn can therefore pass the line once. A limit of 0 means "no limit".
 
 - Over the user's / guest's budget: 429 `llm_budget_exceeded` (+ Retry-After until the regional
-  midnight). Over the global budget: 503 `llm_budget_service` (checked first).
+  midnight). The global budget never blocks anyone
+  (owner, 2026-11-24): it only warns and feeds the gauges. All limits default to 0 (off).
 - The global total crossing the warning percent and 100% is detected atomically in `record`
   (previous total below the line, new total at or above it), so it fires once per day across all
   API processes: a warning log and `jol_llm_budget_threshold_total{level=...}` in `/metrics`.
@@ -91,21 +92,17 @@ _CLEANUP = "DELETE FROM llm_usage_daily WHERE day < %s"
 async def check(
     conn: AsyncConnection, budgets: Iterable[Budget], now: Optional[datetime] = None
 ) -> None:
-    """Raise 503 `llm_budget_service` / 429 `llm_budget_exceeded` if a budget is used up."""
-    active = [b for b in budgets if b.limit > 0]
+    """Raise 429 `llm_budget_exceeded` if a user's / guest's budget is used up (0 = no limit).
+
+    The global budget never blocks (owner's decision 2026-11-24): it only warns in `record`.
+    """
+    active = [b for b in budgets if b.limit > 0 and b.scope != GLOBAL]
     if not active:
         return
     rows = await fetch_all(conn, _USED, (budget_day(now), [b.key for b in active]))
     used = {r["key_hash"]: r["tokens"] for r in rows}
     for budget in active:  # the global one comes first in the lists above
         if used.get(budget.key, 0) >= budget.limit:
-            if budget.scope == GLOBAL:
-                log.warning("llm global daily budget used up: refusing chat requests")
-                raise AppError(
-                    503,
-                    "llm_budget_service",
-                    headers={"Retry-After": str(seconds_until_next_day(now))},
-                )
             raise AppError(
                 429,
                 "llm_budget_exceeded",
