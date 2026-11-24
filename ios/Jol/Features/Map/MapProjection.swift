@@ -22,6 +22,12 @@ final class MapProjection {
         Task { @MainActor [weak self] in self?.invalidate() }
     }
 
+    /// Zoom level of the map now (re-read on every camera frame); `0` while there is no map.
+    var zoom: Double {
+        _ = version
+        return map?.zoomLevel ?? 0
+    }
+
     /// Screen point (in the map view's coordinates) of `coordinate`; `nil` while there is no map.
     func point(for coordinate: CLLocationCoordinate2D) -> CGPoint? {
         _ = version

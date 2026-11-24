@@ -29,6 +29,7 @@ struct HomeScreen: View {
                 projection: projection,
                 bottomInset: mapBottomInset
             )
+            if showsLandmarks { landmarksLayer }
             if chatExpanded {
                 Color.black.opacity(0.12)
                     .ignoresSafeArea()
@@ -106,6 +107,7 @@ struct HomeScreen: View {
             withAnimation(.easeOut(duration: 0.25)) { keyboardHeight = 0 }
         }
         .animation(.snappy(duration: 0.3), value: chatExpanded)
+        .task(id: container.language.code) { await container.landmarks.load(language: container.language.code) }
         .announcingChatChanges(container.chat, language: container.language.code)
         .sheet(isPresented: $profileOpen) {
             ProfileMenuSheet()
@@ -272,6 +274,23 @@ struct HomeScreen: View {
 }
 
 extension HomeScreen {
+    /// The main sights (Ш-69) are not drawn while the live route, the full route map or a way to a place is on the
+    /// map: those show their own stops, and the sights would only crowd (or be mistaken for) them.
+    var landmarksLayer: some View {
+        LandmarksOverlay(
+            landmarks: container.landmarks.items,
+            projection: projection,
+            onOpen: { container.places.select($0.summary) }
+        )
+        // Behind the open chat the markers cannot be reached, so VoiceOver skips them.
+        .accessibilityHidden(chatExpanded)
+    }
+
+    var showsLandmarks: Bool {
+        !container.landmarks.items.isEmpty && !container.tripMap.isOpen
+            && container.chat.state.liveRoute == nil && !container.directions.isActive
+    }
+
     private var attributionLine: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)

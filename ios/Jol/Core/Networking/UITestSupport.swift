@@ -51,15 +51,60 @@ enum UITestSupport {
             + "\(summary(secondPlaceID, "Fixture Cafe", "coffee", lat + 0.01, lon + 0.012))]}"
     }
 
+    /// Main sights (Ш-69): six in Almaty (the first two appear at zoom 12, the rest closer) and two in Turkestan.
+    /// The city overview of the stub (zoom 11) shows none of them.
+    struct LandmarkFixture {
+        let id: String
+        let name: String
+        let category: String
+        let icon: String
+        let lat: Double
+        let lon: Double
+        let minZoom: Double
+        let rank: Int
+        let region: String
+    }
+
+    static let landmarkFixtures: [LandmarkFixture] = [
+        .init(id: "a0000000-0000-4000-8000-000000000001", name: "Medeu", category: "landmark", icon: "skating_rink",
+              lat: 43.1575, lon: 77.0594, minZoom: 12, rank: 1, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000002", name: "Kok-Tobe", category: "viewpoint", icon: "tv_tower",
+              lat: 43.2330, lon: 76.9749, minZoom: 12, rank: 2, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000003", name: "Zenkov Cathedral", category: "religious",
+              icon: "cathedral", lat: 43.2582, lon: 76.9549, minZoom: 12.5, rank: 3, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000004", name: "Green Bazaar", category: "market", icon: "bazaar",
+              lat: 43.2646, lon: 76.9578, minZoom: 12.5, rank: 4, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000005", name: "Central Mosque", category: "religious",
+              icon: "mosque", lat: 43.2373, lon: 76.9425, minZoom: 13, rank: 5, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000006", name: "Park of the First President", category: "park",
+              icon: "park", lat: 43.2130, lon: 76.9215, minZoom: 13, rank: 6, region: "almaty"),
+        .init(id: "a0000000-0000-4000-8000-000000000007", name: "Yasawi Mausoleum", category: "historic",
+              icon: "mausoleum", lat: 43.2975, lon: 68.2722, minZoom: 12, rank: 1, region: "turkestan"),
+        .init(id: "a0000000-0000-4000-8000-000000000008", name: "Charyn Canyon", category: "landmark",
+              icon: "canyon", lat: 43.3500, lon: 79.0850, minZoom: 12, rank: 1, region: "charyn"),
+    ]
+
+    static var landmarksJSON: String {
+        if isDemo { return "{\"landmarks\":[]}" }
+        let items = landmarkFixtures.map { item in
+            "{\"id\":\"\(item.id)\",\"name\":\"\(item.name)\",\"category\":\"\(item.category)\","
+                + "\"icon\":\"\(item.icon)\",\"lat\":\(item.lat),\"lon\":\(item.lon),"
+                + "\"min_zoom\":\(item.minZoom),\"rank\":\(item.rank),"
+                + "\"region\":\"\(item.region)\"}"
+        }
+        return "{\"landmarks\":[\(items.joined(separator: ","))]}"
+    }
+
     static func detailJSON(id: String) -> String {
         let second = id == secondPlaceID
-        let name = second ? "Fixture Cafe" : "Fixture Museum"
+        let sight = landmarkFixtures.first { $0.id == id }
+        let name = sight?.name ?? (second ? "Fixture Cafe" : "Fixture Museum")
         let category = second
             ? "{\"slug\":\"coffee\",\"name\":\"Coffee\"}"
             : "{\"slug\":\"museum\",\"name\":\"Museum\"}"
         let prices = second ? "{\"avg_check_kzt\":3500}" : "{\"entry_price_kzt\":1500}"
-        let lat = Region.current.center.latitude + (second ? 0.01 : 0)
-        let lon = Region.current.center.longitude + (second ? 0.012 : 0)
+        let lat = sight?.lat ?? Region.current.center.latitude + (second ? 0.01 : 0)
+        let lon = sight?.lon ?? Region.current.center.longitude + (second ? 0.012 : 0)
         var days: [String] = []
         for day in 0..<7 {
             days.append("{\"weekday\":\(day),\"intervals\":[{\"opens\":\"09:00\",\"closes\":\"18:00\"}]}")
@@ -261,6 +306,7 @@ final class FixtureURLProtocol: URLProtocol, @unchecked Sendable {
     private static func fixture(path: String) -> String? {
         switch path {
         case "/v1/places": UITestSupport.placesJSON
+        case "/v1/landmarks": UITestSupport.landmarksJSON
         case "/v1/directions": UITestSupport.directionsJSON
         case "/v1/curated-routes": UITestSupport.routesJSON
         case _ where path.hasPrefix("/v1/places/"):

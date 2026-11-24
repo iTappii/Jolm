@@ -4738,6 +4738,26 @@
           }
         }
       }
+    },
+    "%@, landmark" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, достопримечательность"
+          }
+        }
+      }
+    },
+    "Main sights" : {
+      "localizations" : {
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Главные места"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
