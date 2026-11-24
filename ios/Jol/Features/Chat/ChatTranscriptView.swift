@@ -207,7 +207,7 @@ private struct FailureRow: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("chat-retry")
-            } else {
+            } else if failure.offersNewChat {
                 Button(action: onNewChat) {
                     Label("New chat", systemImage: "square.and.pencil")
                         .font(JolFont.callout.weight(.semibold))
@@ -231,9 +231,16 @@ private struct FailureRow: View {
             Text("This chat is full. Start a new chat to continue.")
         case .rateLimited(let seconds):
             if let seconds, seconds > 0 {
-                Text("Too many messages. Try again in \(seconds) s.")
+                Text("Too many messages. Try again in \(RetryDelay.text(seconds)).")
             } else {
                 Text("Too many messages. Try again later.")
+            }
+        case .budgetExceeded(let message):
+            if message.isEmpty {
+                // swiftlint:disable:next line_length
+                Text("You've reached today's AI message limit. Try again tomorrow — the map and directions keep working.")
+            } else {
+                Text(verbatim: message)
             }
         case .server(let message):
             if message.isEmpty { Text("Something went wrong.") } else { Text(verbatim: message) }

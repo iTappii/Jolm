@@ -132,6 +132,9 @@ enum ChatStub {
 
     private static func message(_ text: String) -> Answer {
         let lowered = text.lowercased()
+        if lowered.contains("budget") {
+            return error(429, "llm_budget_exceeded", "", headers: ["Retry-After": "40000"])
+        }
         if lowered.contains("full") { return error(409, "chat_full", "This chat is full.") }
         if lowered.contains("busy"), failedOnce.insert("busy").inserted { return error(409, "chat_busy", "busy") }
         if lowered.contains("boom"), failedOnce.insert("boom").inserted { return stream("chat-error") }
@@ -246,8 +249,10 @@ enum ChatStub {
         return Answer(body: liveJSON() ?? "{}")
     }
 
-    private static func error(_ status: Int, _ code: String, _ message: String) -> Answer {
-        Answer(status: status, body: "{\"error\":{\"code\":\"\(code)\",\"message\":\"\(message)\"}}")
+    private static func error(_ status: Int, _ code: String, _ message: String,
+                              headers: [String: String] = [:]) -> Answer {
+        Answer(status: status, headers: ["Content-Type": "application/json"].merging(headers) { $1 },
+               body: "{\"error\":{\"code\":\"\(code)\",\"message\":\"\(message)\"}}")
     }
 
     // MARK: - JSON
