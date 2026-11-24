@@ -13,6 +13,13 @@ enum LocationResult: Equatable, Sendable {
 @MainActor
 protocol LocationProviding: AnyObject {
     func currentLocation() async -> LocationResult
+    /// Ш-68: the last fix if the user ALREADY granted access and it is fresh. Never asks for permission and never
+    /// waits (used while sending a chat message); `nil` means "unknown", the server then uses the city centre.
+    func knownLocation() -> GeoPoint?
+}
+
+extension LocationProviding {
+    func knownLocation() -> GeoPoint? { nil }
 }
 
 /// `CLLocationManager` wrapper: asks for when-in-use permission if it was never asked, then returns one fix.
@@ -24,6 +31,8 @@ final class CoreLocationProvider: NSObject, LocationProviding, @preconcurrency C
 
     /// A fix younger than this is reused without a new request.
     private static let freshness: TimeInterval = 120
+    /// How old a fix may be to go along with a chat message (a tourist walks ~80 m a minute).
+    private static let knownFreshness: TimeInterval = 600
     private static let timeoutSeconds = 10
 
     override init() {
@@ -51,6 +60,20 @@ final class CoreLocationProvider: NSObject, LocationProviding, @preconcurrency C
                 requestFix()
             }
         }
+    }
+
+    func knownLocation() -> GeoPoint? {
+        switch manager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            break
+        default:
+            return nil  // not asked / refused: no prompt here
+        }
+        if let location = manager.location, -location.timestamp.timeIntervalSinceNow < Self.knownFreshness {
+            return GeoPoint(location.coordinate)
+        }
+        if pending == nil { manager.requestLocation() }  // warms up the next message; permission is already granted
+        return nil
     }
 
     private func requestFix() {

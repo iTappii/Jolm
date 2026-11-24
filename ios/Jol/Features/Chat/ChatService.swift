@@ -24,8 +24,17 @@ struct ChatService: Sendable {
         try await api.send(.get("v1/chats/\(Self.path(id))"))
     }
 
-    func send(chatID: UUID, text: String) throws -> AsyncThrowingStream<SSEEvent, Error> {
-        api.stream(try Endpoint.post("v1/chats/\(Self.path(chatID))/messages", json: ["content": text]))
+    /// `location` (Ш-68) is where the tourist is right now, only when the app already has permission and a fresh fix:
+    /// the server uses it for this turn ("near me"), never stores or logs it, and never hands it to the model.
+    private struct SendBody: Encodable {
+        let content: String
+        let location: GeoPoint?
+    }
+
+    func send(chatID: UUID, text: String, location: GeoPoint? = nil) throws -> AsyncThrowingStream<SSEEvent, Error> {
+        api.stream(try Endpoint.post(
+            "v1/chats/\(Self.path(chatID))/messages", json: SendBody(content: text, location: location)
+        ))
     }
 
     /// `GET /v1/chats/{id}/events` (Ш-64): a long-lived stream with the live route and its build status — first a
@@ -52,10 +61,15 @@ struct ChatService: Sendable {
     private struct GuestBody: Encodable {
         let messages: [GuestMessage]
         let locale: String
+        let location: GeoPoint?
     }
 
-    func guest(messages: [GuestMessage], locale: String) throws -> AsyncThrowingStream<SSEEvent, Error> {
-        api.stream(try Endpoint.post("v1/chat/guest", json: GuestBody(messages: messages, locale: locale)))
+    func guest(
+        messages: [GuestMessage], locale: String, location: GeoPoint? = nil
+    ) throws -> AsyncThrowingStream<SSEEvent, Error> {
+        api.stream(try Endpoint.post(
+            "v1/chat/guest", json: GuestBody(messages: messages, locale: locale, location: location)
+        ))
     }
 
     /// The history a guest request may carry: newest messages that fit the server limits, ending with the

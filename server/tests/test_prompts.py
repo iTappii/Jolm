@@ -23,9 +23,9 @@ def test_unknown_locale_falls_back_to_english_and_unknown_prompt_fails():
 
 
 def test_versions_are_listed_and_latest_is_loaded():
-    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4, 5, 6]
+    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4, 5, 6, 7]
     assert prompts.load_prompt(prompts.GUEST, "en", version=1).version == 1
-    assert prompts.load_prompt(prompts.GUEST, "en").version == 6
+    assert prompts.load_prompt(prompts.GUEST, "en").version == 7
 
 
 def test_render_fills_today():
@@ -131,7 +131,26 @@ async def test_the_chats_use_the_latest_prompts(chat_env, conn):
 def test_latest_prompts_tell_the_model_search_understands_dishes():  # Ш-67
     for name, version in ((prompts.TRIP_BRIEF, 10), (prompts.GUEST, 6)):
         for locale in ("en", "ru"):
-            latest = prompts.load_prompt(name, locale)
-            assert latest.version == version
+            latest = prompts.load_prompt(name, locale, version=version)
             assert "near" in latest.text and "matched" in latest.text
             assert "matched" not in prompts.load_prompt(name, locale, version=version - 1).text
+            assert "near" in prompts.load_prompt(name, locale).text  # kept by Ш-68
+
+
+def test_latest_prompts_make_the_model_recommend_by_itself():  # Ш-68
+    words = {
+        "en": ("distance_m", "closes_at", "open_now", "PICK the 2-3", "never ask", "show more"),
+        "ru": ("distance_m", "closes_at", "open_now", "ВЫБЕРИ 2-3", "не проси", "показать ещё"),
+    }
+    for name, version in ((prompts.TRIP_BRIEF, 11), (prompts.GUEST, 7)):
+        for locale in ("en", "ru"):
+            latest = prompts.load_prompt(name, locale)
+            assert latest.version == version
+            for word in words[locale]:
+                assert word in latest.text, (name, locale, word)
+            for kept in ("matched", "near", *BOUNDARY_WORDS[locale]):  # v10 / v6 rules stay
+                assert kept in latest.text, (name, locale, kept)
+            assert "distance_m" not in prompts.load_prompt(name, locale, version=version - 1).text
+    assert "add to the route" in prompts.load_prompt(prompts.TRIP_BRIEF, "en").text
+    assert "add to the route" not in prompts.load_prompt(prompts.GUEST, "en").text
+    assert "outside_area" in prompts.load_prompt(prompts.GUEST, "ru").text
