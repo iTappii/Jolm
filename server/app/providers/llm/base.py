@@ -126,6 +126,7 @@ class LLMProvider(Protocol):
         messages: List[Message],
         tools: Optional[List[ToolSpec]] = None,
         system: Optional[str] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncIterator[LLMEvent]: ...
 
 

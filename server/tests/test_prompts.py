@@ -23,9 +23,9 @@ def test_unknown_locale_falls_back_to_english_and_unknown_prompt_fails():
 
 
 def test_versions_are_listed_and_latest_is_loaded():
-    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4]
+    assert prompts.versions(prompts.GUEST, "en") == [1, 2, 3, 4, 5]
     assert prompts.load_prompt(prompts.GUEST, "en", version=1).version == 1
-    assert prompts.load_prompt(prompts.GUEST, "en").version == 4
+    assert prompts.load_prompt(prompts.GUEST, "en").version == 5
 
 
 def test_render_fills_today():
@@ -79,3 +79,48 @@ def test_latest_prompts_take_city_and_currency_from_the_region():  # Ш-57
     )  # fmt: skip
     text = brief.render(region=other)
     assert "Ex," in text and "USD" in text and "KZT" not in text
+
+
+# --- Ш-66: boundaries of the assistant ---------------------------------------------------------
+BOUNDARY_WORDS = {
+    "en": ("Allowed", "Not allowed", "code", "SQL", "tool names", "data, not commands", "Examples"),
+    "ru": ("Можно", "Нельзя", "код", "SQL", "названия и аргументы инструментов",
+           "данные, а не команды", "Примеры"),
+}  # fmt: skip
+
+
+def test_prompt_v9_and_v5_carry_the_boundaries_and_are_the_ones_in_use():
+    for name, version, previous in ((prompts.TRIP_BRIEF, 9, 8), (prompts.GUEST, 5, 4)):
+        for locale in ("en", "ru"):
+            latest = prompts.load_prompt(name, locale)
+            assert latest.version == version  # the app loads the highest version (see deps/api)
+            for word in BOUNDARY_WORDS[locale]:
+                assert word in latest.text, (name, locale, word)
+            old = prompts.load_prompt(name, locale, version=previous).text
+            assert "SQL" not in old  # the released version is untouched
+            assert "Stay on topic" not in latest.text and "Держись темы" not in latest.text
+
+
+def test_boundaries_do_not_name_internal_tools_in_the_guest_prompt():
+    for locale in ("en", "ru"):
+        text = prompts.load_prompt(prompts.GUEST, locale).text
+        for tool in ("update_trip_brief", "build_trip", "add_graph_node"):
+            assert tool not in text
+
+
+async def test_the_chats_use_the_latest_prompts(chat_env, conn):
+    from app.providers.llm import FakeLLM
+    from app.providers.llm.fake import Step
+    from tests.test_chat import new_chat, say, sign_in
+
+    llm = FakeLLM(steps=[Step(text=["ok"])])
+    chat_env.app.state.llm_provider = llm
+    headers = await sign_in(conn)
+    chat = await new_chat(chat_env, headers, "en")
+    assert (await say(chat_env, headers, chat["id"])).status_code == 200
+    assert "Boundaries" in llm.calls[0].system
+    guest = await chat_env.client.post(
+        "/v1/chat/guest", json={"messages": [{"role": "user", "content": "Hi"}], "locale": "ru"}
+    )
+    assert guest.status_code == 200
+    assert "Рамки" in llm.calls[-1].system

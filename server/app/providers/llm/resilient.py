@@ -55,11 +55,17 @@ class ResilientLLM:
         timeout_sec: float = 60.0,
         max_retries: int = 2,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        max_output_tokens: Optional[int] = None,
+        max_output_tokens_plan: Optional[int] = None,
     ) -> None:
         self.provider = provider
         self.timeout_sec = timeout_sec
         self.max_retries = max_retries
         self.sleep = sleep
+        # Ш-66: output cap per reply; None = the provider's own default. `long_reply` rounds
+        # (the explanation of a freshly built or edited plan) get the larger plan cap.
+        self.max_output_tokens = max_output_tokens
+        self.max_output_tokens_plan = max_output_tokens_plan or max_output_tokens
         self.counter = TokenCounter()
 
     async def stream(
@@ -67,13 +73,16 @@ class ResilientLLM:
         messages: List[Message],
         tools: Optional[List[ToolSpec]] = None,
         system: Optional[str] = None,
+        long_reply: bool = False,
     ) -> AsyncIterator[LLMEvent]:
+        cap = self.max_output_tokens_plan if long_reply else self.max_output_tokens
+        extra = {"max_tokens": cap} if cap else {}  # providers without the argument still work
         attempt = 0
         while True:
             yielded = False
             failure: Optional[ErrorEvent] = None
             deadline = time.monotonic() + self.timeout_sec
-            events = self.provider.stream(messages, tools, system).__aiter__()
+            events = self.provider.stream(messages, tools, system, **extra).__aiter__()
             try:
                 while True:
                     remaining = deadline - time.monotonic()

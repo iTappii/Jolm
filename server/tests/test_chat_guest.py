@@ -210,7 +210,8 @@ async def test_guest_chat_writes_nothing_to_the_database(chat_env, conn):
     ]
     assert "chats" in tables and "otp_codes" in tables
     # shared rate-limit counters (Ш-51) are bookkeeping, not chat data: hashed key + timestamps
-    tables = [t for t in tables if t != "rate_limit_hits"]
+    # rate limits and daily token counters hold only hashed keys and numbers, never chat content
+    tables = [t for t in tables if t not in ("rate_limit_hits", "llm_usage_daily")]
 
     async def snapshot():
         rows = {}

@@ -31,7 +31,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 from psycopg import AsyncConnection
 from psycopg.types.json import Jsonb
 
-from app import observability, ratelimit
+from app import llm_budget, observability, ratelimit
 from app.auth import apple_grants, keys
 from app.config import get_settings
 from app.db import Database, execute, fetch_all, fetch_one
@@ -166,6 +166,7 @@ async def _retention_cleanup(conn: AsyncConnection, payload: dict) -> None:
         (RETIRED_TOKEN_KEEP_DAYS,),
     )
     await ratelimit.cleanup_expired(conn)  # Ш-51: shared rate-limit hits past their window
+    await llm_budget.cleanup(conn)  # Ш-66: daily token counters of past days
 
 
 @register("apple.revoke", external=True)

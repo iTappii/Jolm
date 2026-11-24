@@ -54,5 +54,9 @@ def make_llm(request: Request) -> ResilientLLM:
         except LLMNotConfigured:
             raise AppError(503, "llm_unavailable") from None
     return ResilientLLM(
-        provider, timeout_sec=settings.llm_timeout_sec, max_retries=settings.llm_max_retries
+        provider,
+        timeout_sec=settings.llm_timeout_sec,
+        max_retries=settings.llm_max_retries,
+        max_output_tokens=settings.llm_max_output_tokens,
+        max_output_tokens_plan=settings.llm_max_output_tokens_plan,
     )

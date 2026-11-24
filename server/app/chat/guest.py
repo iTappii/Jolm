@@ -11,22 +11,26 @@ Events (`event: <name>` + `data: <json>`):
 - `error`       `{"code": "...", "message": "..."}` (ends the stream; no `done` follows)
 """
 
+import logging
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app import llm_budget
 from app.chat import tools
 from app.chat.deps import install_id, make_llm
 from app.chat.engine import ToolOutcome, TurnRecord, run_turn
 from app.chat.prompts import GUEST, load_prompt
 from app.chat.sse import format_event, sse_response
 from app.clientip import client_ip
+from app.config import get_settings
 from app.errors import AppError
 from app.i18n import pick_locale
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
 from app.ratelimit import acquire_own
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
 
 MAX_MESSAGES = 20
@@ -64,12 +68,17 @@ class GuestChatRequest(BaseModel):
 async def guest_chat(payload: GuestChatRequest, request: Request):
     locale = payload.locale or pick_locale(request.headers.get("accept-language"))
     llm = make_llm(request)  # 503 before anything is counted
+    settings = get_settings()
+    installation = install_id(request)
+    budgets = llm_budget.guest_budgets(settings, client_ip(request), installation)
+    async with request.app.state.db.transaction() as conn:  # Ш-66: before anything is counted
+        await llm_budget.check(conn, budgets)
     limiters = request.app.state.chat_limiters
     checks = [(limiters.guest_ip, "ip:" + client_ip(request))]
-    installation = install_id(request)
     if installation:
         checks.append((limiters.guest_install, "install:" + installation))
-    wait = await acquire_own(request.app.state.db, checks)
+    checks = [c for c in checks if c[0].limit > 0]  # limit 0 = no limit (owner, 2026-11-24)
+    wait = await acquire_own(request.app.state.db, checks) if checks else None
     if wait is not None:
         raise AppError(429, "rate_limited", headers={"Retry-After": str(wait)})
 
@@ -111,6 +120,11 @@ async def guest_chat(payload: GuestChatRequest, request: Request):
                 yield format_event(name, data)
         finally:
             await turn.aclose()
+            try:  # Ш-66: what the turn used counts even if it failed or the client left
+                async with db.transaction() as conn:
+                    await llm_budget.record(conn, budgets, record.usage.total, settings)
+            except Exception:
+                log.exception("could not record the guest turn's token usage")
         if record.error is None:
             usage = {
                 "input_tokens": record.usage.input_tokens,

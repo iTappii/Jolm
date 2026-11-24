@@ -418,8 +418,7 @@ async def test_the_offline_copy_carries_day_facts_and_intercity_legs(chat_env, w
 # --- the prompt -------------------------------------------------------------------------------
 @pytest.mark.parametrize("locale", ["ru", "en"])
 def test_prompt_v8_has_the_country_rules_and_v7_is_untouched(locale):
-    latest = prompts.load_prompt(prompts.TRIP_BRIEF, locale)
-    assert latest.version == 8
+    latest = prompts.load_prompt(prompts.TRIP_BRIEF, locale, version=8)
     text = latest.render()
     for word in ("dated_wishes", "stay_wishes", "overnight", "transfer_day", "outside_area",
                  "moves_between_cities", "update_trip_brief"):  # fmt: skip

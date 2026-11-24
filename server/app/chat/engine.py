@@ -15,6 +15,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple
 
+from app import metrics
 from app.i18n import MESSAGES, translate
 from app.providers.llm import (
     Done,
@@ -26,6 +27,9 @@ from app.providers.llm import (
     Usage,
 )
 from app.providers.llm.base import ErrorEvent
+
+# Rounds right after these tools explain a plan: they get the larger output cap (Ш-66).
+PLAN_TOOLS = frozenset({"build_trip", "remove_trip_item", "replace_trip_item"})
 
 log = logging.getLogger(__name__)
 
@@ -57,6 +61,7 @@ class TurnRecord:
     llm_rounds_ms: List[int] = field(default_factory=list)
     tools_ms: List[Dict[str, Any]] = field(default_factory=list)
     first_text_ms: Optional[int] = None
+    truncated: bool = False  # Ш-66: a model reply was cut by the output cap
 
 
 def error_payload(code: str, locale: str) -> Dict[str, str]:
@@ -75,6 +80,7 @@ async def run_turn(
     max_rounds: int,
 ) -> AsyncIterator[SseEvent]:
     conversation = list(messages)
+    long_reply = False
     turn_started = time.perf_counter()
 
     def since(t0: float) -> int:
@@ -86,7 +92,10 @@ async def run_turn(
             calls: List[ToolCall] = []
             round_text: List[str] = []
             round_started = time.perf_counter()
-            async for event in llm.stream(conversation, None if last_round else tools, system):
+            kwargs = {"long_reply": True} if long_reply else {}
+            async for event in llm.stream(
+                conversation, None if last_round else tools, system, **kwargs
+            ):
                 if isinstance(event, TextDelta):
                     if record.first_text_ms is None:
                         record.first_text_ms = since(turn_started)
@@ -102,13 +111,20 @@ async def run_turn(
                     record.error = error_payload(event.code, locale)
                     yield "error", record.error
                     return
-                elif isinstance(event, (Usage, Done)):
+                elif isinstance(event, Done):
+                    if event.finish_reason == "length":
+                        # The cap cut the reply: what was streamed stays, the turn ends cleanly.
+                        record.truncated = True
+                        metrics.count_llm_truncated()
+                        log.warning("model reply cut by the output token cap")
+                elif isinstance(event, Usage):
                     pass
             record.llm_rounds_ms.append(since(round_started))
             if not calls or last_round:
                 if calls:
                     log.warning("model kept calling tools after the tool rounds were used up")
                 return
+            long_reply = any(call.name in PLAN_TOOLS for call in calls)
             conversation.append(
                 Message(role="assistant", content="".join(round_text), tool_calls=calls)
             )

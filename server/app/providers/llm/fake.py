@@ -57,6 +57,7 @@ class Call:
     messages: List[Message]
     tools: Optional[List[ToolSpec]]
     system: Optional[str]
+    max_tokens: Optional[int] = None
 
 
 def estimate_tokens(text: str) -> int:
@@ -90,8 +91,9 @@ class FakeLLM:
         messages: List[Message],
         tools: Optional[List[ToolSpec]] = None,
         system: Optional[str] = None,
+        max_tokens: Optional[int] = None,
     ) -> AsyncIterator[LLMEvent]:
-        self.calls.append(Call(list(messages), tools, system))
+        self.calls.append(Call(list(messages), tools, system, max_tokens))
         step = self._pick(messages)
         if step.delay_sec:
             await asyncio.sleep(step.delay_sec)
@@ -101,10 +103,23 @@ class FakeLLM:
                 return
             raise step.error
         output = []
+        left = (
+            max_tokens * 4 if max_tokens else None
+        )  # characters left under the cap (~4 per token)
+        cut = False
         for chunk in step.text:
+            if left is not None:
+                if left <= 0:
+                    cut = True
+                    break
+                if len(chunk) > left:  # like a real model: the reply stops mid-word at the cap
+                    chunk, cut = chunk[:left], True
+                left -= len(chunk)
             output.append(chunk)
             yield TextDelta(chunk)
-        for index, call in enumerate(step.tool_calls):
+            if cut:
+                break
+        for index, call in enumerate([] if cut else step.tool_calls):
             arguments = (
                 call.arguments if isinstance(call.arguments, str) else json.dumps(call.arguments)
             )
@@ -114,4 +129,4 @@ class FakeLLM:
             raise step.error_after
         prompt = (system or "") + "".join(m.content for m in messages)
         yield step.usage or Usage(estimate_tokens(prompt), estimate_tokens("".join(output)))
-        yield Done("tool_calls" if step.tool_calls else "stop")
+        yield Done("length" if cut else "tool_calls" if step.tool_calls else "stop")
