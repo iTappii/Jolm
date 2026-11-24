@@ -346,7 +346,7 @@ async def test_dialog_fills_the_brief_and_the_graph(chat_env, conn):
         "SELECT * FROM chat_messages WHERE chat_id = %s AND role = 'assistant' ORDER BY id LIMIT 1",
         (chat["id"],),
     )
-    assert row["prompt_id"] == "trip_brief.en.v7" and row["finish"] == "stop"
+    assert row["prompt_id"] == "trip_brief.en.v8" and row["finish"] == "stop"
     assert row["input_tokens"] > 0 and row["output_tokens"] > 0
     assert [t["name"] for t in row["tool_calls"]] == ["update_trip_brief", "add_graph_node"]
     assert all(t["ok"] for t in row["tool_calls"])

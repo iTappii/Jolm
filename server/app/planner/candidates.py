@@ -97,9 +97,9 @@ def _area() -> Dict[str, Any]:
     return {"west": west, "south": south, "east": east, "north": north}
 
 
-async def _far_place(conn, text: str, far: OutsidePlace) -> Optional[Place]:
+async def far_place(conn, text: str, far: OutsidePlace) -> Optional[Place]:
     """The database place for a wish that names a known place outside the start area, or None
-    (then the wish is reported `outside_area`, as in Ш-56)."""
+    (then the wish is reported `outside_area`, as in Ш-56). Ш-62: the chat tools use it too."""
     rows = await fetch_all(
         conn,
         sql.FAR_BY_POINT,
@@ -130,7 +130,7 @@ async def _resolve_must_have(
     far = None if chosen is not None else outside_wish(text)
     if far is not None:  # Ш-56: never stand in a park of the region for Charyn Canyon
         # Ш-61: a place of the country that the database knows is a real must-have (a far one)
-        place = await _far_place(conn, text, far)
+        place = await far_place(conn, text, far)
         if place is not None:
             return MustHave(text, [place], "name")
         return MustHave(text, [], "outside", far)
@@ -165,6 +165,8 @@ async def _resolve_must_have(
             how = "category"
     if chosen is not None:  # Ш-54: the place the tourist picked on the live route comes first
         row = await fetch_one(conn, sql.PLACE_BY_ID, dict(_area(), id=chosen))
+        if row is None:  # Ш-62: a far place of the country picked on the live route
+            row = await fetch_one(conn, sql.PLACE_BY_ID_ANYWHERE, {"id": chosen})
         if row is not None:
             found = [place_from_row(row)] + [p for p in found if p.id != chosen]
             found = found[: max(count, 1)]

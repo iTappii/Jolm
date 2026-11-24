@@ -81,6 +81,7 @@ from app.errors import AppError
 from app.live import clock
 from app.memory import affinity
 from app.memory.notes import latest_notes, memory_data_block
+from app.planner.candidates import far_place
 from app.planner.outside import outside_wish
 from app.providers.llm import Message, ToolArgsError, ToolCall, parse_tool_args
 from app.ratelimit import acquire
@@ -487,7 +488,7 @@ async def _update_trip_brief(
             new, changed = apply_update(current, args, today_in_region())
         except BriefError as exc:
             return ToolOutcome({"ok": False, "error": str(exc)}, ok=False, error=str(exc))
-        far = _new_outside_wishes(current, new) if "must_haves" in changed else []
+        far = await _new_outside_wishes(conn, current, new) if "must_haves" in changed else []
         if changed:
             await store.save_brief(conn, chat_id, new)
             await store.record_filled_order(conn, chat_id, fill_entries(current, new, changed))
@@ -508,14 +509,15 @@ async def _update_trip_brief(
     return ToolOutcome(result, events)
 
 
-def _new_outside_wishes(current: dict, new: dict) -> list:
-    """(wish, known place) for each must-have this update added that names a place outside the
-    v1 area (Ш-56). A wish that was already in the brief is not counted again."""
+async def _new_outside_wishes(conn, current: dict, new: dict) -> list:
+    """(wish, known place) for each must-have this update added that names a known place Jol has
+    no data for (Ш-56; Ш-62: a place of the country that the database has is plannable, so it is
+    not reported). A wish that was already in the brief is not counted again."""
     known = {item.casefold() for item in current.get("must_haves") or []}
     out = []
     for wish in new.get("must_haves") or []:
         place = None if wish.casefold() in known else outside_wish(wish)
-        if place is not None:
+        if place is not None and await far_place(conn, wish, place) is None:
             out.append((wish, place))
     return out
 

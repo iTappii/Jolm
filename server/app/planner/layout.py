@@ -638,6 +638,7 @@ async def _time_day(
                 travel_s, estimated = leg_seconds(default), False
             else:
                 travel_s, estimated = tm.minutes(origin_idx, idx[item.place.id]) * 60.0, True
+            far = getattr(legs, "intercity_of", None)  # Ш-62: an edit keeps intercity legs
             leg = Leg(
                 prev_item.place.id if prev_item else None,
                 item.place.id,
@@ -646,6 +647,7 @@ async def _time_day(
                 default.mode if default else None,
                 travel_s,
                 estimated,
+                await far(origin, dest, default.mode if default else None) if far else None,
             )
             arrive = depart + int(-(-travel_s // 60))
         else:

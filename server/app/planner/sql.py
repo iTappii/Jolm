@@ -127,6 +127,18 @@ LIMIT %(limit)s
 # `_COLS` shape and the same "only plannable places" rules apply as everywhere in this file).
 PLACE_BY_ID = "SELECT" + _COLS + _FROM_WHERE + "  AND p.id = %(id)s\n"
 
+# Ш-62: the place picked on the live route when it lies outside the start area (Charyn...): the same
+# rules as PLACE_BY_ID without the area. params: id.
+PLACE_BY_ID_ANYWHERE = (
+    "SELECT"
+    + _COLS
+    + _FROM_WHERE.replace(
+        "AND p.geom && ST_MakeEnvelope(%(west)s, %(south)s, %(east)s, %(north)s, 4326)::geography",
+        "",
+    )
+    + "  AND p.id = %(id)s\n"
+)
+
 # Ш-61: the place a wish names outside the start area (Charyn, Kolsai, the Yasawi mausoleum...).
 # params: q (the wish), lat, lon (the known place's point), radius_m, limit. Not food, not lodging;
 # the best name match first, then the nearest, then the most popular.

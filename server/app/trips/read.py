@@ -381,7 +381,15 @@ def offline_json(
             }
             for i in day["items"]
         ]  # fmt: skip
-        days.append({"date": day["date"], "items": day_items, "legs": []})
+        days.append(
+            {
+                "date": day["date"],
+                "kind": day["kind"],  # Ш-62 (Ш-61 day facts)
+                "overnight": day["overnight"],
+                "items": day_items,
+                "legs": [],
+            }
+        )
     legs_by_day: Dict[str, List[Dict[str, Any]]] = {d["date"]: d["legs"] for d in days}
     for row in legs:
         option = chosen_option(row)
@@ -398,6 +406,7 @@ def offline_json(
                 "cost_kzt": row["cost_kzt"],
                 "distance_m": option.get("distance_m") if option else None,
                 "geometry": option.get("geometry") if option else None,
+                "intercity": row.get("intercity"),  # Ш-62: null for an ordinary leg
             }
         )
     return {

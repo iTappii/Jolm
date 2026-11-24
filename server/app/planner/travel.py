@@ -14,7 +14,7 @@ first, then the fastest) without knowing which option the tourist will choose.
 
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Protocol, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Sequence, Tuple
 
 from app.routing.base import Point, RoutingProvider, RoutingUnavailable
 from app.routing.costs import Tariff, recommend
@@ -162,6 +162,13 @@ class PreferredLegs:
         if mode is None or not any(o.mode == mode for o in options):
             return options
         return [o.model_copy(update={"recommended": o.mode == mode}) for o in options]
+
+    async def intercity_of(
+        self, origin: Point, destination: Point, mode: Optional[str]
+    ) -> Optional[Dict[str, Any]]:
+        """Ш-62: the `Leg.intercity` block, when the wrapped provider knows far legs."""
+        inner = getattr(self.inner, "intercity_of", None)
+        return await inner(origin, destination, mode) if inner is not None else None
 
 
 def pick_default(options: Sequence[DirectionOption]) -> Optional[DirectionOption]:

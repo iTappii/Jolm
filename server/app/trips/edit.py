@@ -33,14 +33,17 @@ from psycopg.types.json import Jsonb
 from app.db import execute, fetch_all, fetch_one
 from app.errors import AppError
 from app.places import service
+from app.planner import country as ctry
 from app.planner import hours as hrs
 from app.planner import sql as planner_sql
 from app.planner.build import leg_tools
+from app.planner.intercity_legs import IntercityLegs
 from app.planner.layout import NON_MEAL_CATEGORIES, KeptStop, RetimedDay, retime_day
 from app.planner.model import Place, place_from_row
 from app.planner.travel import PreferredLegs
 from app.regions import default_region
 from app.routing.base import Point, RoutingUnavailable
+from app.routing.costs import load_intercity_params
 from app.routing.fake import haversine_m
 from app.routing.service import get_directions
 from app.trips import read, store
@@ -231,6 +234,12 @@ async def _retime(
     prefs = await _preferences(conn, trip["id"], day, items)
     hours = await hrs.load_hours(conn, [s.place.id for s in stops])
     travel, legs = await leg_tools(conn, router, trip["start_date"])
+    start: Optional[Point] = None
+    params = await load_intercity_params(conn)
+    settings = await ctry.load_settings(conn)
+    if params is not None and settings is not None:  # Ш-62: far legs stay intercity legs
+        legs = IntercityLegs(legs, conn, router, params, settings, trip["budget_kzt"])
+        start = await _far_start(conn, trip, day, prefs, items)
     return await retime_day(
         day,
         (trip["brief"] or {}).get("pace"),
@@ -239,7 +248,34 @@ async def _retime(
         travel,
         PreferredLegs(legs, prefs),
         forecast,
+        start,
     )
+
+
+async def _far_start(
+    conn, trip: Dict[str, Any], day: date, prefs: Dict[Any, str], items: List[dict]
+) -> Optional[Point]:
+    """Ш-62: the point the day starts from when its first leg is an intercity one (the road of an
+    outing, a transfer): where the person slept the night before, else the home city. Every other
+    day has no start leg (as before), so None. The first leg's chosen mode is kept too."""
+    first = next(
+        (
+            leg
+            for leg in await store.main_legs(conn, trip["id"])
+            if leg["day"] == day and leg["from_item_id"] is None and leg.get("intercity")
+        ),
+        None,
+    )
+    if first is None:
+        return None
+    meta = trip.get("day_meta") or {}
+    previous = (meta.get((day - timedelta(days=1)).isoformat()) or {}).get("overnight")
+    start: Point = (previous["lat"], previous["lon"]) if previous else default_region().centre
+    if first["chosen_mode"]:  # whichever stop of the day comes first now is reached that way
+        for row in items:
+            if row["day"] == day:
+                prefs[(start, _point(row))] = first["chosen_mode"]
+    return start
 
 
 def _kept(row: dict, place: Place) -> KeptStop:
@@ -695,11 +731,28 @@ async def set_leg_mode(
 
     trip = await _lock_unchanged(conn, user_id, trip_id, trip["version"])
     options = list(leg["options"]) + ([option] if added else [])
+    block = leg.get("intercity")
+    if block:  # Ш-62: the intercity block follows the chosen way (`intercity.mode == chosen_mode`)
+        block = dict(
+            block,
+            mode=mode,
+            approximate=bool(option.get("approximate", block.get("approximate"))),
+            price_kzt_min=option.get("cost_kzt_min"),
+            price_kzt_max=option.get("cost_kzt_max"),
+        )
     await execute(
         conn,
         "UPDATE trip_legs SET chosen_mode = %s, chosen_variant = %s, cost_kzt = %s, travel_s = %s,"
-        " options = %s WHERE id = %s",
-        (mode, wanted, int(option["cost_kzt_max"]), travel_s, Jsonb(options), leg_id),
+        " options = %s, intercity = %s WHERE id = %s",
+        (
+            mode,
+            wanted,
+            int(option["cost_kzt_max"]),
+            travel_s,
+            Jsonb(options),
+            Jsonb(block) if block else None,
+            leg_id,
+        ),
     )
     warnings, unmet = list(trip["warnings"]), list(trip["must_have_unmet"])
     budget, total = await recompute_budget(conn, trip, warnings)
@@ -707,7 +760,7 @@ async def set_leg_mode(
 
     leg.update(
         chosen_mode=mode, chosen_variant=wanted, cost_kzt=int(option["cost_kzt_max"]),
-        travel_s=travel_s, options=options,
+        travel_s=travel_s, options=options, intercity=block or None,
     )  # fmt: skip
     destination = next(
         r for r in await store.main_items(conn, trip_id) if r["id"] == leg["to_item_id"]

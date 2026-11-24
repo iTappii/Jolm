@@ -10,6 +10,14 @@ public transport if the network offers it, else by car. The object is always sen
                 "alternatives": [{id, name, category, lat, lon}]}],
      "legs":  [{"from_ord", "to_ord", "mode": "walk"|"transit"|"car", "duration_s", "distance_m"}]}
 
+Ш-62 (SSOT §5.4 п. 7): when two consecutive stops are far apart (`intercity_settings`
+`min_distance_km` and more) the leg comes from the intercity service instead (`planner.country`
+rules: from `country_planner_settings.transfer_min_km` a transfer between cities by plane / train /
+bus, the fastest one the budget allows; nearer an outing by road). Such a leg is
+`{"mode": "plane"|"train"|"bus_intercity"|"car"|"tour", "duration_s", "distance_m",
+"intercity": true, "price_kzt_min"?: int, "price_kzt_max"?: int}`; `duration_s` is door to door with
+the hub buffer, the price is per person (per vehicle for "car"). Ordinary legs have no `intercity`.
+
 A leg whose route could not be computed (routing down, no way found) is left out of `legs`; it is
 retried on the next change. Stored in `chat_live_stops` / `chat_live_alternatives` (migration
 0028); names are read in the chat's locale when the object is built. The trip generator takes
@@ -18,18 +26,23 @@ the chosen stop place for its wish (`chosen_places`).
 
 import asyncio
 import logging
+import math
 import time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
 from uuid import UUID
 
 from app.chat import tools
-from app.db import execute, fetch_all
+from app.db import execute, fetch_all, fetch_one
 from app.live import clock
+from app.planner import country as ctry
 from app.planner.travel import DirectionsLegs
-from app.routing import RoutingError, get_network
-from app.routing.costs import load_tariffs
+from app.regions import default_region
+from app.routing import RoutingError, RoutingUnavailable, get_network
+from app.routing.costs import IntercityParams, Tariff, load_intercity_params, load_tariffs
+from app.routing.fake import haversine_m
 
 log = logging.getLogger(__name__)
 
@@ -85,8 +98,8 @@ class Stop:
 async def _load_stops(conn, chat_id: UUID) -> List[Stop]:
     rows = await fetch_all(
         conn,
-        "SELECT ord, wish, place_id, leg_mode, leg_duration_s, leg_distance_m "
-        "FROM chat_live_stops WHERE chat_id = %s ORDER BY ord",
+        "SELECT ord, wish, place_id, leg_mode, leg_duration_s, leg_distance_m, leg_intercity, "
+        "leg_price_kzt_min, leg_price_kzt_max FROM chat_live_stops WHERE chat_id = %s ORDER BY ord",
         (chat_id,),
     )
     alts = await fetch_all(
@@ -106,6 +119,12 @@ async def _load_stops(conn, chat_id: UUID) -> List[Stop]:
                 "duration_s": row["leg_duration_s"],
                 "distance_m": row["leg_distance_m"],
             }
+            if row["leg_intercity"]:  # Ш-62
+                stop.leg["intercity"] = True
+                for key, column in (("price_kzt_min", "leg_price_kzt_min"),
+                                    ("price_kzt_max", "leg_price_kzt_max")):  # fmt: skip
+                    if row[column] is not None:
+                        stop.leg[key] = row[column]
         stops.append(stop)
     return stops
 
@@ -118,7 +137,8 @@ async def _save_stops(conn, chat_id: UUID, stops: Sequence[Stop]) -> None:
         await execute(
             conn,
             "INSERT INTO chat_live_stops (chat_id, ord, wish, place_id, leg_mode, "
-            "leg_duration_s, leg_distance_m) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            "leg_duration_s, leg_distance_m, leg_intercity, leg_price_kzt_min, "
+            "leg_price_kzt_max) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (
                 chat_id,
                 ord_,
@@ -127,6 +147,9 @@ async def _save_stops(conn, chat_id: UUID, stops: Sequence[Stop]) -> None:
                 leg.get("mode"),
                 leg.get("duration_s"),
                 leg.get("distance_m"),
+                bool(leg.get("intercity")),
+                leg.get("price_kzt_min"),
+                leg.get("price_kzt_max"),
             ),
         )
         for rank, alt in enumerate(stop.alternatives):
@@ -191,6 +214,66 @@ async def chosen_places(conn, chat_id: UUID) -> Dict[str, UUID]:
 # --- legs ------------------------------------------------------------------------------------
 
 
+LEG_CONCURRENCY = 4  # routing calls in flight at once while the legs of a route are filled
+
+# intercity.service mode -> the mode of a live-route leg (the contract of the iOS app)
+INTERCITY_MODES = {
+    "plane": "plane",
+    "train": "train",
+    "bus": "bus_intercity",
+    "car": "car",
+    "tour": "tour",
+}
+
+
+@dataclass
+class LegContext:
+    """What the legs of one route are computed with; read once per pass (Ш-64)."""
+
+    tariffs: Dict[str, Tariff]
+    network: Any
+    params: Optional[IntercityParams] = None  # Ш-62: None = no intercity data, city legs only
+    settings: Optional[ctry.Settings] = None
+    budget_kzt: Optional[int] = None  # the brief's budget: a transfer must be affordable
+    # far legs read the database on the pass's single connection, one at a time
+    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    @property
+    def intercity(self) -> bool:
+        return self.params is not None and self.settings is not None
+
+
+def pick_intercity_leg(
+    raw: Sequence[Dict[str, Any]],
+    origin: Tuple[float, float],
+    destination: Tuple[float, float],
+    settings: ctry.Settings,
+    budget_kzt: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    """The live-route leg for two far stops from the options of `intercity.service`.
+
+    Same rule as the trip planner (`planner.country.rank_options`): from `transfer_min_km` a
+    transfer between cities (plane / train / bus), the fastest one whose upper price is within
+    `transfer_budget_share` of the budget (no budget known: the fastest); nearer an outing by road
+    (own car / tour; a taxi is the same road and is not offered here). None when nothing fits."""
+    pool = [o for o in raw if o["mode"] in INTERCITY_MODES]
+    if not pool:
+        return None
+    transfer = ctry.km(origin, destination) >= settings.transfer_min_km
+    cap = budget_kzt * settings.transfer_budget_share if budget_kzt else math.inf
+    chosen = ctry.rank_options(pool, transfer, cap)[0]
+    leg: Dict[str, Any] = {
+        "mode": INTERCITY_MODES[chosen["mode"]],
+        "duration_s": int(round(chosen["duration_s_max"])),
+        "distance_m": int(round(chosen.get("distance_m") or haversine_m(origin, destination))),
+        "intercity": True,
+    }
+    for key, source in (("price_kzt_min", "cost_kzt_min"), ("price_kzt_max", "cost_kzt_max")):
+        if chosen.get(source) is not None:
+            leg[key] = int(chosen[source])
+    return leg
+
+
 def pick_leg(options: Sequence[Any]) -> Optional[Dict[str, Any]]:
     """Walk if it takes at most 20 minutes, else transit if offered, else car/taxi."""
 
@@ -216,17 +299,66 @@ def pick_leg(options: Sequence[Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-LEG_CONCURRENCY = 4  # routing calls in flight at once while the legs of a route are filled
-
-
-async def leg_context(db) -> Tuple[Any, Any]:
-    """(tariffs, transit network) the legs of one route are priced with; read once, so the legs
-    can then be computed concurrently without touching the database."""
+async def leg_context(db, budget_kzt: Optional[int] = None) -> LegContext:
+    """Tariffs, transit network and intercity data the legs of one route are computed with; read
+    once, so the legs can then be computed concurrently without touching the database."""
     now: datetime = clock.now()
     async with db.transaction() as conn:
         tariffs = await load_tariffs(conn, now.date())
         network = await get_network(conn) if "bus" in tariffs or "metro" in tariffs else None
-    return tariffs, network
+        params = await load_intercity_params(conn)
+        settings = await ctry.load_settings(conn)
+    return LegContext(tariffs, network, params, settings, budget_kzt)
+
+
+async def _intercity_leg(
+    db, router: Any, origin: Tuple[float, float], destination: Tuple[float, float], ctx: LegContext
+) -> Optional[Dict[str, Any]]:
+    """Ш-62: the leg between far stops, or None when `intercity.service` has nothing for the pair
+    (the ordinary city options then decide). Raises RoutingUnavailable when the router is down.
+
+    A pair no hub serves on one side (the Kolsai Lakes to Turkistan: no airport or station within
+    reach of the lakes) goes through the home city, as the trip does: the road home, then the
+    transfer from there. One leg: the times and prices are added, the mode is the transfer's."""
+    from app.intercity.service import intercity_options  # late: it imports the routing service
+
+    assert ctx.params is not None and ctx.settings is not None
+    now = clock.now()
+
+    async def options(a, b):
+        async with ctx.lock:  # one query at a time on the pass's connection
+            async with db.transaction() as conn:
+                return await intercity_options(
+                    conn, router, ctx.tariffs, ctx.params, a, b, None, "ru", now
+                )
+
+    raw = await options(origin, destination)
+    direct = pick_intercity_leg(raw, origin, destination, ctx.settings, ctx.budget_kzt)
+    if direct is not None:
+        return direct
+    home = default_region().centre
+    if ctry.km(origin, home) <= ctx.settings.local_radius_km:
+        return None
+    if ctry.km(destination, home) <= ctx.settings.local_radius_km:
+        return None  # the road back to the city is a plain road: nothing to compose
+    first = pick_intercity_leg(
+        await options(origin, home), origin, home, ctx.settings, ctx.budget_kzt
+    )
+    second = pick_intercity_leg(
+        await options(home, destination), home, destination, ctx.settings, ctx.budget_kzt
+    )
+    if first is None or second is None:
+        return None
+    leg = {
+        "mode": second["mode"],
+        "duration_s": first["duration_s"] + second["duration_s"],
+        "distance_m": first["distance_m"] + second["distance_m"],
+        "intercity": True,
+    }
+    for key in ("price_kzt_min", "price_kzt_max"):
+        if key in first and key in second:
+            leg[key] = first[key] + second[key]
+    return leg
 
 
 async def compute_leg(
@@ -234,10 +366,17 @@ async def compute_leg(
     router: Any,
     origin: Tuple[float, float],
     destination: Tuple[float, float],
-    context: Optional[Tuple[Any, Any]] = None,
+    context: Optional[LegContext] = None,
 ) -> Optional[Dict[str, Any]]:
-    tariffs, network = context if context is not None else await leg_context(db)
-    legs = DirectionsLegs(router, network, tariffs)
+    ctx = context if context is not None else await leg_context(db)
+    if ctx.intercity and ctx.params and ctx.params.min_distance_km <= ctry.km(origin, destination):
+        try:
+            far = await _intercity_leg(db, router, origin, destination, ctx)
+        except RoutingUnavailable:
+            return None
+        if far is not None:
+            return far
+    legs = DirectionsLegs(router, ctx.network, ctx.tariffs)
     try:
         options = await legs.options(origin, destination, clock.now())
     except RoutingError:
@@ -246,7 +385,12 @@ async def compute_leg(
 
 
 async def _fill_legs(
-    db, router: Any, stops: List[Stop], places: Dict[UUID, Dict[str, Any]], old: List[Stop]
+    db,
+    router: Any,
+    stops: List[Stop],
+    places: Dict[UUID, Dict[str, Any]],
+    old: List[Stop],
+    budget_kzt: Optional[int] = None,
 ) -> None:
     """Leg for every stop but the first. A leg is reused when the same pair of places (previous
     place, this place) already had one; otherwise it is computed (Ш-64: the missing ones
@@ -271,7 +415,7 @@ async def _fill_legs(
     if not missing:
         return
     started = time.perf_counter()
-    context = await leg_context(db)
+    context = await leg_context(db, budget_kzt)
     gate = asyncio.Semaphore(LEG_CONCURRENCY)
 
     async def one(origin: Tuple[float, float], destination: Tuple[float, float]):
@@ -285,6 +429,15 @@ async def _fill_legs(
         "live route legs",
         extra={"legs": len(missing), "legs_ms": round((time.perf_counter() - started) * 1000)},
     )
+
+
+async def _budget(db, chat_id: UUID) -> Optional[int]:
+    """The trip budget of the chat's brief (a transfer must be affordable), None when not known."""
+    async with db.transaction() as conn:
+        row = await fetch_one(
+            conn, "SELECT budget_kzt FROM trip_briefs WHERE chat_id = %s", (chat_id,)
+        )
+    return row["budget_kzt"] if row else None
 
 
 # --- sync with the brief --------------------------------------------------------------------
@@ -335,7 +488,7 @@ async def _sync_locked(
     async with db.transaction() as conn:
         ids = [s.place_id for s in stops] + [a for s in stops for a in s.alternatives]
         places = await _places(conn, ids)
-    await _fill_legs(db, router, stops, places, old)
+    await _fill_legs(db, router, stops, places, old, await _budget(db, chat_id))
     async with db.transaction() as conn:
         await _save_stops(conn, chat_id, stops)
     changed = shape(stops) != before
@@ -406,7 +559,7 @@ async def _choose_locked(
         async with db.transaction() as conn:
             ids = [s.place_id for s in stops] + [a for s in stops for a in s.alternatives]
             places = await _places(conn, ids)
-        await _fill_legs(db, router, stops, places, old)
+        await _fill_legs(db, router, stops, places, old, await _budget(db, chat_id))
         async with db.transaction() as conn:
             await _save_stops(conn, chat_id, stops)
     result = await _render(db, chat_id, stops, locale)

@@ -1,28 +1,28 @@
-# Graph Report - sh-61-server  (2026-11-23)
+# Graph Report - sh-62-server  (2026-11-24)
 
 ## Corpus Check
-- 640 files · ~419,101 words
+- 647 files · ~428,155 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 49 file(s) not represented in the graph (top: .sse 15, (none) 9, .csv 5)
 
 ## Summary
-- 9198 nodes · 25254 edges · 453 communities (270 shown, 183 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 2173 edges (avg confidence: 0.87)
+- 9283 nodes · 25535 edges · 455 communities (269 shown, 186 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 2197 edges (avg confidence: 0.87)
 - Token cost: 211,973 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `19c60595`
+- Built from commit: `da9f6d13`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - ProfileBookingsUITests
 - trips/store.py
-- get
+- SwiftUI
 - htmx-1.9.12.min (105)
 - TripMapModel
 - CodingKey
-- MyBookingsModel
+- AuthService
 - trips/api.py
 - test_weather.py
 - live_route.py
@@ -31,7 +31,7 @@
 - LiveRouteUITests
 - test_chat_background.py
 - test_directions.py
-- .send
+- .post
 - APIClientTests (64)
 - layout (61)
 - edit.py
@@ -41,10 +41,10 @@
 - test_trip_edits.py
 - TripReplaceTests
 - test_submissions (55)
-- re
+- test_regions.py
 - test_llm.py
-- SwiftUI
-- chat/api.py
+- PlaceholderScreen
+- send_message
 - test_transit_search.py
 - intercity/service.py
 - TripMapUITests
@@ -66,7 +66,7 @@
 - add_place
 - test_popular_import (41)
 - Identifiable
-- test_bookings.py
+- ChatChainUITests
 - place_load.py
 - test_osm_import (39)
 - push/__init__.py
@@ -92,7 +92,7 @@
 - fetch_one
 - DeviceRegistrarTests
 - DirectionsPanel
-- execute
+- AppError
 - HomeScreenUITests
 - ChatUITests
 - test_trips.py
@@ -109,30 +109,30 @@
 - PlacesTests (27)
 - JolFont
 - .init
-- test_events.py
+- test_country_chat.py
 - LiveRouteTests
 - test_chat.py
 - schemas (24)
 - PlacesModel
 - live/engine.py
 - OfflineTripsModel
-- test_memory.py
+- select_candidates
 - llm/__init__.py
 - UITestSupport
-- candidates.py
+- test_planner_scoring.py
 - open_sources.py
-- errors.py
+- places/api.py
 - CLAUDE (19)
 - DeviceRegistrar
 - JOL_SSOT (19)
 - ChatService
 - SessionTokens
-- ReverseGeocode
+- default_region
 - BackgroundRouteTests
 - EventItem
 - TECH_PLAN (17)
-- ChatChainUITests
-- submissions/schemas.py
+- .nodeCenter
+- ChainNodesTests
 - XCTestCase
 - ContentModel
 - geometry (16)
@@ -147,24 +147,24 @@
 - JOL_SSOT (14)
 - Region
 - .swiftlint (14)
-- Что сделано
+- PlaceActionsUITests
 - run_import.py
 - NavigatorButton
 - planner/hours.py
-- BonusModel
+- test_memory.py
 - AnalyticsTests
 - README (13)
 - Settings
-- EventsModel
+- prompts/__init__.py
 - brief.py
 - JOL_SSOT (12)
 - Ш-07-09 (12)
 - SubmissionDraft
-- ReviewsModel
+- candidates.py
 - trip_brief.en.v4 (12)
-- ContentUITests
-- ResilientLLM
-- CoreLocation
+- regions/__init__.py
+- asyncio
+- MapScreen
 - ChainNode
 - .add
 - Ш-11-12 (10)
@@ -174,15 +174,15 @@
 - LiveRoute
 - String
 - TripMapOverlay
-- PlaceCategoryStyle
+- search_places
 - project (9)
 - Ш-18 (8)
 - Ш-23b-server (8)
-- chat/store.py
+- compute_leg
 - project (8)
 - project (8)
 - ContentTests
-- CodingKeys
+- ContentModel
 - TECH_PLAN (7)
 - outside.py
 - Message
@@ -219,10 +219,10 @@
 - Ш-26 (2)
 - pyproject (1)
 - TECH_PLAN (1)
-- ChatEvent
+- Decodable
 - String
 - UITestPlaceActions
-- PlacesUITests
+- TripBudgetSheet
 - deploy.sh
 - postgres
 - DirectionsUITests
@@ -242,46 +242,46 @@
 - SSEEvent
 - PushAuthorizing
 - Problem
-- BonusUITests
+- TapPointUITests
 - test_transit_import.py
 - test_apple.py
-- CoreLocationProvider
-- TripLegSheet
+- .full
+- scoring.py
 - test_airport.py
 - CodingKeys
 - Деплой Jol: рабочая инструкция (Ш-51)
 - test_intercity.py
-- _update_trip_brief
-- accrue
+- .init
+- CodingKeys
 - Failure
-- edit_tools.py
+- parse_tool_args
 - RegionTests
 - build.py
-- clock.py
+- crowd/service.py
 - Ревью Ш-60 — межгородские переезды
-- ChatEventBus
+- Что сделано
 - Ревью Ш-59 — Карта и маршрутизация на страну
-- FavoritesUITests
-- test_geocode.py
+- chat_lock
+- Failure
 - UITestExtraStub
 - TripMapLine
 - CodingKeys
 - minio-init
-- .answer
-- App Store Connect — «App Privacy»: ответы и доказательства
-- SignInGateUITests
-- OfflinePlaceCard
-- PlaceCategoryStyle
-- get_settings
-- SwiftUI
+- analytics/events.py
+- IntercityLegs
+- region_for_point
+- 1. Гонка `choose` / `sync`
+- UIColor
+- get_apple_grants
+- AppContainer
 - OfflineTrip
-- test_favorites.py
-- Перепроверка (2026-11-21, независимо от автора)
-- Stage
+- pool_sizes
+- .when
+- resolve
 - ChatAnnouncements
 - pathlib
-- Problem
-- CodingKeys
+- load_regions
+- Ревью Ш-61 (сервер) — планировщик поездки по стране
 - Ревью Ш-47 (iOS) — загруженность: «я здесь», отчёт, блок в карточке
 - CodingKeys
 - import_places.py
@@ -295,51 +295,52 @@
 - valhalla
 - LiveRouteStatusBadge
 - Покрытие данными мест: Казахстан (kazakhstan)
+- Kind
 - test_places_regions.py
-- DatedWish
+- sync
 - CodingKeys
+- error_response
 - Look
-- BonusScreen
-- ChatChainReductionTests
-- SidebarUITests
-- metrics.py
-- region_coverage.py
-- CodingKeys
+- test_api.py
+- XCTest
+- Ревью: серверные долги (2026-11-21)
+- test_ops.py
+- Ревью Ш-49 (iOS) — кнопка и запрос бронирования
+- pick_intercity_leg
+- Проверки
 - Plan
-- CodingKeys
-- LiveRouteError
-- CodingKeys
-- CodingKeys
+- .link
+- RequestIdMiddleware
+- isolated
+- test_known_legs_are_reused_and_not_computed_again
 - Look
-- Ш-64 (iOS). Чат не ждёт карту
-- Problem
-- lock_log
-- CodingKeys
-- test_today_is_the_almaty_date
+- test_legs_are_computed_concurrently_with_the_same_result
+- fixtures
+- fixtures
 
 ## God Nodes (most connected - your core abstractions)
-1. `fetch_one()` - 287 edges
-2. `fetch_all()` - 211 edges
-3. `conn()` - 145 edges
-4. `sign_in()` - 130 edges
+1. `fetch_one()` - 293 edges
+2. `fetch_all()` - 213 edges
+3. `conn()` - 147 edges
+4. `sign_in()` - 133 edges
 5. `execute()` - 129 edges
-6. `AppError` - 114 edges
+6. `AppError` - 112 edges
 7. `get_settings()` - 110 edges
 8. `Text` - 98 edges
-9. `TripMapModel` - 90 edges
-10. `Step` - 88 edges
+9. `Step` - 94 edges
+10. `TripMapModel` - 90 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Тарифы` --references--> `get_directions()`  [INFERRED]
-  docs/reviews/Ш-60.md → server/app/routing/service.py
+- `2. Рёбра на настоящем Valhalla` --references--> `DirectionsLegs`  [INFERRED]
+  docs/reviews/Ш-63-server.md → server/app/planner/travel.py
+- `Не проверено / риски` --references--> `plan_country()`  [INFERRED]
+  docs/reviews/Ш-61.md → server/app/planner/country.py
+- `Не проверено / риски` --references--> `RoutingUnavailable`  [INFERRED]
+  docs/reviews/Ш-62-server.md → server/app/routing/base.py
+- `Замечания` --references--> `PlaceActionsUITests`  [INFERRED]
+  docs/reviews/Ш-32b.md → ios/JolUITests/PlaceActionsUITests.swift
 - `Замечания (по важности)` --references--> `S3Storage`  [INFERRED]
   docs/reviews/Ш-44-ios.md → server/app/providers/storage/s3.py
-- `Не проверено` --references--> `S3Storage`  [INFERRED]
-  docs/reviews/Ш-51.md → server/app/providers/storage/s3.py
-- `Секреты` --references--> `SecretsError`  [INFERRED]
-  docs/deploy.md → server/app/auth/keys.py
-- `Что найдено и исправлено` --references--> `AdaptiveStack`  [INFERRED]
-  docs/reviews/Ш-52-a11y-card.md → ios/Jol/Core/Design/AdaptiveLayout.swift
 
 ## Import Cycles
 - None detected.
@@ -362,15 +363,15 @@
 - **Trip build pipeline: candidates, layout, budget** — docs_reviews_ш_36_build_trip, docs_reviews_ш_33_select_candidates, docs_reviews_ш_34_layout_plan_days, docs_reviews_ш_35_budget_plan_costs [INFERRED 0.85]
 - **Trip edit flow (remove, replace, signals, SSE)** — docs_reviews_ш_38_remove_item, docs_reviews_ш_38_replace_item, docs_reviews_ш_38_trip_edit_engine, docs_reviews_ш_38_user_place_signals, docs_reviews_ш_38_trip_updated_event [INFERRED 0.85]
 
-## Communities (453 total, 183 thin omitted)
+## Communities (455 total, 186 thin omitted)
 
 ### Community 1 - "trips/store.py"
-Cohesion: 0.09
-Nodes (16): apply_budget_choice(), brief_json(), day_meta_json(), get_trip_for_update(), get_trip_row(), insert_leg(), list_trips(), lodging_options() (+8 more)
+Cohesion: 0.10
+Nodes (15): apply_budget_choice(), brief_json(), day_meta_json(), get_trip_for_update(), get_trip_row(), insert_leg(), list_trips(), lodging_options() (+7 more)
 
-### Community 2 - "get"
-Cohesion: 0.11
-Nodes (30): fetch(), test_alternative_can_replace_and_prices_follow_place_kind(), test_alternatives_are_similar_nearby_and_not_in_the_trip(), test_alternatives_errors(), url(), RacingRouter, road_leg(), test_a_trip_changed_while_planning_is_retried_once() (+22 more)
+### Community 2 - "SwiftUI"
+Cohesion: 0.05
+Nodes (24): Экраны ВНЕ зоны, которым нужен тот же проход, JolApp, .body, RootView, .body, .content, JolRadius, JolSpacing (+16 more)
 
 ### Community 3 - "htmx-1.9.12.min (105)"
 Cohesion: 0.08
@@ -378,131 +379,131 @@ Nodes (104): A(), ae(), ar(), at(), B(), be(), br(), bt() (+96 more)
 
 ### Community 4 - "TripMapModel"
 Cohesion: 0.05
-Nodes (27): Что сделано, EventsService, TripDownloadButton, .body, .current, TripMapModel, .day, .days (+19 more)
+Nodes (37): Failure, tooLarge, unreadable, Failure, generic, network, outsideArea, serviceUnavailable (+29 more)
 
 ### Community 5 - "CodingKey"
-Cohesion: 0.02
-Nodes (91): CodingKeys, displayName, email, id, phone, CodingKeys, nextCursor, CodingKeys (+83 more)
+Cohesion: 0.03
+Nodes (78): ServerMeta, CodingKeys, minIOSVersion, version, CodingKeys, refreshToken, CodingKeys, budget (+70 more)
 
-### Community 6 - "MyBookingsModel"
-Cohesion: 0.05
-Nodes (30): items, MyBookingsModel, CancelProblem, network, notCancellable, other, Phase, failed (+22 more)
+### Community 6 - "AuthService"
+Cohesion: 0.03
+Nodes (37): AuthenticationServices, Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью Ш-46 (iOS) — бонусы: баланс и история в профиле, Что сделано, AccountGate, AppleSignInView (+29 more)
 
 ### Community 7 - "trips/api.py"
-Cohesion: 0.06
-Nodes (41): bearer_token(), delete_me(), logout(), me(), refresh(), RefreshRequest, current_user(), revoke() (+33 more)
+Cohesion: 0.05
+Nodes (52): bearer_token(), delete_me(), me(), current_user(), cancel_booking(), create_booking(), get_booking(), list_bookings() (+44 more)
 
 ### Community 8 - "test_weather.py"
-Cohesion: 0.06
-Nodes (32): DayWeather, ForecastView, HourWeather, WeatherUnavailable, city_forecast(), cache_key(), _hour(), _hour_json() (+24 more)
+Cohesion: 0.07
+Nodes (28): DayWeather, WeatherUnavailable, city_forecast(), cache_key(), _hour(), _hour_json(), OpenMeteoProvider, parse_response() (+20 more)
 
 ### Community 9 - "live_route.py"
-Cohesion: 0.06
-Nodes (47): Замечания, Пример для iOS-фикстуры («китайский ресторан → парк Первого Президента → Зелёный базар»), Проверки, Ревью координатора (2026-11-22), Ревью Ш-54 (сервер) — живой маршрут на карте в чате, Что сделано, 1. Гонка `choose` / `sync`, 2. Рёбра на настоящем Valhalla (+39 more)
+Cohesion: 0.24
+Nodes (13): _budget(), choose(), _choose_locked(), _fill_legs(), load(), _load_stops(), _places(), render() (+5 more)
 
 ### Community 10 - "ChatStub"
-Cohesion: 0.06
+Cohesion: 0.07
 Nodes (15): ChatStub, Answer, .buildDelay, FixtureURLProtocol, DemoTrip, Slot, Stop, TripStub (+7 more)
 
 ### Community 11 - "country.py"
 Cohesion: 0.07
-Nodes (44): Block, BlockDay, city_label(), cluster_by_direction(), _day_plan(), decide_overnight(), _direction_option(), _estimate_option() (+36 more)
+Nodes (48): Что сделано, Block, BlockDay, city_label(), cluster_by_direction(), _day_plan(), decide_overnight(), _direction_option() (+40 more)
 
 ### Community 13 - "test_chat_background.py"
-Cohesion: 0.12
-Nodes (26): queue(), GateRouter, get_events(), kinds_until(), notify(), parse_stream(), send(), short_streams() (+18 more)
+Cohesion: 0.13
+Nodes (24): queue(), GateRouter, get_events(), kinds_until(), notify(), parse_stream(), send(), short_streams() (+16 more)
 
 ### Community 14 - "test_directions.py"
 Cohesion: 0.06
-Nodes (27): encode_polyline6(), decode_polyline6(), TransitLeg, TransitOption, _alt(), _stub_region_for_point(), StubDatabase, test_directions_accepts_point_in_another_region() (+19 more)
+Nodes (26): Изменения поведения (честно), decode_polyline6(), TransitLeg, TransitOption, _alt(), directions_api(), _stub_region_for_point(), StubDatabase (+18 more)
 
-### Community 15 - ".send"
-Cohesion: 0.07
-Nodes (5): BookingService, TripService, APIClientTests, ClearedFlag, .value
+### Community 15 - ".post"
+Cohesion: 0.08
+Nodes (23): AppleCredential, CodingKeys, authorizationCode, identityToken, Challenge, MeInfo, CodingKeys, displayName (+15 more)
 
 ### Community 16 - "APIClientTests (64)"
 Cohesion: 0.07
-Nodes (6): BookingsListTests, FavoritesTests, ProfileTests, apiError(), SignInTests, Fixture
+Nodes (6): APIClientTests, ClearedFlag, .value, BookingsListTests, FavoritesTests, ProfileTests
 
 ### Community 17 - "layout (61)"
-Cohesion: 0.07
-Nodes (35): fail(), give_up(), fail(), _assign_activities(), assign(), best_day(), item_for(), _assign_meals() (+27 more)
+Cohesion: 0.06
+Nodes (39): compose(), replan(), fail(), give_up(), fail(), _assign_activities(), assign(), best_day() (+31 more)
 
 ### Community 18 - "edit.py"
-Cohesion: 0.09
-Nodes (36): leg_tools(), KeptStop, RetimedDay, Place, place_from_row(), alternatives(), _apply_retime(), budget_summary() (+28 more)
+Cohesion: 0.10
+Nodes (35): KeptStop, RetimedDay, alternatives(), _apply_retime(), budget_summary(), _candidates(), _day_stops(), _far_start() (+27 more)
 
 ### Community 19 - "test_live_plan.py"
-Cohesion: 0.13
-Nodes (48): d(), set_clock(), configure(), TransactionalDatabase, at(), built(), FailingWeather, FakePush (+40 more)
+Cohesion: 0.15
+Nodes (46): d(), set_clock(), configure(), TransactionalDatabase, at(), built(), FailingWeather, FakePush (+38 more)
 
 ### Community 20 - "service (59)"
-Cohesion: 0.07
-Nodes (45): add_route_place(), check_event_refs(), clean_text(), format_hours_day(), like_pattern(), list_places(), move_route_item(), _norm() (+37 more)
+Cohesion: 0.08
+Nodes (44): add_route_place(), check_event_refs(), clean_text(), format_hours_day(), like_pattern(), list_places(), _norm(), page_number() (+36 more)
 
 ### Community 21 - "test_country_planner.py"
-Cohesion: 0.08
-Nodes (37): must_have_unmet_json(), load_settings(), Settings, add(), at(), brief(), country_trip(), _place() (+29 more)
+Cohesion: 0.11
+Nodes (31): must_have_unmet_json(), at(), brief(), country_trip(), _place(), place_day(), plan(), public_stays() (+23 more)
 
 ### Community 22 - "test_trip_edits.py"
-Cohesion: 0.25
-Nodes (23): all_items(), assert_day_is_consistent(), built(), check_totals(), day_of(), pick(), plan(), post() (+15 more)
+Cohesion: 0.16
+Nodes (31): fetch(), test_alternative_can_replace_and_prices_follow_place_kind(), test_alternatives_are_similar_nearby_and_not_in_the_trip(), test_alternatives_errors(), url(), all_items(), assert_day_is_consistent(), built() (+23 more)
 
 ### Community 24 - "test_submissions (55)"
-Cohesion: 0.11
-Nodes (49): test_approve_and_reject_flow(), test_approving_menu_and_price_applies_them_to_the_place(), test_deleted_admin_keeps_the_decision(), test_duplicate_photo_by_hash(), test_duplicate_review_text(), test_menu_and_transit_text_are_filtered_too(), test_moderation_requires_admin_and_csrf(), test_moderator_rejected_photo_cannot_come_back() (+41 more)
+Cohesion: 0.07
+Nodes (69): test_approve_and_reject_flow(), test_approving_menu_and_price_applies_them_to_the_place(), test_deleted_admin_keeps_the_decision(), test_duplicate_photo_by_hash(), test_duplicate_review_text(), test_menu_and_transit_text_are_filtered_too(), test_moderation_requires_admin_and_csrf(), test_moderator_rejected_photo_cannot_come_back() (+61 more)
 
-### Community 25 - "re"
-Cohesion: 0.09
-Nodes (11): class_of(), dedupe(), distance_m(), _fill_tags(), name_set(), normalize_name(), test_dedupe_rules_pure(), fresh_cache() (+3 more)
+### Community 25 - "test_regions.py"
+Cohesion: 0.17
+Nodes (3): fresh_cache(), test_latest_prompt_versions_do_not_name_the_city(), test_only_one_default_region()
 
 ### Community 26 - "test_llm.py"
-Cohesion: 0.16
-Nodes (23): Done, ErrorEvent, TextDelta, Call, estimate_tokens(), FakeLLM, BriefUpdate, events() (+15 more)
+Cohesion: 0.18
+Nodes (20): Done, ErrorEvent, TextDelta, ToolCall, Call, estimate_tokens(), FakeLLM, BriefUpdate (+12 more)
 
-### Community 27 - "SwiftUI"
-Cohesion: 0.04
-Nodes (34): AuthenticationServices, .content, JolRadius, JolSpacing, PlaceholderScreen, .body, AccountGateSheet, .body (+26 more)
+### Community 27 - "PlaceholderScreen"
+Cohesion: 0.09
+Nodes (17): PlaceholderScreen, .body, ChatScreen, .body, PlacesScreen, .body, LanguagePicker, .body (+9 more)
 
-### Community 28 - "chat/api.py"
-Cohesion: 0.04
-Nodes (49): Решения владельца, bus_of(), chat_events(), frames(), read_route(), _chat_json(), choose_live_stop(), ChooseStop (+41 more)
+### Community 28 - "send_message"
+Cohesion: 0.03
+Nodes (65): Сервер (порядок заполнения, восстановление), _add_graph_node(), _build_trip(), _finish(), _finished_route_events(), lease_sec(), _new_outside_wishes(), _route_json() (+57 more)
 
 ### Community 29 - "test_transit_search.py"
 Cohesion: 0.16
 Nodes (20): hop_speed_boost(), build(), _load(), _load_dev_network(), run(), search(), stop_row(), test_best_of_each_mode_is_kept() (+12 more)
 
 ### Community 30 - "intercity/service.py"
-Cohesion: 0.12
-Nodes (10): _cost(), _drive(), intercity_options(), _leg(), _pick(), _road_options(), _sum(), _taxi_leg_cost() (+2 more)
+Cohesion: 0.11
+Nodes (9): _cost(), _drive(), intercity_options(), _leg(), _pick(), _road_options(), _sum(), _taxi_leg_cost() (+1 more)
 
 ### Community 32 - "test_clientip.py"
-Cohesion: 0.08
-Nodes (25): Замечания и компромиссы, Не проверено, Проверки, Ревью координатора (2026-11-21), Ревью Ш-51 — продакшен-инфраструктура (кодовая часть), Что сделано, client_ip(), _parse() (+17 more)
+Cohesion: 0.07
+Nodes (27): Замечания и компромиссы, Не проверено, Проверки, Ревью координатора (2026-11-21), Ревью Ш-51 — продакшен-инфраструктура (кодовая часть), Решения владельца, Что сделано, install_id() (+19 more)
 
 ### Community 33 - "ChatUITests"
 Cohesion: 0.06
-Nodes (28): Не сделано / не проверено, Перепроверка (2026-11-21, независимо от автора), Пробелы серверного API, Ревью Ш-50 (iOS) — отправка событий, Решения и замечания, Что сделано, AnalyticsClient, AnalyticsBatch (+20 more)
+Nodes (29): Не сделано / не проверено, Перепроверка (2026-11-21, независимо от автора), Пробелы серверного API, Проверки, Ревью Ш-50 (iOS) — отправка событий, Решения и замечания, Что сделано, AnalyticsClient (+21 more)
 
 ### Community 34 - "typing"
 Cohesion: 0.03
-Nodes (47): Изменения поведения (честно), Команды и результаты, Оставшиеся исключения (упоминания Алматы/KZT, которые остались сознательно), Ревью координатора (2026-11-23), Ревью Ш-57 (сервер): регионы, Что не проверено, Что сделано, _model_events() (+39 more)
+Nodes (35): _bearer(), _install_id(), post_events(), ClientEvent, EventBatch, anonymize_user(), funnel(), ingest() (+27 more)
 
 ### Community 35 - "Ш-32 (47)"
 Cohesion: 0.06
 Nodes (45): ChatGraphView (one-branch thesis graph), ChatPanel (collapsible chat), ChatService (iOS SSE chat client), MapCoordinator+Chat (live map pins), POST /v1/chats/{id}/messages (SSE), TripDaysSheet (route by days sheet), interests.py keyword table (RU+EN), _resolve_must_have (mandatory wishes) (+37 more)
 
 ### Community 36 - "GeoPoint"
-Cohesion: 0.09
-Nodes (14): .line, Keys, options, DirectionsRequest, CodingKeys, from, toPlaceID, toPoint (+6 more)
+Cohesion: 0.11
+Nodes (8): .line, Keys, options, from, Counter, DirectionsTests, FakeLocator, okDirections()
 
 ### Community 37 - "travel.py"
-Cohesion: 0.05
-Nodes (38): DirectionsLegs, PreferredLegs, directions(), IntercityParams, load_intercity_params(), load_tariffs(), recommend(), _recommendation_rank() (+30 more)
+Cohesion: 0.06
+Nodes (29): directions(), calculate_cost(), IntercityParams, load_intercity_params(), load_tariffs(), recommend(), _recommendation_rank(), Tariff (+21 more)
 
 ### Community 38 - "CrowdSection"
-Cohesion: 0.13
-Nodes (4): CrowdSection, .actions, .body, .model
+Cohesion: 0.16
+Nodes (5): CrowdSection, .actions, .body, .model, View
 
 ### Community 39 - "Ш-31 (45)"
 Cohesion: 0.05
@@ -513,100 +514,96 @@ Cohesion: 0.06
 Nodes (38): Review Ш-44 server: content submissions, LocalStorage (dev only), retention.cleanup worker task, S3Storage with SigV4 presigned PUT, StorageProvider interface, Submissions API (five types), Review Ш-45: autofilter and moderation, Autofilter rules (rejected_auto) (+30 more)
 
 ### Community 41 - "test_admin.py"
-Cohesion: 0.08
-Nodes (56): place_form_values(), get_place(), fetch_all(), fetch_one(), add_category(), add_place(), csrf_of(), logged_in() (+48 more)
+Cohesion: 0.05
+Nodes (74): place_form_values(), get_place(), move_route_item(), fetch_all(), fetch_one(), Breakdown, compute(), resolve() (+66 more)
 
 ### Community 42 - "test_planner_layout (45)"
-Cohesion: 0.11
-Nodes (33): HaversineMatrix, RouterMatrix, _at(), check_invariants(), dates(), fingerprint(), legs_provider(), mk() (+25 more)
+Cohesion: 0.10
+Nodes (35): DirectionsLegs, HaversineMatrix, _plan_seconds(), RouterMatrix, _at(), check_invariants(), dates(), fingerprint() (+27 more)
 
 ### Community 43 - "DirectionsModel"
 Cohesion: 0.06
-Nodes (26): DirectionsModel, Failure, generic, network, outsideArea, serviceUnavailable, Fallback, chosen (+18 more)
+Nodes (26): DirectionsModel, Fallback, chosen, denied, outsideArea, unavailable, .isActive, .lines (+18 more)
 
 ### Community 44 - "Booking"
-Cohesion: 0.06
-Nodes (35): Booking, .canCancel, CodingKeys, createdAt, endsAt, id, kind, note (+27 more)
+Cohesion: 0.04
+Nodes (43): State, done, editing, failed, sending, Booking, .canCancel, CodingKeys (+35 more)
 
 ### Community 45 - "SignInModel"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (26): CodeStep, .body, DestinationStep, .body, ProblemText, .body, .rateLimitedText, SignInEntryView (+18 more)
 
 ### Community 47 - "add_place"
-Cohesion: 0.07
-Nodes (41): _covers(), group_hours(), is_open_now(), like_pattern(), parse_bbox(), fill_profile(), test_build_plan_reads_the_profile(), test_card_shows_crowd_only_with_enough_data() (+33 more)
+Cohesion: 0.05
+Nodes (51): _covers(), group_hours(), is_open_now(), parse_bbox(), mk(), put(), test_cap_applies_to_new_places_only(), test_favorites_are_per_user_and_hidden_places_are_not_listed() (+43 more)
 
 ### Community 48 - "test_popular_import (41)"
-Cohesion: 0.11
-Nodes (23): _bool(), CsvError, import_csv(), _int(), link_manual_to_osm(), mark_manual(), _opt(), parse_rows() (+15 more)
+Cohesion: 0.13
+Nodes (20): _bool(), CsvError, import_csv(), _int(), link_manual_to_osm(), mark_manual(), _opt(), parse_rows() (+12 more)
 
 ### Community 49 - "Identifiable"
-Cohesion: 0.05
-Nodes (44): .body, CuratedRouteDetail, .stops, CuratedRoutesList, CuratedRouteStop, CodingKeys, ord, .id (+36 more)
-
-### Community 50 - "test_bookings.py"
-Cohesion: 0.10
-Nodes (26): PartnerResult, book(), booking_settings(), cancel(), place(), test_cancel_requires_auth_and_hides_foreign_bookings(), test_cancel_returns_the_booking_as_cancelled(), test_cancel_twice_or_after_start_is_409() (+18 more)
+Cohesion: 0.04
+Nodes (54): CuratedRouteDetail, .stops, CuratedRoutesList, CuratedRouteStop, CodingKeys, ord, .id, CuratedRouteSummary (+46 more)
 
 ### Community 51 - "place_load.py"
-Cohesion: 0.10
-Nodes (19): _protected(), _set(), apply_record(), _best_rank(), cross_dedupe(), find_match(), import_record(), import_records() (+11 more)
+Cohesion: 0.09
+Nodes (20): _protected(), _set(), mark_sources(), apply_record(), _best_rank(), cross_dedupe(), find_match(), import_record() (+12 more)
 
 ### Community 52 - "test_osm_import (39)"
-Cohesion: 0.09
-Nodes (25): _parse_days(), _parse_intervals(), parse_opening_hours(), _to_time(), category_for_food(), category_slug(), classify(), _clean() (+17 more)
+Cohesion: 0.05
+Nodes (42): class_of(), dedupe(), distance_m(), _fill_tags(), name_set(), normalize_name(), _parse_days(), _parse_intervals() (+34 more)
 
 ### Community 53 - "push/__init__.py"
-Cohesion: 0.10
-Nodes (16): optional_weather(), push(), reset(), router(), push_send(), ApnsProvider, _reason(), LogPushProvider (+8 more)
+Cohesion: 0.12
+Nodes (11): ApnsProvider, _reason(), LogPushProvider, PushError, PushMessage, PushOutcome, PushProvider, make_push() (+3 more)
 
 ### Community 54 - "ValhallaRouter"
-Cohesion: 0.10
-Nodes (23): check_mode(), Maneuver, MatrixResult, NoRoute, RouteResult, RoutingError, RoutingUnavailable, _costing_body() (+15 more)
+Cohesion: 0.07
+Nodes (35): check_mode(), Maneuver, MatrixResult, NoRoute, RouteResult, RoutingError, RoutingUnavailable, make_router() (+27 more)
 
 ### Community 55 - "test_analytics.py"
-Cohesion: 0.08
-Nodes (42): AnalyticsLimiters, make_limiters(), clean_props(), _flag(), _one_of(), _short_str(), _small_int(), funnel() (+34 more)
+Cohesion: 0.09
+Nodes (44): AnalyticsLimiters, make_limiters(), period(), add_item(), checkin(), ev(), hdr(), make_trip() (+36 more)
 
 ### Community 56 - "ChatModel"
-Cohesion: 0.08
-Nodes (8): Что проверено (код против DoD и сервера), Что изменилось, ChatModel, .isBuildingRoute, .isEventsRunning, .isGuestTranscript, .isStreaming, Loaded
+Cohesion: 0.07
+Nodes (11): Что изменилось, ChatModel, .isBuildingRoute, .isEventsRunning, .isGuestTranscript, .isStreaming, Loaded, LiveRouteError (+3 more)
 
 ### Community 57 - "ReviewsModel"
-Cohesion: 0.04
-Nodes (52): JSONValue, array, int, string, PlaceReview, CodingKeys, authorName, createdAt (+44 more)
+Cohesion: 0.03
+Nodes (64): Stage, done, failed, idle, preparingPhoto, sending, uploading, JSONValue (+56 more)
 
 ### Community 58 - "ChatState"
-Cohesion: 0.08
-Nodes (19): messages, ChatFailure, busy, .canRetry, full, network, other, rateLimited (+11 more)
+Cohesion: 0.07
+Nodes (20): messages, ChatFailure, busy, .canRetry, full, network, other, rateLimited (+12 more)
 
 ### Community 59 - "LocationResult"
-Cohesion: 0.13
-Nodes (8): StubLocationProvider, LocationProviding, LocationResult, denied, located, unavailable, TestLocator, PointLocator
+Cohesion: 0.08
+Nodes (9): StubLocationProvider, CoreLocationProvider, LocationProviding, LocationResult, denied, located, unavailable, TestLocator (+1 more)
 
 ### Community 60 - "FakeRouter"
-Cohesion: 0.10
-Nodes (22): FakeRouter, haversine_m(), make_router(), SlowRouter, _near(), load(), _router(), run() (+14 more)
+Cohesion: 0.07
+Nodes (25): encode_polyline6(), FakeRouter, haversine_m(), _distinct_routes(), _near(), path_distance_m(), directed(), _resample() (+17 more)
 
 ### Community 61 - "BookingSheet"
 Cohesion: 0.04
-Nodes (25): BookingFormatting, BookingModel, .booking, Failure, invalid, network, notSupported, other (+17 more)
+Nodes (28): BookingModel, .booking, .isSending, items, BookingSheet, .body, .calendar, .form (+20 more)
 
 ### Community 62 - "LiveRouteScheduler"
-Cohesion: 0.13
-Nodes (4): _Job, LiveRouteScheduler, PassResult, Ticket
+Cohesion: 0.08
+Nodes (6): ChatEventBus, publish(), _Job, LiveRouteScheduler, PassResult, Ticket
 
 ### Community 63 - "messages.py"
-Cohesion: 0.13
-Nodes (9): _stats(), day_text(), _hour(), mountain_texts(), proposal_texts(), Problem, stop_problem(), visit_hours() (+1 more)
+Cohesion: 0.12
+Nodes (10): day_text(), _hour(), mountain_texts(), proposal_texts(), Problem, stop_problem(), visit_hours(), HourWeather (+2 more)
 
 ### Community 64 - "View"
-Cohesion: 0.06
-Nodes (28): Text, EdgeLine, .body, LiveRouteOverlay, .body, .canvas, Picked, Resolved (+20 more)
+Cohesion: 0.04
+Nodes (40): Что сделано, AdaptiveStack, JolTarget, Text, .body, PlaceReviewsView, .body, .content (+32 more)
 
 ### Community 65 - "LiveRouteLayout"
-Cohesion: 0.17
-Nodes (7): LiveRouteLayout, Caption, CaptionSide, above, below, hidden, LiveRouteLayoutTests
+Cohesion: 0.09
+Nodes (14): LiveRouteLayout, Caption, CaptionSide, above, below, hidden, EdgeLine, .body (+6 more)
 
 ### Community 66 - "postgres"
 Cohesion: 0.22
@@ -618,67 +615,67 @@ Nodes (28): merge_place(), Источники, версии, лицензии, �
 
 ### Community 68 - "Sendable"
 Cohesion: 0.06
-Nodes (75): MeInfo, .identity, ChatBrief, .isEmpty, ChatDetail, BriefUpdated, ErrorPayload, MapPlacesPayload (+67 more)
+Nodes (53): DeviceRegistration, DirectionStep, Camera, Centre, Name, .lines, BudgetBreakdown, Line (+45 more)
 
 ### Community 69 - "Foundation"
 Cohesion: 0.09
-Nodes (8): Foundation, InstallID, ContentService, UploadBody, CodingKeys, contentType, sizeBytes, Observation
+Nodes (10): CoreGraphics, CoreLocation, Foundation, L10n, Polyline, MapCoordinator.Layer, MapLibre, Observation (+2 more)
 
 ### Community 70 - "test_live_route.py"
 Cohesion: 0.08
-Nodes (42): add_wishes(), choose(), choose_via(), get_chat(), live_events(), option(), place_ids(), race_choose() (+34 more)
+Nodes (38): add_wishes(), choose(), choose_via(), get_chat(), live_events(), option(), real_leg(), settle() (+30 more)
 
 ### Community 71 - "live/store.py"
-Cohesion: 0.08
-Nodes (28): 1. Погодный воркер: «рассчитать, затем применить» (Ш-38 №1, Ш-40 №3), weather(), plan_proposal(), _apply(), _days_ahead(), mountain_notify(), mountain_scan(), TripChanged (+20 more)
+Cohesion: 0.13
+Nodes (19): 1. Погодный воркер: «рассчитать, затем применить» (Ш-38 №1, Ш-40 №3), _apply(), accept(), create(), decline(), list_json(), _place_refs(), add_chat_message() (+11 more)
 
 ### Community 72 - "ChatTranscriptView"
 Cohesion: 0.07
-Nodes (28): Проверки, Ревью координатора (2026-11-21), Ревью Ш-32a — граф-кольцо в чате, Решения и ограничения, Что сделано, iOS (цепочка, `Features/Chat/`), .body, ProposalState (+20 more)
+Nodes (28): Проверки, Ревью координатора (2026-11-21), Ревью Ш-32a — граф-кольцо в чате, Решения и ограничения, Что сделано, .body, .body, ProposalState (+20 more)
 
 ### Community 73 - "fetch_one"
-Cohesion: 0.07
-Nodes (28): memory_scan(), backoff_seconds(), enqueue(), enqueue_due_schedules(), _finish(), LeaseLost, process_batch(), register() (+20 more)
+Cohesion: 0.04
+Nodes (50): bus_of(), Database, execute(), JsonFormatter, setup_logging(), memory_scan(), _apple_revoke(), backoff_seconds() (+42 more)
 
 ### Community 75 - "DirectionsPanel"
-Cohesion: 0.12
-Nodes (6): DirectionsFormatting, .carousel, .chips, DirectionsPanel, .content, .language
+Cohesion: 0.09
+Nodes (12): DirectionsFormatting, .carousel, .chips, DirectionsPanel, .content, .language, TripLegSheet, .body (+4 more)
 
-### Community 76 - "execute"
+### Community 76 - "AppError"
 Cohesion: 0.03
-Nodes (60): hash_token(), login(), LoginResult, logout(), new_token(), normalize_email(), verify_password(), _bearer() (+52 more)
+Nodes (67): delete_account(), _remove_submissions(), logout(), refresh(), RefreshRequest, AppleKeyCache, fetch_keys(), sign_in() (+59 more)
 
 ### Community 77 - "HomeScreenUITests"
-Cohesion: 0.11
-Nodes (14): Замечания, Итог прогона, Проверки, Ревью координатора (2026-11-21), Ревью Ш-43 (iOS) — боковая панель: недавние чаты, поездки, новый чат, Что сделано, Замечания, Итог прогона (+6 more)
+Cohesion: 0.06
+Nodes (29): 1. Общие ответы, 2. Типы данных (что отметить в App Store Connect), 3. API с «обоснованием причины» (Privacy Manifest), 4. Разрешения (Info.plist) — RU + EN, 5. Что решить владельцу до отправки, App Store Connect — «App Privacy»: ответы и доказательства, Ревью координатора (2026-11-21), Замечания (по важности) (+21 more)
 
 ### Community 78 - "ChatUITests"
-Cohesion: 0.08
-Nodes (10): Замечания (по важности), Проверки, Ревью Ш-23c (iOS) — тап по любой точке карты, Не проверено / замечания, Проверки, Ревью Ш-52 (остаток): доступность и тёмная тема главного экрана и чата, Результат полного прогона, A11yHomeUITests (+2 more)
+Cohesion: 0.09
+Nodes (8): Результат полного прогона, Не проверено / замечания, Проверки, Ревью Ш-52 (остаток): доступность и тёмная тема главного экрана и чата, Результат полного прогона, ChatUITests, ContentUITests, SignInGateUITests
 
 ### Community 79 - "test_trips.py"
-Cohesion: 0.18
-Nodes (29): call(), test_planner_and_chat_offer_an_attendable_event_with_its_ad_label(), _router(), test_build_trip_passes_the_owner_to_the_planner_and_guests_have_none(), test_build_trip_queues_one_delayed_note_job_per_version(), test_chat_tools_without_a_trip_or_with_bad_ids_report_errors(), brief_call(), build() (+21 more)
+Cohesion: 0.11
+Nodes (40): call(), add_event(), test_admin_event_shown_on_localized_map_and_venue_card(), test_guest_can_search_evening_events_without_a_trip(), test_map_rejects_invalid_windows_and_boxes(), test_map_window_overlap_coordinates_and_hidden_places(), test_planner_and_chat_offer_an_attendable_event_with_its_ad_label(), test_public_places_are_ad_free_in_admin_database_and_map() (+32 more)
 
 ### Community 80 - "read.py"
 Cohesion: 0.13
-Nodes (19): budget_json(), chosen_option(), days_json(), item_json(), leg_json(), leg_late_by_s(), local(), lodging_option_json() (+11 more)
+Nodes (20): budget_json(), chosen_option(), days_json(), item_json(), leg_json(), leg_late_by_s(), local(), lodging_option_json() (+12 more)
 
 ### Community 81 - "_macros (30)"
 Cohesion: 0.10
 Nodes (5): checkbox macro, csrf_field macro, field macro, select macro, textarea macro
 
 ### Community 82 - "conn"
-Cohesion: 0.09
-Nodes (70): admin_get(), admin_post(), _admin_upload(), AdminError, AdminLoginRequired, analytics_page(), _bonus_page(), bonuses_form() (+62 more)
+Cohesion: 0.06
+Nodes (83): admin_get(), admin_post(), _admin_upload(), AdminError, AdminLoginRequired, analytics_page(), _bonus_page(), bonuses_form() (+75 more)
 
 ### Community 83 - "test_account_deletion.py"
-Cohesion: 0.19
-Nodes (15): apple_login(), auth(), count(), FakeGrants, otp_sign_in(), test_apple_delete_enqueues_revoke_and_allows_reregistration(), test_apple_without_stored_token_deletes_and_logs_gap(), test_code_exchange_problems_never_block_sign_in() (+7 more)
+Cohesion: 0.11
+Nodes (26): apple_login(), apple_signin(), auth(), count(), delivery(), ec_key(), FakeGrants, http_grants() (+18 more)
 
 ### Community 84 - "bookings/service.py"
 Cohesion: 0.08
-Nodes (17): Availability, BookingLimits, BookingRequest, get_adapter(), limits_of(), PartnerAdapter, StubAdapter, supported_names() (+9 more)
+Nodes (19): Availability, BookingLimits, BookingRequest, get_adapter(), limits_of(), PartnerAdapter, PartnerResult, StubAdapter (+11 more)
 
 ### Community 85 - "transit.py"
 Cohesion: 0.12
@@ -686,10 +683,10 @@ Nodes (13): _candidates(), find_transit_options(), get_network(), _in_service(),
 
 ### Community 86 - "psycopg"
 Cohesion: 0.09
-Nodes (19): apply_migrations(), checksum_of(), discover(), main(), MigrationError, counts(), main(), hash_password() (+11 more)
+Nodes (17): database_url(), main(), apply_migrations(), checksum_of(), discover(), main(), MigrationError, counts() (+9 more)
 
 ### Community 89 - "A11yCardUITests"
-Cohesion: 0.22
+Cohesion: 0.20
 Nodes (6): Замечания (по важности), Проверки, Ревью Ш-52 (доступность): карточка места, формы контента, избранное, вход, Результат полного прогона, Что найдено и исправлено, A11yCardUITests
 
 ### Community 90 - "ci (27)"
@@ -701,72 +698,72 @@ Cohesion: 0.20
 Nodes (4): Counter, json(), page(), PlacesTests
 
 ### Community 93 - "JolFont"
-Cohesion: 0.07
-Nodes (18): JolFont, AdBadge, .body, PlaceGallery, .body, PlaceTabContent, .addInfoButton, .bookButton (+10 more)
+Cohesion: 0.09
+Nodes (14): JolFont, .openButton, AdBadge, .body, EventCardSheet, .body, PlaceTabContent, .addInfoButton (+6 more)
 
 ### Community 94 - ".init"
 Cohesion: 0.12
-Nodes (6): AppConfig, .apiBaseURL, .appleSignInEnabled, .isSimulator, .privacyPolicyURL, APIBaseURLTests
+Nodes (7): AppConfig, .apiBaseURL, .appleSignInEnabled, .isSimulator, .privacyPolicyURL, AppConfigTests, APIBaseURLTests
 
-### Community 95 - "test_events.py"
-Cohesion: 0.13
-Nodes (28): FakeToolCall, post(), test_bad_tool_arguments_come_back_as_a_tool_error(), test_failure_after_text_keeps_the_text_and_sends_no_done(), test_guest_chat_writes_nothing_to_the_database(), snapshot(), test_history_at_the_limits_is_accepted(), test_history_limits_are_422() (+20 more)
+### Community 95 - "test_country_chat.py"
+Cohesion: 0.14
+Nodes (20): brief_step(), day(), far_day(), get_trip(), has_key(), live(), owner(), run_scenario() (+12 more)
 
 ### Community 96 - "LiveRouteTests"
-Cohesion: 0.13
-Nodes (3): LiveRouteGeometry, LiveRouteTests, Script
+Cohesion: 0.11
+Nodes (4): LiveRouteGeometry, JSONEncoderForTests, LiveRouteTests, Script
 
 ### Community 97 - "test_chat.py"
-Cohesion: 0.12
-Nodes (43): SendMessage, configure(), Step, parse_sse(), day(), new_chat(), open_stream(), say() (+35 more)
+Cohesion: 0.09
+Nodes (62): scheduler_of(), FakeToolCall, Step, parse_sse(), day(), post(), test_bad_tool_arguments_come_back_as_a_tool_error(), test_failure_after_text_keeps_the_text_and_sends_no_done() (+54 more)
 
 ### Community 98 - "schemas (24)"
 Cohesion: 0.15
 Nodes (20): EventItem, CategoriesList, Category, CategoryRef, CrowdHour, CrowdLevel, CrowdProfile, CuratedRouteDetail (+12 more)
 
 ### Community 99 - "PlacesModel"
-Cohesion: 0.06
-Nodes (20): Что сделано, .failedRow, PlacesModel, DetailState, failed, idle, loaded, loading (+12 more)
+Cohesion: 0.04
+Nodes (33): Что сделано, Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-48 (iOS) — мероприятия на карте, Что сделано, EventsModel (+25 more)
 
 ### Community 100 - "live/engine.py"
-Cohesion: 0.20
-Nodes (10): _count(), _count_plan(), _count_rows(), _minutes(), _option(), outdoor(), Plan, problem_of() (+2 more)
+Cohesion: 0.12
+Nodes (13): _count(), _count_plan(), _count_rows(), _minutes(), _option(), outdoor(), Plan, plan_proposal() (+5 more)
 
 ### Community 101 - "OfflineTripsModel"
-Cohesion: 0.09
-Nodes (8): OfflineTripsModel, State, downloading, none, saved, OfflineTripStore, .defaultDirectory, OfflineTripTests
+Cohesion: 0.06
+Nodes (21): Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью Ш-42 (iOS) — скачанный маршрут (SSOT §7.4), Что сделано, OfflineTripsModel, Problem, network (+13 more)
 
-### Community 102 - "test_memory.py"
-Cohesion: 0.09
-Nodes (34): load_memory(), Memory, penalties_from_signals(), _area(), Candidate, select_candidates(), trip_days(), test_planner_uses_the_profile_for_quiet_travellers() (+26 more)
+### Community 102 - "select_candidates"
+Cohesion: 0.23
+Nodes (16): select_candidates(), test_planner_uses_the_profile_for_quiet_travellers(), test_select_candidates_puts_the_chosen_place_first(), test_outside_wish_gets_no_almaty_stand_in_and_is_reported(), brief(), fixture_places(), names(), test_crowd_source_is_used_for_quiet_travellers() (+8 more)
 
 ### Community 103 - "llm/__init__.py"
 Cohesion: 0.11
-Nodes (10): Completion, LLMError, LLMNotConfigured, ToolArgsError, ToolSpec, build_messages(), build_tools(), DeepSeekLLM (+2 more)
+Nodes (12): Completion, LLMError, LLMNotConfigured, LLMTimeout, ToolSpec, Usage, build_messages(), build_tools() (+4 more)
 
 ### Community 104 - "UITestSupport"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (15): UITestGeocode, Answer, .mode, UITestSupport, .directionsJSON, .eventsItemsJSON, .favoritesJSON, .forcedColorScheme (+7 more)
 
-### Community 106 - "candidates.py"
-Cohesion: 0.06
-Nodes (40): _far_place(), MustHave, places_per_must_have(), _resolve_must_have(), _matches(), resolve(), Resolved, _tokens() (+32 more)
+### Community 106 - "test_planner_scoring.py"
+Cohesion: 0.15
+Nodes (17): CrowdSource, no_event_bonus(), UnknownCrowd, make_place(), scored(), test_an_interest_match_beats_a_little_popularity(), test_crowd_penalty_scales_with_intolerance(), test_default_hooks_mean_no_data() (+9 more)
 
 ### Community 107 - "open_sources.py"
 Cohesion: 0.14
 Nodes (12): foursquare_category(), overture_category(), address_fields(), build_record(), _clean(), foursquare_columns(), _foursquare_sql(), _query() (+4 more)
 
-### Community 108 - "errors.py"
-Cohesion: 0.10
-Nodes (15): EventList, EventVenue, address_text(), reverse(), _geojson(), get_curated_route(), get_place(), list_categories() (+7 more)
+### Community 108 - "places/api.py"
+Cohesion: 0.07
+Nodes (24): options(), search_events(), checkin(), CrowdReport, report(), Where, crowd_aggregate(), event_json() (+16 more)
 
 ### Community 109 - "CLAUDE (19)"
 Cohesion: 0.13
 Nodes (11): .claude/CLAUDE.md graphify trigger document, graphify skill triggered by /graphify, Root CLAUDE.md project instructions, ADR numbering and supersession rules, ADR index and rules document, ADR status values (предложено, принято, отклонено, заменено), Decision log (SSOT §17), JOL_SSOT product single source of truth (+3 more)
 
 ### Community 110 - "DeviceRegistrar"
-Cohesion: 0.08
-Nodes (15): Не сделано / не проверено, Перепроверка (2026-11-21, независимо от автора), Пробелы серверного API, Проверки, Ревью Ш-40 (iOS) — регистрация устройства для пушей, Что сделано, DeviceRegistrar, .apnsToken (+7 more)
+Cohesion: 0.10
+Nodes (9): Не сделано / не проверено, Перепроверка (2026-11-21, независимо от автора), Пробелы серверного API, Проверки, Ревью Ш-40 (iOS) — регистрация устройства для пушей, Что сделано, DeviceRegistrar, .apnsToken (+1 more)
 
 ### Community 111 - "JOL_SSOT (19)"
 Cohesion: 0.15
@@ -777,16 +774,16 @@ Cohesion: 0.12
 Nodes (12): Load, failed, idle, loaded, loading, ChatService, GuestBody, GuestMessage (+4 more)
 
 ### Community 113 - "SessionTokens"
-Cohesion: 0.04
-Nodes (33): JolApp, .body, EphemeralTokenStore, TokenStore, SessionStore, .query, SessionTokens, CodingKeys (+25 more)
+Cohesion: 0.12
+Nodes (10): EphemeralTokenStore, TokenStore, SessionStore, .query, SessionTokens, CodingKeys, accessToken, refreshToken (+2 more)
 
-### Community 114 - "ReverseGeocode"
-Cohesion: 0.11
-Nodes (12): ReverseGeocode, address, CodingKeys, address, kind, lat, lon, name (+4 more)
+### Community 114 - "default_region"
+Cohesion: 0.12
+Nodes (14): optional_weather(), push(), weather(), _days_ahead(), mountain_notify(), mountain_scan(), push_send(), _stats() (+6 more)
 
 ### Community 115 - "BackgroundRouteTests"
-Cohesion: 0.17
-Nodes (4): BackgroundRouteTests, Counter, Delays, .all
+Cohesion: 0.12
+Nodes (8): Допущения о сервере (и поправки координатора), Открытые риски, Тесты, Ш-64 (iOS). Чат не ждёт карту, BackgroundRouteTests, Counter, Delays, .all
 
 ### Community 116 - "EventItem"
 Cohesion: 0.08
@@ -796,29 +793,29 @@ Nodes (19): EventItem, CodingKeys, adLabel, category, description, endsAt, id, i
 Cohesion: 0.13
 Nodes (13): ADR 0003 default values for open SSOT questions, Default behavior table for SSOT §16 questions, Refresh token reuse grace window of 10 seconds, Deferred review items to fix before production or TestFlight, Bookings and orders via partner APIs, Two-stage monetization plan (growth then partnership), Open questions register (SSOT §16), Promoted events shown during trip dates (+5 more)
 
-### Community 118 - "ChatChainUITests"
-Cohesion: 0.06
-Nodes (12): CoreGraphics, Замечания, Проверки, Ревью координатора (2026-11-21), Ревью Ш-32b — узлы графа = ответы пользователя (цепочка вместо кольца), Что сделано, ChainGeometry, Connector (+4 more)
+### Community 118 - ".nodeCenter"
+Cohesion: 0.14
+Nodes (4): ChainGeometry, Connector, .height, ChainGeometryTests
 
-### Community 119 - "submissions/schemas.py"
-Cohesion: 0.13
-Nodes (11): _clean(), _line(), MenuItem, MenuPayload, _Payload, PhotoPayload, PricePayload, _required() (+3 more)
+### Community 119 - "ChainNodesTests"
+Cohesion: 0.15
+Nodes (3): ChainNodes, .chainNodes, ChainNodesTests
 
 ### Community 120 - "XCTestCase"
-Cohesion: 0.04
-Nodes (15): Ревью координатора (2026-11-22), Результат полного прогона, Ревью координатора (2026-11-23), AppConfigTests, BonusTests, LongTripFormattingTests, InstallIDTests, JSONEncoderForTests (+7 more)
+Cohesion: 0.08
+Nodes (7): Ревью координатора (2026-11-23), BonusTests, LongTripFormattingTests, SessionStoreTests, FavoritesUITests, FeatureGalleryUITests, MapLaunchUITests
 
 ### Community 121 - "ContentModel"
-Cohesion: 0.11
-Nodes (8): ContentModel, .isBusy, .isDone, PreparedPhoto, ContentFlowTests, Flag, reviewsPage(), contentReply()
+Cohesion: 0.16
+Nodes (3): ContentFlowTests, reviewsPage(), contentReply()
 
 ### Community 123 - "geometry (16)"
 Cohesion: 0.20
 Nodes (8): _in_ring(), _inside(), representative_point(), _ring_area_centroid(), test_centroid_of_convex_polygon(), test_degenerate_input(), test_point_avoids_hole(), test_point_is_inside_concave_polygon()
 
 ### Community 124 - "BonusEntry"
-Cohesion: 0.19
-Nodes (8): BonusEntry, .reasonKey, BonusPage, CodingKeys, balance, items, nextCursor, tengePerBonus
+Cohesion: 0.10
+Nodes (18): Перепроверка (2026-11-21, независимо от автора), BonusEntry, CodingKeys, amount, createdAt, id, kind, submissionType (+10 more)
 
 ### Community 125 - "HANDOFF (16)"
 Cohesion: 0.14
@@ -829,40 +826,36 @@ Cohesion: 0.10
 Nodes (20): CodingKeys, address, booking, category, crowd, description, events, hours (+12 more)
 
 ### Community 127 - "MapCoordinator"
-Cohesion: 0.07
+Cohesion: 0.08
 Nodes (6): DirectionLine, CLLocationCoordinate2D, LiveRouteFit, MapCoordinator, Layer, MapView
 
 ### Community 128 - "config.py"
 Cohesion: 0.06
-Nodes (21): Замечания, Проверки, Ревью Ш-55 (сервер) — доработки без внешних сервисов, Что сделано, ObjectTooLarge, StorageError, LocalStorage, _sig() (+13 more)
+Nodes (24): Что сделано, Settings, make_storage(), media_url(), ObjectTooLarge, PresignedPut, StorageError, LocalStorage (+16 more)
 
 ### Community 129 - "Ш-20 (15)"
 Cohesion: 0.19
 Nodes (10): Ревью Ш-20 (движок маршрутизации Valhalla), RoutingProvider, ValhallaRouter, FakeRouter, Valhalla routing engine (docker, valhalla-scripted), Цель make osm-pbf и общий кэш OSM, Ревью Ш-21 (общественный транспорт), Импорт транспорта (120 маршрутов, 956 остановок), Поиск транспорта до 1 пересадки (transit.py), POST /v1/directions (+2 more)
 
 ### Community 130 - "conftest.py"
-Cohesion: 0.10
-Nodes (23): make_limiter(), options(), acquire(), acquire_own(), cleanup_expired(), key_hash(), RateRule, _retention_cleanup() (+15 more)
+Cohesion: 0.11
+Nodes (21): make_limiter(), options(), acquire(), acquire_own(), cleanup_expired(), key_hash(), RateRule, test_a_committed_count_survives_a_failing_request() (+13 more)
 
 ### Community 131 - "pytest"
-Cohesion: 0.16
-Nodes (23): status(), delta(), ok(), handler(), provider(), run(), settings(), sse() (+15 more)
+Cohesion: 0.20
+Nodes (20): status(), delta(), ok(), provider(), run(), settings(), sse(), test_empty_key_is_clear_not_configured_error() (+12 more)
 
 ### Community 132 - "JOL_SSOT (14)"
 Cohesion: 0.19
 Nodes (10): ADR 0002 planner vs LLM record, Budget overrun offers two variants for user choice (SSOT §16.3), Maximum trip length 60 days assumption, Dynamic one-branch thesis graph in chat, Collapsing AI chat home screen over map, Trip input parameters collected in chat, Data model draft (tables), LLMProvider interface (fake provider in dev) (+2 more)
 
 ### Community 133 - "Region"
-Cohesion: 0.08
-Nodes (25): .isInServiceArea, .regionName, Region, Camera, .center, Centre, CodingKeys, bbox (+17 more)
+Cohesion: 0.09
+Nodes (22): .isInServiceArea, .regionName, Region, .center, CodingKeys, bbox, camera, centre (+14 more)
 
 ### Community 134 - ".swiftlint (14)"
 Cohesion: 0.09
 Nodes (22): custom_rules, no_city_constants, disabled_rules, excluded, file_length, warning, function_body_length, warning (+14 more)
-
-### Community 135 - "Что сделано"
-Cohesion: 0.18
-Nodes (5): Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью Ш-42 (iOS) — скачанный маршрут (SSOT §7.4), OfflineTripUITests
 
 ### Community 136 - "run_import.py"
 Cohesion: 0.17
@@ -873,32 +866,28 @@ Cohesion: 0.19
 Nodes (5): Ревью координатора (2026-11-23), .body, Navigator, NavigatorButton, .body
 
 ### Community 138 - "planner/hours.py"
-Cohesion: 0.17
+Cohesion: 0.19
 Nodes (4): earliest_start(), load_hours(), _minutes(), windows()
 
-### Community 139 - "BonusModel"
+### Community 139 - "test_memory.py"
 Cohesion: 0.17
-Nodes (9): Что сделано, BonusModel, .balanceKzt, Phase, failed, idle, loaded, loading (+1 more)
-
-### Community 140 - "AnalyticsTests"
-Cohesion: 0.12
-Nodes (4): Проверки, AnalyticsTests, .requests, AnalyticsUITests
+Nodes (14): load_memory(), penalties_from_signals(), count(), museum_count(), museum_world(), new_user(), reject_museums(), signal() (+6 more)
 
 ### Community 141 - "README (13)"
 Cohesion: 0.27
 Nodes (12): JOL_MAP_STYLE_URL map style configuration, Bundled placeholder style (MapLibre demo tiles, temporary), Map demo HTML page, load(theme, lang) style loader function, Theme and label-language selectors, almaty.pmtiles vector tile archive, build_tiles.sh Planetiler tile build, maps README (tiles, demo, hosting, styles) (+4 more)
 
 ### Community 142 - "Settings"
-Cohesion: 0.10
-Nodes (38): _exchange_code(), decrypt_token(), encrypt_token(), _fernet(), challenge_key(), _checked(), decrypt(), encrypt() (+30 more)
+Cohesion: 0.08
+Nodes (44): decrypt_token(), encrypt_token(), _fernet(), challenge_key(), _checked(), decrypt(), encrypt(), _explicit() (+36 more)
 
-### Community 143 - "EventsModel"
-Cohesion: 0.09
-Nodes (9): Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-48 (iOS) — мероприятия на карте, Что сделано, EventCardSheet, .body (+1 more)
+### Community 143 - "prompts/__init__.py"
+Cohesion: 0.15
+Nodes (12): load_prompt(), Prompt, versions(), test_prompt_v8_has_the_country_rules_and_v7_is_untouched(), test_every_prompt_exists_in_both_languages(), test_guest_prompt_exposes_place_and_event_search(), test_latest_prompts_name_places_outside_the_area_honestly(), test_latest_prompts_take_city_and_currency_from_the_region() (+4 more)
 
 ### Community 144 - "brief.py"
-Cohesion: 0.17
-Nodes (16): apply_update(), brief_data_block(), BriefError, BriefUpdate, empty_brief(), fill_entries(), _merge_list(), _merge_wish_details() (+8 more)
+Cohesion: 0.10
+Nodes (20): apply_update(), brief_data_block(), BriefError, BriefUpdate, _clean_items(), DatedWish, empty_brief(), fill_entries() (+12 more)
 
 ### Community 145 - "JOL_SSOT (12)"
 Cohesion: 0.21
@@ -909,32 +898,36 @@ Cohesion: 0.27
 Nodes (8): Импорт OSM по bbox Алматы (pyosmium), Подборка popular_places.csv (102 места), Ревью Ш-07/08/09 (данные мест), Слияние строк мест (data/osm/merge.py), Ревью доработки Ш-08: дедупликация мест OSM, Центроид полигона (data/osm/geometry.py), Импорт мультиполигонов-отношений OSM, Ревью доработки Ш-08: отношения OSM и связь ручных мест
 
 ### Community 148 - "SubmissionDraft"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (11): MenuItemDraft, SubmissionDraft, .usesPhoto, .menuFields, .isValid, .problems, TypedNumber, empty (+3 more)
 
-### Community 149 - "ReviewsModel"
-Cohesion: 0.10
-Nodes (15): PlaceReviewsView, .body, .content, .empty, .list, .model, RatingStars, .body (+7 more)
+### Community 149 - "candidates.py"
+Cohesion: 0.15
+Nodes (9): like_pattern(), _area(), Candidate, far_place(), MustHave, _resolve_must_have(), trip_days(), place_from_row() (+1 more)
 
 ### Community 150 - "trip_brief.en.v4 (12)"
 Cohesion: 0.23
 Nodes (10): Trip brief prompt EN v1, Trip brief prompt EN v2, Trip brief prompt EN v3, Reply after build_trip (budget status rules), Trip brief prompt EN v4, Edit built plan via get/remove/replace tools, Trip brief prompt RU v1, Trip brief prompt RU v2 (+2 more)
 
-### Community 152 - "ResilientLLM"
-Cohesion: 0.13
-Nodes (13): Замечания, Проверки, Ревью координатора (2026-11-22), Ревью Ш-53 — LLM-провайдер DeepSeek, Что сделано, LLMProvider, LLMTimeout, Usage (+5 more)
+### Community 151 - "regions/__init__.py"
+Cohesion: 0.18
+Nodes (5): Region, all_regions(), _from_row(), get_region(), reset_cache()
 
-### Community 153 - "CoreLocation"
-Cohesion: 0.24
-Nodes (5): CoreLocation, Polyline, MapCoordinator.Layer, MapLibre, UIKit
+### Community 152 - "asyncio"
+Cohesion: 0.14
+Nodes (16): collect(), Message, ResilientLLM, main(), handler(), test_resilient_retries_a_429_then_succeeds(), test_resilient_turns_401_into_error_event_without_retry(), test_cancellation_propagates() (+8 more)
+
+### Community 153 - "MapScreen"
+Cohesion: 0.12
+Nodes (8): Замечания (по важности), Проверки, Что сделано, Ш-54 iOS — живой маршрут на карте в чате, MapProjection, MapScreen, .liveRoute, .tripOpen
 
 ### Community 154 - "ChainNode"
-Cohesion: 0.06
-Nodes (24): ChainLabels, ChainNode, .id, Kind, budget, crowd, dates, interests (+16 more)
+Cohesion: 0.17
+Nodes (12): iOS (цепочка, `Features/Chat/`), ChainNode, .id, ChainConnector, .animatableData, ChatChainFooter, .body, .selectedIndex (+4 more)
 
 ### Community 155 - ".add"
-Cohesion: 0.09
-Nodes (12): FavoritesList, FavoritesModel, ListState, failed, idle, loaded, loading, Problem (+4 more)
+Cohesion: 0.05
+Nodes (14): FavoritesList, FavoritesModel, ListState, failed, idle, loaded, loading, Problem (+6 more)
 
 ### Community 156 - "Ш-11-12 (10)"
 Cohesion: 0.27
@@ -945,24 +938,28 @@ Cohesion: 0.27
 Nodes (8): APIClient с single-flight refresh, AppContainer (DI через Environment), LanguageSettings и L10n (RU/EN), Ревью Ш-14 (iOS-каркас), SSEClient и SSEParser, ProfileMenuSheet (меню аккаунта), ProfileModel (load, signOut, deleteAccount), Ревью Ш-16 (меню профиля)
 
 ### Community 158 - "APIClient"
-Cohesion: 0.04
-Nodes (42): Что сделано, Не сделано, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-49 (iOS) — кнопка и запрос бронирования, Что сделано, APIClient (+34 more)
+Cohesion: 0.06
+Nodes (24): APIClient, ConditionalResult, fresh, notModified, RefreshBody, CodingKeys, refreshToken, Refresher (+16 more)
 
 ### Community 159 - "Place"
 Cohesion: 0.07
-Nodes (49): _cheaper_replacement(), cheaper_variant(), choose_lodging(), Costs, drop_variant(), _in_pool_order(), layout_centre(), leg_cost() (+41 more)
+Nodes (44): _cheaper_replacement(), cheaper_variant(), choose_lodging(), Costs, drop_variant(), _in_pool_order(), layout_centre(), leg_cost() (+36 more)
 
 ### Community 160 - "LiveRoute"
-Cohesion: 0.06
-Nodes (32): L10n, LiveEdge, .id, LiveLeg, CodingKeys, distanceM, durationS, fromOrd (+24 more)
+Cohesion: 0.07
+Nodes (30): LiveEdge, .id, LiveLeg, CodingKeys, distanceM, durationS, fromOrd, toOrd (+22 more)
+
+### Community 161 - "String"
+Cohesion: 0.14
+Nodes (8): Endpoint, Method, delete, get, patch, post, put, BackgroundRouteUITests
 
 ### Community 162 - "TripMapOverlay"
-Cohesion: 0.05
-Nodes (24): Что сделано, Замечания (по важности), Проверки, Ревью координатора (2026-11-21), Что сделано, Ш-52 (доступность) — полная карта маршрута, «Как добраться», мероприятия, бронирование, готовые маршруты, Экраны ВНЕ зоны, которым нужен тот же проход, Тесты (+16 more)
+Cohesion: 0.06
+Nodes (19): Замечания (по важности), Проверки, Ревью координатора (2026-11-21), Что сделано, Ш-52 (доступность) — полная карта маршрута, «Как добраться», мероприятия, бронирование, готовые маршруты, Тесты, TripDayListView, .body (+11 more)
 
-### Community 163 - "PlaceCategoryStyle"
-Cohesion: 0.18
-Nodes (4): .content, PlaceCategoryStyle, .allImages, .color
+### Community 163 - "search_places"
+Cohesion: 0.13
+Nodes (13): Проверка, Ревью координатора, Что сделано, Ш-56. Пожелания вне зоны v1 — ревью, Не проверено / риски, Ревью Ш-62 (сервер) — межгород в чате и на карте, Решения вне SSOT — [предложено], Сценарий владельца в чате (скриптованная LLM, `tests/test_country_chat.py`) (+5 more)
 
 ### Community 164 - "project (9)"
 Cohesion: 0.22
@@ -976,9 +973,9 @@ Nodes (6): Слой мест jol-pins с кластеризацией MapLibre, 
 Cohesion: 0.25
 Nodes (6): Кнопка «В избранное» в листе места, FavoritesModel (избранное, iOS), Список избранного в боковой панели, API избранного /v1/me/favorites, Перенос избранного при слиянии дублей мест, user_favorites (таблица)
 
-### Community 167 - "chat/store.py"
-Cohesion: 0.15
-Nodes (16): save(), add_assistant_message(), add_graph_node(), add_user_message(), brief_from_row(), chat_messages(), create_chat(), get_brief() (+8 more)
+### Community 167 - "compute_leg"
+Cohesion: 0.14
+Nodes (11): Было / стало, Контракт для iOS, Открытые риски, Тесты, Что изменилось, Ш-64 (сервер): чат не ждёт карту, compute_leg(), one() (+3 more)
 
 ### Community 168 - "project (8)"
 Cohesion: 0.25
@@ -989,24 +986,24 @@ Cohesion: 0.25
 Nodes (8): target, dependencies, dependencies, platform, settings, sources, type, JolUITests
 
 ### Community 170 - "ContentTests"
-Cohesion: 0.14
-Nodes (8): Замечания (по важности), Проверки, Ревью Ш-44 (iOS) — отправка контента и отзывы, Что сделано, ImageIO, PhotoSanitizer, ContentTests, UniformTypeIdentifiers
-
-### Community 171 - "CodingKeys"
 Cohesion: 0.17
-Nodes (12): CodingKeys, endsAt, estCostKzt, id, kind, meal, mustHave, ord (+4 more)
+Nodes (6): Замечания (по важности), Проверки, Ревью Ш-44 (iOS) — отправка контента и отзывы, Что сделано, PhotoSanitizer, ContentTests
+
+### Community 171 - "ContentModel"
+Cohesion: 0.19
+Nodes (5): ContentModel, .isBusy, .isDone, PreparedPhoto, Flag
 
 ### Community 172 - "TECH_PLAN (7)"
 Cohesion: 0.38
 Nodes (6): ADR 0001 technology stack record, API draft under /v1 prefix, Target architecture (iOS, FastAPI, worker, Valhalla, PostGIS), Postgres job queue with SKIP LOCKED, SSE chat stream events (text_delta, graph_node, map_places, route_ready), Valhalla routing engine for walk, scooter, car
 
 ### Community 173 - "outside.py"
-Cohesion: 0.10
-Nodes (12): _new_outside_wishes(), _drop_far_wishes(), Selection, _hit(), match(), names_a_venue(), outside_wish(), OutsidePlace (+4 more)
+Cohesion: 0.16
+Nodes (9): _hit(), match(), names_a_venue(), outside_wish(), OutsidePlace, _place(), _tokens(), test_known_places_outside_the_area_are_recognised() (+1 more)
 
 ### Community 174 - "Message"
 Cohesion: 0.12
-Nodes (16): chat_data_block(), memory_note(), _provider(), clean_note(), collect(), Message, get_llm_provider(), get_resilient_llm() (+8 more)
+Nodes (15): chat_data_block(), configure(), memory_note(), _provider(), clean_note(), LLMProvider, get_llm_provider(), get_resilient_llm() (+7 more)
 
 ### Community 175 - "English"
 Cohesion: 0.10
@@ -1025,8 +1022,8 @@ Cohesion: 0.16
 Nodes (11): collapse(), evaluate(), FilterResult, free_texts(), has_profanity(), price_reasons(), profanity_lists(), text_reasons() (+3 more)
 
 ### Community 179 - "AppError"
-Cohesion: 0.04
-Nodes (44): DevEmailProvider, EmailProvider, EmailSettings, get_email_provider(), normalize_email(), SmtpEmailProvider, RefreshReuse, get_sms_provider() (+36 more)
+Cohesion: 0.05
+Nodes (35): StorageProvider, create_submission(), create_upload(), get_storage(), place_reviews(), Param, save_coefficients(), summary() (+27 more)
 
 ### Community 180 - "pg-common.sh"
 Cohesion: 0.24
@@ -1045,12 +1042,12 @@ Cohesion: 0.33
 Nodes (5): ChatPanel (сворачиваемая карточка), HomeScreen (карта на весь экран, чат поверх), Ревью Ш-15 (главный экран), SidebarPanel и открытие свайпом от края, Переключение тёмного стиля карты по теме
 
 ### Community 184 - "CrowdModel"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (13): CrowdModel, Action, checkIn, report, .isWorking, Outcome, alreadyRecorded, failed (+5 more)
 
 ### Community 185 - "ChatPanel"
 Cohesion: 0.11
-Nodes (11): BriefFormatting, ChatPanel, .body, .canSend, .header, .inputBar, .inputPrompt, .isActive (+3 more)
+Nodes (10): BriefFormatting, ChatPanel, .canSend, .header, .inputBar, .inputPrompt, .isActive, CollapsedChatBar (+2 more)
 
 ### Community 186 - "project (6)"
 Cohesion: 0.33
@@ -1112,17 +1109,21 @@ Nodes (16): CrowdBlock, CodingKeys, samples, today, updatedAt, CrowdHour, CrowdL
 Cohesion: 0.67
 Nodes (3): Jol tourist trip-planning app (Almaty, iOS first), Repository README (placeholder), README title placeholder Jolm (spelling differs from Jol)
 
-### Community 213 - "ChatEvent"
-Cohesion: 0.12
-Nodes (16): ChatEvent, briefUpdated, done, error, graphNode, liveRoute, liveRouteStatus, mapPlaces (+8 more)
+### Community 213 - "Decodable"
+Cohesion: 0.04
+Nodes (85): Что проверено (код против DoD и сервера), ChatBrief, .isEmpty, ChatDetail, CodingKeys, brief, graphNodes, id (+77 more)
 
 ### Community 214 - "String"
 Cohesion: 0.13
 Nodes (11): AppLanguage, english, .id, .nativeName, russian, system, LanguageSettings, .code (+3 more)
 
 ### Community 215 - "UITestPlaceActions"
-Cohesion: 0.38
-Nodes (3): UITestPlaceActions, Answer, Seeded
+Cohesion: 0.21
+Nodes (5): .body, UITestContent, UITestPlaceActions, Answer, Seeded
+
+### Community 216 - "TripBudgetSheet"
+Cohesion: 0.27
+Nodes (3): TripBudgetSheet, .body, .language
 
 ### Community 217 - "deploy.sh"
 Cohesion: 0.44
@@ -1138,7 +1139,7 @@ Nodes (8): depends_on, migrate, postgres, condition, depends_on, condition, depe
 
 ### Community 224 - "ContentSheet"
 Cohesion: 0.15
-Nodes (6): ContentSheet, .body, .photoFields, .priceFields, .reviewFields, .transitFields
+Nodes (7): ContentSheet, .photoFields, .priceFields, .reviewFields, .transitFields, .body, PhotosUI
 
 ### Community 225 - "CodingKeys"
 Cohesion: 0.12
@@ -1173,12 +1174,12 @@ Cohesion: 0.40
 Nodes (5): command, env_file, image, restart, migrate
 
 ### Community 234 - "SSEEvent"
-Cohesion: 0.20
+Cohesion: 0.18
 Nodes (3): SSEEvent, SSEParser, SSEParserTests
 
 ### Community 236 - "PushAuthorizing"
-Cohesion: 0.22
-Nodes (3): UITestPush, PushAuthorizing, SystemPushAuthorizing
+Cohesion: 0.21
+Nodes (4): UITestPush, PushAuthorizing, SystemPushAuthorizing, UserNotifications
 
 ### Community 239 - "Problem"
 Cohesion: 0.17
@@ -1192,12 +1193,12 @@ Nodes (12): by_rel(), network(), rows(), sconn(), test_empty_extract_does_not_wi
 Cohesion: 0.26
 Nodes (11): apple_jwks(), get_nonce(), issue(), private_key(), submit(), test_invalid_signature_does_not_consume_challenge(), test_outage_is_rate_limited(), test_rejects_expired_nonce_and_wrong_algorithm_before_fetch() (+3 more)
 
-### Community 248 - "TripLegSheet"
-Cohesion: 0.14
-Nodes (12): Итог прогона (Ш-37, Ш-47, Ш-48, Ш-49), Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-37 (iOS) — полная карта маршрута (веха M3), Что сделано, TripLegSheet (+4 more)
+### Community 248 - "scoring.py"
+Cohesion: 0.26
+Nodes (8): _clip01(), interest_match(), intolerance(), pick_pool(), rank(), Score, score_place(), Scored
 
 ### Community 250 - "test_airport.py"
-Cohesion: 0.21
+Cohesion: 0.23
 Nodes (11): airport_routes(), build_network(), bus(), ride_from_terminal(), test_airport_real_pbf(), test_airport_real_valhalla(), test_import_sends_stable_manual_stop_ids(), test_manual_stop_rows_survive_reimport() (+3 more)
 
 ### Community 254 - "CodingKeys"
@@ -1209,48 +1210,52 @@ Cohesion: 0.14
 Nodes (13): Бэкапы и восстановление, Деплой Jol: рабочая инструкция (Ш-51), Клиентский IP за прокси, Ключи шифрования токенов Apple: ротация и миграция, Миграции, Наблюдаемость, Откат, Первый деплой (+5 more)
 
 ### Community 257 - "test_intercity.py"
-Cohesion: 0.19
-Nodes (11): modes(), query(), seeded(), test_almaty_to_saty_has_car_taxi_tour_and_no_plane(), test_almaty_to_turkestan_has_plane_train_bus_car(), test_directions_uses_the_intercity_tariff_outside_the_city(), test_localised_names_and_rate_limit(), test_other_pairs_and_schedule_flag() (+3 more)
-
-### Community 258 - "_update_trip_brief"
-Cohesion: 0.19
-Nodes (8): Сервер (порядок заполнения, восстановление), _update_trip_brief(), merge_filled_order(), TurnLive, get_filled_order(), lock_brief(), record_filled_order(), test_record_filled_order_appends_without_repeats()
-
-### Community 259 - "accrue"
 Cohesion: 0.16
-Nodes (10): Breakdown, compute(), resolve(), accrue(), load_coefficients(), test_formula_age_and_frequency(), test_ledger_is_insert_only_but_goes_with_the_account(), test_ledger_key_is_unique_per_submission() (+2 more)
+Nodes (13): api(), modes(), query(), seeded(), test_almaty_to_saty_has_car_taxi_tour_and_no_plane(), test_almaty_to_turkestan_has_plane_train_bus_car(), test_directions_uses_the_intercity_tariff_outside_the_city(), test_integration_valhalla_car_and_taxi_almaty_turkestan_and_saty() (+5 more)
+
+### Community 259 - "CodingKeys"
+Cohesion: 0.17
+Nodes (12): CodingKeys, budgetKzt, complete, crowdTolerance, endDate, filledOrder, hasAccommodation, interests (+4 more)
 
 ### Community 260 - "Failure"
 Cohesion: 0.20
 Nodes (8): Failure, alreadySubmitted, imageRefused, network, photoTooLarge, photoUnreadable, server, tooMany
 
-### Community 261 - "edit_tools.py"
-Cohesion: 0.13
-Nodes (20): _add_graph_node(), _build_trip(), _search_events(), _search_places(), handle_tool(), _after_edit(), _chat_trip(), get_trip_plan() (+12 more)
+### Community 261 - "parse_tool_args"
+Cohesion: 0.14
+Nodes (6): Замечания, Проверки, Ревью Ш-53 — LLM-провайдер DeepSeek, Что сделано, parse_tool_args(), ToolArgsError
 
 ### Community 264 - "RegionTests"
-Cohesion: 0.11
-Nodes (6): Исключения из правила, Ревью Ш-57 (iOS): регионы, Что не проверено и оговорки, Что сделано, RegionModel, RegionTests
+Cohesion: 0.09
+Nodes (8): Исключения из правила, Ревью Ш-57 (iOS): регионы, Результат полного прогона, Что не проверено и оговорки, Что сделано, RegionModel, RegionTests, AppleSignInUITests
 
 ### Community 265 - "build.py"
-Cohesion: 0.10
-Nodes (22): Проверка, Ревью координатора, Что сделано, Ш-56. Пожелания вне зоны v1 — ревью, build_trip(), _model_budget(), _annotate(), _breakdown() (+14 more)
+Cohesion: 0.09
+Nodes (23): Что сделано, lodging_from_row(), trip_nights(), _annotate(), _breakdown(), budget_json(), build_plan(), BuiltPlan (+15 more)
 
-### Community 266 - "clock.py"
-Cohesion: 0.08
-Nodes (16): checkin(), CrowdReport, report(), Where, crowd_aggregate(), aggregate(), card_block(), _distance() (+8 more)
+### Community 266 - "crowd/service.py"
+Cohesion: 0.18
+Nodes (7): aggregate(), card_block(), _distance(), label(), place_block(), ProfileCrowd, record()
 
 ### Community 267 - "Ревью Ш-60 — межгородские переезды"
 Cohesion: 0.17
 Nodes (11): Модель данных, Не проверено, Пары и откуда цифры (просмотрено 2026-11-23, ничего не бронировалось), Примеры (реальный Valhalla, 2026-12-01, тестовая БД с сидом), Ревью координатора (2026-11-23), Ревью Ш-60 — межгородские переезды, Тарифы, Тесты (+3 more)
 
+### Community 268 - "Что сделано"
+Cohesion: 0.22
+Nodes (7): Замечания, Пример для iOS-фикстуры («китайский ресторан → парк Первого Президента → Зелёный базар»), Проверки, Ревью Ш-54 (сервер) — живой маршрут на карте в чате, Что сделано, chosen_places(), pick_leg()
+
 ### Community 269 - "Ревью Ш-59 — Карта и маршрутизация на страну"
 Cohesion: 0.20
 Nodes (9): iOS, Не проверено / хостинг, Ответы маршрутов (Valhalla `auto`, из центра Алматы), Ревью Ш-59 — Карта и маршрутизация на страну, Сервер: «Как добраться» по стране, Стили и раздача, Тайлы на весь Казахстан, Тарифы (замечание) (+1 more)
 
-### Community 273 - "test_geocode.py"
-Cohesion: 0.17
-Nodes (8): load_fixture(), sconn(), test_address_when_no_place_close(), test_bare_point_and_validation(), test_extract_fixture(), test_import_table_is_independent_of_places(), test_place_wins_inside_radius(), test_point_in_another_region_is_answered()
+### Community 270 - "chat_lock"
+Cohesion: 0.18
+Nodes (6): Проверка после слияния, Ревью координатора, Риски, Ш-64. Чат не ждёт карту — ревью координатора, chat_lock(), _Locked
+
+### Community 273 - "Failure"
+Cohesion: 0.18
+Nodes (8): Failure, invalid, network, notSupported, other, rateLimited, signedOut, unavailable
 
 ### Community 274 - "UITestExtraStub"
 Cohesion: 0.38
@@ -1258,7 +1263,7 @@ Nodes (3): UITestExtraStub, .isOffline, .resetsOffline
 
 ### Community 275 - "TripMapLine"
 Cohesion: 0.21
-Nodes (6): Замечания, Проверки, Ревью координатора (2026-11-22), Ревью Ш-55 (iOS): замена места, «все дни», «Мои брони», доступность боковой панели и профиля, TripMapLine, TripMapStop
+Nodes (6): Замечания, Проверки, Ревью Ш-55 (iOS): замена места, «все дни», «Мои брони», доступность боковой панели и профиля, Что сделано, TripMapLine, TripMapStop
 
 ### Community 276 - "CodingKeys"
 Cohesion: 0.22
@@ -1268,57 +1273,57 @@ Nodes (9): CodingKeys, distanceM, durationS, fromName, geometry, kind, routeRef,
 Cohesion: 0.18
 Nodes (12): minio, MINIO_ROOT_PASSWORD, MINIO_ROOT_USER, S3_BUCKET, condition, environment, depends_on, entrypoint (+4 more)
 
-### Community 279 - "App Store Connect — «App Privacy»: ответы и доказательства"
+### Community 278 - "analytics/events.py"
+Cohesion: 0.25
+Nodes (7): clean_props(), _flag(), _one_of(), _short_str(), _small_int(), test_whitelist_covers_every_event_and_clean_props_is_strict(), test_analytics_accepts_only_catalog_ids()
+
+### Community 280 - "region_for_point"
 Cohesion: 0.22
-Nodes (7): 1. Общие ответы, 2. Типы данных (что отметить в App Store Connect), 3. API с «обоснованием причины» (Privacy Manifest), 4. Разрешения (Info.plist) — RU + EN, 5. Что решить владельцу до отправки, App Store Connect — «App Privacy»: ответы и доказательства, table
+Nodes (8): Команды и результаты, Оставшиеся исключения (упоминания Алматы/KZT, которые остались сознательно), Ревью координатора (2026-11-23), Ревью Ш-57 (сервер): регионы, Что не проверено, Что сделано, region_for_point(), test_no_city_constants_in_server_code()
 
-### Community 281 - "OfflinePlaceCard"
-Cohesion: 0.24
-Nodes (5): OfflinePlaceCard, .hoursText, .id, TripOfflinePlaceSheet, .body
+### Community 281 - "1. Гонка `choose` / `sync`"
+Cohesion: 0.20
+Nodes (8): 1. Гонка `choose` / `sync`, 2. Рёбра на настоящем Valhalla, Как проверено, Не проверено, Ревью координатора (2026-11-23), Ревью Ш-63 (сервер): гонка выбора в живом маршруте и рёбра на настоящем Valhalla, Что сделано, ChoiceError
 
-### Community 282 - "PlaceCategoryStyle"
-Cohesion: 0.19
-Nodes (4): JolColor, View, JolColor, UIColor
+### Community 282 - "UIColor"
+Cohesion: 0.10
+Nodes (8): JolColor, View, JolColor, UIColor, PlaceCategoryStyle, .allImages, .color, .body
 
-### Community 283 - "get_settings"
-Cohesion: 0.02
-Nodes (71): AppleKeyCache, AppleSignIn, challenge(), Challenge, fetch_keys(), AppleGrantError, AppleGrants, client_secret() (+63 more)
+### Community 283 - "get_apple_grants"
+Cohesion: 0.09
+Nodes (10): _exchange_code(), AppleGrantError, AppleGrants, credentials_configured(), _error(), get_apple_grants(), HttpAppleGrants, MissingCredentialsGrants (+2 more)
 
-### Community 284 - "SwiftUI"
+### Community 284 - "AppContainer"
 Cohesion: 0.05
-Nodes (28): Замечания (по важности), Что сделано, AppContainer, RootView, .body, EdgeSwipeStrip, .body, HomeScreen (+20 more)
+Nodes (31): Итог прогона (Ш-37, Ш-47, Ш-48, Ш-49), Не сделано / ограничения, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-37 (iOS) — полная карта маршрута (веха M3), Что сделано, AppContainer (+23 more)
 
 ### Community 285 - "OfflineTrip"
 Cohesion: 0.05
 Nodes (59): Перепроверка (2026-11-21, независимо от автора), object, OfflineDay, OfflineHours, OfflineInterval, OfflineItem, CodingKeys, endsAt (+51 more)
 
-### Community 286 - "test_favorites.py"
-Cohesion: 0.38
-Nodes (8): mk(), put(), test_cap_applies_to_new_places_only(), test_favorites_are_per_user_and_hidden_places_are_not_listed(), test_guest_gets_401_everywhere(), test_names_follow_accept_language_and_address(), test_put_list_delete_and_idempotency(), test_put_unknown_or_inactive_place_is_404_and_delete_is_still_204()
+### Community 286 - "pool_sizes"
+Cohesion: 0.22
+Nodes (7): places_per_must_have(), pool_sizes(), PoolSizes, test_must_have_count_grows_with_the_trip(), test_a_longer_trip_or_denser_pace_never_shrinks_the_pool(), test_pool_sizes(), test_resolve_slugs()
 
-### Community 287 - "Перепроверка (2026-11-21, независимо от автора)"
-Cohesion: 0.20
-Nodes (7): Не сделано / ограничения, Перепроверка (2026-11-21, независимо от автора), Пробелы серверного API, Проверки, Ревью Ш-46 (iOS) — бонусы: баланс и история в профиле, .date, .date
-
-### Community 288 - "Stage"
-Cohesion: 0.25
-Nodes (7): Stage, done, failed, idle, preparingPhoto, sending, uploading
+### Community 288 - "resolve"
+Cohesion: 0.31
+Nodes (5): _matches(), resolve(), Resolved, _tokens(), test_resolve_flags_and_empty_input()
 
 ### Community 295 - "ChatAnnouncements"
-Cohesion: 0.27
+Cohesion: 0.21
 Nodes (4): Ревью координатора (2026-11-23), ChatAnnouncements, .locale, View
 
 ### Community 296 - "pathlib"
-Cohesion: 0.11
-Nodes (7): build_query(), latest_release(), main(), H, build(), interp(), name_expr()
+Cohesion: 0.09
+Nodes (12): build_query(), latest_release(), main(), build_report(), database_url(), main(), _pct(), _table() (+4 more)
 
-### Community 298 - "Problem"
-Cohesion: 0.20
-Nodes (8): Failure, tooLarge, unreadable, Problem, network, noReplacement, outdated, server
+### Community 298 - "load_regions"
+Cohesion: 0.28
+Nodes (3): list_regions(), load_regions(), refresh()
 
-### Community 299 - "CodingKeys"
-Cohesion: 0.20
-Nodes (10): CodingKeys, feasible, lodgingChanged, removed, removedCount, savesKzt, shortfallKzt, swaps (+2 more)
+### Community 299 - "Ревью Ш-61 (сервер) — планировщик поездки по стране"
+Cohesion: 0.25
+Nodes (7): Контракт JSON (как построено, отклонений от задания нет), Не проверено / риски, Ревью Ш-61 (сервер) — планировщик поездки по стране, Решения вне SSOT — [предложено], Сценарий владельца (генератор, дорога — тестовый роутер с реальными горными дорогами, Valhalla не запускался), Тесты, Числа, которые нужно подтвердить владельцу (`data/seed/country_planner.sql`, все — оценки команды)
 
 ### Community 300 - "Ревью Ш-47 (iOS) — загруженность: «я здесь», отчёт, блок в карточке"
 Cohesion: 0.29
@@ -1329,8 +1334,8 @@ Cohesion: 0.20
 Nodes (10): CodingKeys, breakdown, budgetKzt, choice, lodging, remainingKzt, shortfallKzt, status (+2 more)
 
 ### Community 302 - "import_places.py"
-Cohesion: 0.06
-Nodes (34): build_record(), clean(), extract(), load(), main(), build_record(), collect(), database_url() (+26 more)
+Cohesion: 0.08
+Nodes (25): build_record(), clean(), extract(), load(), main(), database_url(), find_pbf(), in_bbox() (+17 more)
 
 ### Community 303 - "CodingKeys"
 Cohesion: 0.20
@@ -1341,8 +1346,8 @@ Cohesion: 0.25
 Nodes (8): build_admins, build_elevation, build_tar, build_time_zones, serve_tiles, server_threads, use_default_speeds_config, environment
 
 ### Community 305 - "StubURLProtocol"
-Cohesion: 0.10
-Nodes (5): Проверки, Ревью координатора (2026-11-22), Ш-54 iOS — живой маршрут на карте в чате, StubURLProtocol, TripMapTests
+Cohesion: 0.07
+Nodes (12): Ревью координатора (2026-11-22), Ревью координатора (2026-11-22), Ревью координатора (2026-11-22), Ревью координатора (2026-11-22), Замечания, Проверки, Ревью координатора (2026-11-22), Ревью Ш-55 (сервер) — доработки без внешних сервисов (+4 more)
 
 ### Community 307 - "services"
 Cohesion: 0.29
@@ -1372,97 +1377,89 @@ Nodes (5): LiveRouteStatusBadge, .body, StandaloneBuildBadge, .body, View
 Cohesion: 0.33
 Nodes (5): Итого, По источникам, По категориям, Покрытие данными мест: Казахстан (kazakhstan), Чьё значение у поля
 
-### Community 325 - "test_places_regions.py"
-Cohesion: 0.13
-Nodes (25): _as_list(), _hours_protected(), mark_sources(), upsert_place(), test_upsert_place_is_exported(), open_record(), osm_record(), place_row() (+17 more)
+### Community 323 - "Kind"
+Cohesion: 0.25
+Nodes (8): Kind, budget, crowd, dates, interests, lodging, mustHave, pace
 
-### Community 344 - "DatedWish"
-Cohesion: 0.22
-Nodes (3): _clean_items(), DatedWish, StayWish
+### Community 325 - "test_places_regions.py"
+Cohesion: 0.14
+Nodes (23): _as_list(), _hours_protected(), upsert_place(), open_record(), osm_record(), place_row(), q(), sources_of() (+15 more)
+
+### Community 344 - "sync"
+Cohesion: 0.39
+Nodes (7): sync(), place_ids(), race_choose(), read_route(), test_choose_and_sync_of_a_new_wish_do_not_lose_each_other(), test_two_concurrent_chooses_on_different_stops_keep_both(), test_two_concurrent_chooses_on_one_stop_stay_consistent()
 
 ### Community 347 - "CodingKeys"
 Cohesion: 0.22
 Nodes (9): CodingKeys, category, categoryName, distanceM, id, lat, lon, name (+1 more)
 
+### Community 348 - "error_response"
+Cohesion: 0.36
+Nodes (6): error_response(), install_error_handlers(), _app_error(), _http_error(), _unhandled(), _validation_error()
+
 ### Community 350 - "Look"
 Cohesion: 0.25
 Nodes (7): Look, dark, darkAX3, .isDark, .isLarge, light, lightAX3
 
-### Community 357 - "BonusScreen"
-Cohesion: 0.32
-Nodes (4): BonusScreen, .body, .history, .summary
+### Community 358 - "XCTest"
+Cohesion: 0.08
+Nodes (4): ImageIO, AnalyticsUITests, Jol, XCTest
 
-### Community 360 - "SidebarUITests"
-Cohesion: 0.15
-Nodes (12): 2. `hours_assumed` пересчитывается после правки (Ш-38 №2, часть), 3. Инфраструктура тестов, Замечания, Проверки, Разбор остальных долгов, Ревью координатора (2026-11-21), Ревью: серверные долги (2026-11-21), Что сделано (+4 more)
+### Community 360 - "Ревью: серверные долги (2026-11-21)"
+Cohesion: 0.17
+Nodes (9): 2. `hours_assumed` пересчитывается после правки (Ш-38 №2, часть), 3. Инфраструктура тестов, Замечания, Проверки, Разбор остальных долгов, Ревью: серверные долги (2026-11-21), Что сделано, recreate_database() (+1 more)
 
-### Community 361 - "metrics.py"
+### Community 361 - "test_ops.py"
+Cohesion: 0.09
+Nodes (14): _esc(), render(), reset(), capture_exception(), init_error_reporting(), _release(), test_error_reporting_is_off_without_a_dsn_and_safe_without_the_sdk(), test_interactive_docs_are_off_in_prod() (+6 more)
+
+### Community 362 - "Ревью Ш-49 (iOS) — кнопка и запрос бронирования"
 Cohesion: 0.29
-Nodes (4): _esc(), render(), reset(), test_metrics_counts_requests_by_route_template()
+Nodes (6): Не сделано, Пробелы серверного API, Проверки, Ревью координатора (2026-11-21), Ревью Ш-49 (iOS) — кнопка и запрос бронирования, Что сделано
 
-### Community 364 - "region_coverage.py"
-Cohesion: 0.48
-Nodes (5): build_report(), database_url(), main(), _pct(), _table()
+### Community 364 - "pick_intercity_leg"
+Cohesion: 0.38
+Nodes (5): pick_intercity_leg(), option(), test_a_transfer_is_the_fastest_affordable_public_way(), test_an_outing_is_a_road_and_a_taxi_is_never_offered(), test_an_unknown_price_is_left_out_not_invented()
 
-### Community 369 - "CodingKeys"
-Cohesion: 0.29
-Nodes (7): CodingKeys, category, id, lat, lon, mustHave, name
+### Community 369 - "Проверки"
+Cohesion: 0.33
+Nodes (5): Замечания, Проверки, Ревью координатора (2026-11-21), Ревью Ш-32b — узлы графа = ответы пользователя (цепочка вместо кольца), Что сделано
 
 ### Community 371 - "Plan"
 Cohesion: 0.12
 Nodes (10): Не проверено, Проверка, Ревью координатора (2026-11-23), Что сделано, Ш-63 (iOS) — камера живого маршрута и карты поездки, CameraFit, Plan, bounds (+2 more)
 
-### Community 375 - "CodingKeys"
+### Community 375 - ".link"
 Cohesion: 0.33
-Nodes (6): CodingKeys, amount, createdAt, id, kind, submissionType
+Nodes (3): Step, code, destination
 
-### Community 376 - "LiveRouteError"
-Cohesion: 0.33
-Nodes (4): LiveRouteError, busy, network, outdated
-
-### Community 381 - "CodingKeys"
-Cohesion: 0.33
-Nodes (6): CodingKeys, content, finish, id, proposalID, role
-
-### Community 383 - "CodingKeys"
-Cohesion: 0.33
-Nodes (6): CodingKeys, entriesKzt, eventsKzt, lodgingKzt, mealsKzt, transportKzt
+### Community 381 - "isolated"
+Cohesion: 0.40
+Nodes (3): reset(), isolated(), lock_log()
 
 ### Community 384 - "Look"
 Cohesion: 0.33
 Nodes (5): Look, .appearance, dark, darkLarge, lightLarge
 
-### Community 392 - "Ш-64 (iOS). Чат не ждёт карту"
-Cohesion: 0.40
-Nodes (4): Допущения о сервере (и поправки координатора), Открытые риски, Тесты, Ш-64 (iOS). Чат не ждёт карту
-
-### Community 404 - "Problem"
-Cohesion: 0.40
-Nodes (3): Problem, network, server
-
-### Community 421 - "CodingKeys"
-Cohesion: 0.29
-Nodes (7): CodingKeys, budget, days, endDate, id, startDate, updatedAt
-
 ## Knowledge Gaps
-- **843 isolated node(s):** `.buildDelay`, `.isOver`, `.total`, `.value`, `network` (+838 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2837 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **183 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **843 isolated node(s):** `.buildDelay`, `.isOver`, `.total`, `.value`, `downloading` (+838 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2870 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **186 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DirectionsRequest` connect `GeoPoint` to `Sendable`, `.report`, `DirectionOption`, `DirectionsModel`, `execute`, `ReviewsModel`?**
-  _High betweenness centrality (0.128) - this node is a cross-community bridge._
-- **Are the 142 inferred relationships involving `conn()` (e.g. with `main()` and `main()`) actually correct?**
-  _`conn()` has 142 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `DirectionsRequest` connect `DirectionsModel` to `typing`, `Sendable`, `.report`, `DirectionOption`, `ReviewsModel`?**
+  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+- **Are the 144 inferred relationships involving `conn()` (e.g. with `main()` and `main()`) actually correct?**
+  _`conn()` has 144 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `.buildDelay`, `.isOver`, `.total` to the rest of the system?**
   _843 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `trips/store.py` be split into smaller, more focused modules?**
-  _Cohesion score 0.09206349206349207 - nodes in this community are weakly interconnected._
-- **Why does `MapView` connect `MapCoordinator` to `LiveRoute`, `PlaceCategoryStyle`, `Sendable`, `GeoPoint`, `RegionTests`, `execute`, `Identifiable`, `TripMapLine`, `CoreLocation`, `PlaceCategoryStyle`, `SwiftUI`, `.init`, `.applyTrip`?**
-  _High betweenness centrality (0.090) - this node is a cross-community bridge._
-- **Should `get` be split into smaller, more focused modules?**
-  _Cohesion score 0.11153846153846154 - nodes in this community are weakly interconnected._
-- **Why does `fetch_one()` connect `test_admin.py` to `trips/store.py`, `_update_trip_brief`, `conftest.py`, `accrue`, `edit_tools.py`, `get`, `trips/api.py`, `test_weather.py`, `build.py`, `clock.py`, `test_chat_background.py`, `test_geocode.py`, `edit.py`, `test_live_plan.py`, `service (59)`, `test_country_planner.py`, `test_trip_edits.py`, `test_submissions (55)`, `get_settings`, `chat/api.py`, `intercity/service.py`, `test_favorites.py`, `typing`, `travel.py`, `chat/store.py`, `Message`, `add_place`, `autofilter.py`, `AppError`, `test_bookings.py`, `push/__init__.py`, `test_osm_import (39)`, `test_analytics.py`, `test_live_route.py`, `live/store.py`, `fetch_one`, `execute`, `test_trips.py`, `conn`, `test_account_deletion.py`, `bookings/service.py`, `test_events.py`, `test_chat.py`, `test_memory.py`, `candidates.py`, `errors.py`?**
-  _High betweenness centrality (0.082) - this node is a cross-community bridge._
+  _Cohesion score 0.09803921568627451 - nodes in this community are weakly interconnected._
+- **Why does `MapView` connect `MapCoordinator` to `LiveRoute`, `typing`, `PlacesModel`, `Foundation`, `RegionTests`, `DirectionsModel`, `TripMapLine`, `Decodable`, `MapScreen`, `UIColor`, `.init`, `.applyTrip`?**
+  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+- **Should `SwiftUI` be split into smaller, more focused modules?**
+  _Cohesion score 0.04717853839037928 - nodes in this community are weakly interconnected._
+- **Why does `GeoPoint` connect `DirectionsModel` to `PlacesModel`, `Sendable`, `.report`, `Region`, `GeoPoint`, `UITestSupport`, `DirectionOption`, `RegionTests`, `DirectionsPanel`, `PlaceActionsTests`, `Identifiable`, `LocationResult`, `OfflineTrip`, `MapCoordinator`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._

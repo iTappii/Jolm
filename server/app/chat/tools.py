@@ -10,7 +10,7 @@ from app.db import fetch_all
 from app.events import service as events_service
 from app.live import clock
 from app.places import service, sql
-from app.planner import outside
+from app.planner import candidates, outside
 from app.planner.events import trip_events
 from app.providers.llm import ToolSpec
 from app.regions import default_region
@@ -23,9 +23,7 @@ SEARCH_EVENTS = "search_events"
 
 MAX_SEARCH_LIMIT = 10
 MAX_NODE_CHARS = 80
-OUTSIDE_NOTE = (
-    "outside the area Jol plans in this version (the default region and nearby mountains)"
-)
+OUTSIDE_NOTE = "a place Jol has no data for yet: it cannot be planned in this version"
 
 
 class SearchPlacesArgs(BaseModel):
@@ -60,8 +58,9 @@ class NoArgs(BaseModel):
 SEARCH_PLACES_SPEC = ToolSpec.from_model(
     SEARCH_PLACES,
     "Search the places database of the trip region by name part and/or category. Use it to answer "
-    "questions about real places; never invent places, prices or hours. A well-known place "
-    "outside the region comes back as outside_area instead of places.",
+    "questions about real places; never invent places, prices or hours. Places anywhere in "
+    "Kazakhstan come back as places (a far one also has a far block); a well-known place Jol has "
+    "no data for comes back as outside_area instead.",
     SearchPlacesArgs,
 )
 SEARCH_EVENTS_SPEC = ToolSpec.from_model(
@@ -111,8 +110,24 @@ async def search_places(
     if len(query) < 2 and not category:
         return {"error": "give a query of at least 2 characters or a category"}, []
     far = None if category else outside.outside_wish(query)
-    if far is not None:  # Ш-56: not in the database because v1 covers one region only
-        return {"places": [], "outside_area": far.as_json(locale), "note": OUTSIDE_NOTE}, []
+    if far is not None:
+        async with db.transaction() as conn:
+            known = await candidates.far_place(conn, query, far)
+        if known is None:  # Ш-56: a known place the database has no data for: say so honestly
+            return {"places": [], "outside_area": far.as_json(locale), "note": OUTSIDE_NOTE}, []
+        # Ш-62: a place of the country the planner can plan (Charyn, Kolsai, Turkistan...)
+        row = {
+            "id": known.id,
+            "name_ru": known.name_ru,
+            "name_en": known.name_en,
+            "name_kk": None,
+            "category": known.category,
+            "lat": known.lat,
+            "lon": known.lon,
+        }
+        pin = place_pin(row, locale)
+        found = dict(pin, kind=known.kind, popularity=known.popularity, is_partner=False)
+        return {"places": [found], "far": far.as_json(locale)}, [pin]
     params = {
         "bbox": False,
         "west": None,

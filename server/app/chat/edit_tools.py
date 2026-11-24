@@ -81,8 +81,23 @@ EDIT_SPECS: List[ToolSpec] = [GET_TRIP_PLAN_SPEC, REMOVE_TRIP_ITEM_SPEC, REPLACE
 
 async def plan_days(conn, trip: Dict[str, Any], locale: str, only: Optional[List[str]] = None):
     """Compact plan for the model: `[{date, stops: [{item_id, time, name, kind, category,
-    cost_kzt, meal?, must_have?}]}]`; `only` = ISO dates to include."""
+    cost_kzt, meal?, must_have?}], transfer_day?, overnight_in?, moves_between_cities?}]`;
+    `only` = ISO dates to include. The last three (Ш-62) say where the person sleeps and how they
+    get to another city; absent for an ordinary day of the home city."""
     items = await store.main_items(conn, trip["id"])
+    meta = trip.get("day_meta") or {}
+    far_legs: Dict[Any, List[Dict[str, Any]]] = {}
+    for leg in await store.main_legs(conn, trip["id"]):  # Ш-62: moves between cities
+        block = leg.get("intercity")
+        if block:
+            far_legs.setdefault(leg["day"], []).append(
+                {
+                    "mode": block["mode"],
+                    "from": block["from_city"].get(locale) or block["from_city"]["ru"],
+                    "to": block["to_city"].get(locale) or block["to_city"]["ru"],
+                    "hours": round(leg["travel_s"] / 3600.0, 1),
+                }
+            )
     days = []
     for d in read.trip_dates(trip["start_date"], trip["end_date"]):
         if only is not None and d.isoformat() not in only:
@@ -102,7 +117,16 @@ async def plan_days(conn, trip: Dict[str, Any], locale: str, only: Optional[List
             if row["is_must_have"]:
                 stop["must_have"] = True
             stops.append(stop)
-        days.append({"date": d.isoformat(), "stops": stops})
+        day: Dict[str, Any] = {"date": d.isoformat(), "stops": stops}
+        facts = meta.get(d.isoformat()) or {}
+        if facts.get("kind") == "transfer":
+            day["transfer_day"] = True  # the day is mostly a move to another city
+        night = (facts.get("overnight") or {}).get("city")
+        if night:
+            day["overnight_in"] = night.get(locale) or night["ru"]
+        if far_legs.get(d):
+            day["moves_between_cities"] = far_legs[d]
+        days.append(day)
     return days
 
 
