@@ -18,6 +18,7 @@ final class AppContainer {
     @ObservationIgnored let chat: ChatModel
     @ObservationIgnored let tripMap: TripMapModel
     @ObservationIgnored let events: EventsModel
+    @ObservationIgnored let landmarks: LandmarksModel
     @ObservationIgnored let crowd: CrowdModel
     @ObservationIgnored let bookings: BookingModel
     @ObservationIgnored let offline: OfflineTripsModel
@@ -70,6 +71,7 @@ final class AppContainer {
         )
         self.tripMap = TripMapModel(api: self.api, offline: self.offline)
         self.events = EventsModel(api: self.api)
+        self.landmarks = LandmarksModel(api: self.api)
         self.crowd = CrowdModel(api: self.api, locator: locator)
         self.bookings = BookingModel(api: self.api)
         self.reviews = ReviewsModel(api: self.api)
