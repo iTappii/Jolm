@@ -8,6 +8,8 @@ struct MapScreen: View {
     var tripMap: TripMapModel?
     var events: EventsModel?
     var projection: MapProjection?
+    /// The sights `LandmarksOverlay` draws (empty while it is not shown): ordinary pins keep out from under them.
+    var landmarks: [Landmark] = []
     var bottomInset: CGFloat = 0
     @Environment(\.colorScheme) private var colorScheme
 
@@ -25,6 +27,7 @@ struct MapScreen: View {
             routeStops: places.routeStops,
             routeID: places.activeRoute?.id,
             selectedID: places.selected?.id,
+            landmarks: landmarks,
             markedPoint: places.selected?.tappedPoint == nil ? nil : places.selected.map { GeoPoint($0.coordinate) },
             directionLines: directions?.lines ?? [],
             directionOrigin: directions?.origin,
@@ -85,6 +88,12 @@ struct MapScreen: View {
                     .accessibilityLabel(Text(verbatim: "chat-map-places"))
                     .accessibilityValue(Text(verbatim: String(chat?.state.mapPlaces.count ?? 0)))
                     .accessibilityIdentifier("chat-map-places")
+                Color.clear
+                    .frame(width: 1, height: 1)
+                    .accessibilityElement()
+                    .accessibilityLabel(Text(verbatim: "map-drawn-pins"))
+                    .accessibilityValue(Text(verbatim: projection?.debugPins ?? ""))
+                    .accessibilityIdentifier("map-drawn-pins")
                 Color.clear
                     .frame(width: 1, height: 1)
                     .accessibilityElement()

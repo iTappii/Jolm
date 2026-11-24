@@ -26,6 +26,8 @@ final class AppContainer {
     @ObservationIgnored let analytics: AnalyticsClient
     @ObservationIgnored let reviews: ReviewsModel
     @ObservationIgnored let regions: RegionModel
+    /// The last known position, only if access was already granted (Ш-70: «1,2 км от вас» on the card).
+    @ObservationIgnored let locator: any LocationProviding
 
     init(
         tokens: any TokenStore = SessionStore.shared,
@@ -59,6 +61,7 @@ final class AppContainer {
         self.gate = AccountGate(auth: auth)
         self.favorites = FavoritesModel(api: self.api)
         let locator = locator ?? CoreLocationProvider()
+        self.locator = locator
         self.chat = ChatModel(
             api: self.api, language: { languageSettings.code }, location: { locator.knownLocation() }
         )

@@ -12,6 +12,12 @@ struct PlaceSummary: Decodable, Identifiable, Equatable, Sendable {
     let isPublic: Bool
     let isPartner: Bool
     let popularity: Int
+    /// Logo of the venue (Ш-70): from a partner or the team, so mostly `nil`; the map then draws the category pin.
+    var logoURL: String?
+    /// Also in every item of the map list (Ш-70), so the card can show them before its detail loads.
+    var rating: PlaceRating?
+    var today: PlaceToday?
+    var address: String?
     /// Set when this is a tapped address / point, not a place of ours (Ш-23c). Not part of the wire format.
     var tappedPoint: TappedPoint?
 
@@ -21,6 +27,48 @@ struct PlaceSummary: Decodable, Identifiable, Equatable, Sendable {
         case id, name, category, kind, lat, lon, popularity
         case isPublic = "is_public"
         case isPartner = "is_partner"
+        case logoURL = "logo_url"
+        case rating, today, address
+    }
+}
+
+/// Average of the reviews that passed the automatic filter (Ш-70); `nil` on the card when there are none.
+struct PlaceRating: Decodable, Equatable, Sendable {
+    let average: Double
+    let count: Int
+}
+
+/// Opening hours of the place for today in the region's time zone (Ш-70); `nil` when the hours are unknown.
+struct PlaceToday: Decodable, Equatable, Sendable {
+    let opens: String?
+    let closes: String?
+    let openNow: Bool?
+    let open24h: Bool
+    let closedToday: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case opens, closes
+        case openNow = "open_now"
+        case open24h = "open_24h"
+        case closedToday = "closed_today"
+    }
+
+    init(opens: String? = nil, closes: String? = nil, openNow: Bool? = nil, open24h: Bool = false,
+         closedToday: Bool = false) {
+        self.opens = opens
+        self.closes = closes
+        self.openNow = openNow
+        self.open24h = open24h
+        self.closedToday = closedToday
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        opens = try values.decodeIfPresent(String.self, forKey: .opens)
+        closes = try values.decodeIfPresent(String.self, forKey: .closes)
+        openNow = try values.decodeIfPresent(Bool.self, forKey: .openNow)
+        open24h = try values.decodeIfPresent(Bool.self, forKey: .open24h) ?? false
+        closedToday = try values.decodeIfPresent(Bool.self, forKey: .closedToday) ?? false
     }
 }
 
@@ -96,12 +144,17 @@ struct PlaceDetail: Decodable, Identifiable, Equatable, Sendable {
     let events: [EventItem]?
     /// Partner booking (Ш-49): `nil` when the place has no partner — the booking button stays off.
     let booking: BookingInfo?
+    /// Ш-70, all optional on the wire: older servers do not send them.
+    let rating: PlaceRating?
+    let today: PlaceToday?
+    let logoURL: String?
 
     var coordinate: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
 
     enum CodingKeys: String, CodingKey {
         case id, name, description, category, kind, lat, lon, address, website, prices, photos, hours
-        case crowd, events, booking
+        case crowd, events, booking, rating, today
+        case logoURL = "logo_url"
         case typicalVisitMin = "typical_visit_min"
         case isPublic = "is_public"
         case isPartner = "is_partner"
